@@ -134,8 +134,6 @@ O cadastro de paciente contempla:
 - Endereço completo
 
 **Dados Clínicos (Opcionais):**
-- Convênio/Plano de saúde
-- Número da carteirinha
 - Alergias conhecidas
 - Observações gerais
 

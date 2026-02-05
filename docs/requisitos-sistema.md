@@ -342,7 +342,6 @@ O sistema deve permitir cadastro de procedimentos/serviços:
 **Dados opcionais:**
 - Código interno
 - Descrição
-- Código TUSS (para convênios)
 - Instruções para o paciente
 
 **Configurações:**
