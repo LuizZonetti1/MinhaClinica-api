@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
@@ -426,7 +426,9 @@ model Patient {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Dados pessoais adicionais
+  cpf         String   @db.VarChar(11)
   rg          String?  @db.VarChar(20)
+
   dateOfBirth DateTime @db.Date
   gender      Gender
 
@@ -460,6 +462,7 @@ model Patient {
   medicalRecords   MedicalRecord[]
   financialRecords FinancialRecord[]
 
+  @@unique([clinicId, cpf])
   @@map("patients")
 }
 
