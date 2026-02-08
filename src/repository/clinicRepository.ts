@@ -43,4 +43,37 @@ export class ClinicRepository {
             },
         });
     }
+
+    async findById(id: string) {
+        return prisma.clinic.findUnique({
+            where: { id },
+        });
+    }
+
+    //update
+    async updateClinic(id: string, data: {
+        legalName?: string,
+        tradeName?: string,
+        cnpj?: string,
+        email?: string,
+        phone?: string,
+        zipCode?: string,
+        street?: string,
+        number?: string,
+        neighborhood?: string,
+        city?: string,
+        state?: string,
+        timezone?: string,
+        isActive?: boolean,
+        complement?: string,
+        logoUrl?: string,
+        website?: string,
+        subdomain?: string,
+        customDomain?: string,
+    }) {
+        return prisma.clinic.update({
+            where: { id },
+            data,
+        });
+    }
 }

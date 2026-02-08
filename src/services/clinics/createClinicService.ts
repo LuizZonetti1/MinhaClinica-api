@@ -1,4 +1,4 @@
-import { ClinicRepository } from "../repository/clinicRepository";
+import { ClinicRepository } from "../../repository/clinicRepository";
 
 interface CreateClinicRequest {
     legalName: string,
@@ -59,7 +59,7 @@ export class CreateClinicService {
             if (error.code === 'P2002') {
                 // Unique constraint violation
                 const field = error.meta?.target?.[0];
-                
+
                 if (field === 'cnpj') {
                     throw new Error(`CNPJ ${data.cnpj} já está cadastrado`);
                 }
@@ -69,10 +69,10 @@ export class CreateClinicService {
                 if (field === 'subdomain') {
                     throw new Error(`Subdomain já está em uso`);
                 }
-                
+
                 throw new Error('Já existe uma clínica com estes dados');
             }
-            
+
             // Repassa outros erros
             throw error;
         }
