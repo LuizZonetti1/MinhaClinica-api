@@ -144,8 +144,8 @@ model Clinic {
   state        String  @db.VarChar(2)
 
   // Configurações
-  subdomain    String  @unique // Ex: clinicaexemplo
-  customDomain String? @unique // Ex: www.clinicaexemplo.com.br
+  subdomain    String? @unique // Ex: clinicaexemplo (opcional - para uso futuro)
+  customDomain String? @unique // Ex: www.clinicaexemplo.com.br (opcional)
   timezone     String  @default("America/Sao_Paulo")
 
   // Multi-tenant
@@ -170,7 +170,7 @@ model Clinic {
   auditLogs        AuditLog[]
 
   @@index([cnpj])
-  @@index([subdomain])
+  @@index([city, state]) // Índice para busca por localização
   @@map("clinics")
 }
 
@@ -426,8 +426,8 @@ model Patient {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Dados pessoais adicionais
-  cpf         String   @db.VarChar(11)
-  rg          String?  @db.VarChar(20)
+  cpf String  @db.VarChar(11)
+  rg  String? @db.VarChar(20)
 
   dateOfBirth DateTime @db.Date
   gender      Gender
