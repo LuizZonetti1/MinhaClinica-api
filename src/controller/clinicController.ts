@@ -1,5 +1,6 @@
 import { CreateClinicService } from "../services/clinics/createClinicService";
 import { UpdateClinicService } from "../services/clinics/updateClinicService";
+import { GetClinicService } from "../services/clinics/getClinicService";
 import { Request, Response } from "express";
 import { ClinicSchema } from "../schemas/clinicSchema";
 
@@ -94,6 +95,59 @@ export class ClinicController {
             // Trata outros erros
             res.status(400).json({
                 message: error.message || "Erro ao atualizar clínica",
+            });
+        }
+    }
+
+    // Listar todas as clínicas
+    async listClinics(req: Request, res: Response): Promise<void> {
+        try {
+            const getClinicService = new GetClinicService();
+            const clinics = await getClinicService.getAll();
+
+            res.status(200).json({
+                message: "Clínicas listadas com sucesso",
+                total: clinics.length,
+                data: clinics,
+            });
+        } catch (error: any) {
+            res.status(400).json({
+                message: error.message || "Erro ao listar clínicas",
+            });
+        }
+    }
+
+    // Buscar clínica por ID
+    async getClinicById(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+
+            // Valida se o ID é um UUID válido
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidRegex.test(id)) {
+                res.status(400).json({
+                    message: "ID da clínica inválido"
+                });
+                return;
+            }
+
+            const getClinicService = new GetClinicService();
+            const clinic = await getClinicService.getById(id);
+
+            res.status(200).json({
+                message: "Clínica encontrada",
+                data: clinic,
+            });
+        } catch (error: any) {
+            if (error.message === "Clínica não encontrada") {
+                res.status(404).json({
+                    message: error.message,
+                });
+                return;
+            }
+
+            res.status(400).json({
+                message: error.message || "Erro ao buscar clínica",
             });
         }
     }

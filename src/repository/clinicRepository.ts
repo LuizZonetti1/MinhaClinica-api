@@ -50,6 +50,14 @@ export class ClinicRepository {
         });
     }
 
+    async findAll() {
+        return prisma.clinic.findMany({
+            orderBy: {
+                createdAt: 'desc', // Mais recentes primeiro
+            },
+        });
+    }
+
     //update
     async updateClinic(id: string, data: {
         legalName?: string,
