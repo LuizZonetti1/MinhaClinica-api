@@ -1,0 +1,119 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "resources": [
+    {
+      "_type": "request_group",
+      "name": "Users - Cadastro em Etapas",
+      "description": "Fluxo de pré-cadastro e definição de papel"
+    },
+    {
+      "_type": "request",
+      "name": "1. Pré-cadastro (Público)",
+      "method": "POST",
+      "url": "{{ base_url }}/api/users/pre-register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"clinicId\": \"{{clinicId}}\",\n  \"name\": \"João Silva Teste\",\n  \"cpf\": \"12345678901\",\n  \"email\": \"joao.teste@email.com\",\n  \"phone\": \"11999999999\",\n  \"password\": \"senha123\"\n}"
+      }
+    },
+    {
+      "_type": "request",
+      "name": "2. Listar Usuários Pendentes (Admin)",
+      "method": "GET",
+      "url": "{{ base_url }}/api/users/pending",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ]
+    },
+    {
+      "_type": "request",
+      "name": "3A. Definir como PATIENT",
+      "method": "POST",
+      "url": "{{ base_url }}/api/users/{{userId}}/define-role",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"role\": \"PATIENT\",\n  \"patientData\": {\n    \"dateOfBirth\": \"1990-05-15\",\n    \"gender\": \"MALE\",\n    \"rg\": \"123456789\",\n    \"zipCode\": \"01310100\",\n    \"street\": \"Avenida Paulista\",\n    \"number\": \"1000\",\n    \"complement\": \"Apto 101\",\n    \"neighborhood\": \"Bela Vista\",\n    \"city\": \"São Paulo\",\n    \"state\": \"SP\",\n    \"alternativePhone\": \"11977777777\",\n    \"allergies\": \"Penicilina\",\n    \"observations\": \"Hipertenso\"\n  }\n}"
+      }
+    },
+    {
+      "_type": "request",
+      "name": "3B. Definir como RECEPTIONIST",
+      "method": "POST",
+      "url": "{{ base_url }}/api/users/{{userId}}/define-role",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"role\": \"RECEPTIONIST\"\n}"
+      }
+    },
+    {
+      "_type": "request",
+      "name": "3C. Definir como PROFESSIONAL",
+      "method": "POST",
+      "url": "{{ base_url }}/api/users/{{userId}}/define-role",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"role\": \"PROFESSIONAL\",\n  \"professionalData\": {\n    \"professionalCouncil\": \"CRM\",\n    \"registrationNumber\": \"123456\",\n    \"registrationState\": \"SP\",\n    \"defaultAppointmentDuration\": 30\n  }\n}"
+      }
+    },
+    {
+      "_type": "request",
+      "name": "3D. Definir como ADMIN",
+      "method": "POST",
+      "url": "{{ base_url }}/api/users/{{userId}}/define-role",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{adminToken}}"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"role\": \"ADMIN\"\n}"
+      }
+    }
+  ]
+}
