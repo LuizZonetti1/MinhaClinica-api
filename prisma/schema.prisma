@@ -282,6 +282,10 @@ model User {
   termsAcceptedAt   DateTime?
   privacyAcceptedAt DateTime?
 
+  // Verificação de Email
+  verificationToken   String?   // Token hasheado para verificação de email
+  verificationExpires DateTime? // Data de expiração do token
+
   // Metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
