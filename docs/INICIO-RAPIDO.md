@@ -1,261 +1,322 @@
 # 🚀 INÍCIO RÁPIDO - MinhaClínica API
 
-Guia para começar a desenvolver AGORA!
+Guia para configurar ambiente e começar a desenvolver!
 
 ---
 
-## ⚡ 5 Minutos para Começar
+## ✅ O QUE JÁ ESTÁ PRONTO
 
-### 1. Instale as dependências necessárias
-```bash
-yarn add jsonwebtoken bcryptjs yup cors
-yarn add -D @types/jsonwebtoken @types/bcryptjs @types/cors
-```
-
-### 2. Estrutura de pastas já criada ✅
-```
-src/
-├── @types/
-├── controller/
-├── service/
-├── repository/
-├── routes/
-├── middlewares/
-└── utils/
-```
-
-### 3. Comece pelo Auth Module
-Abra o arquivo: **[docs/exemplo-auth-module.md](exemplo-auth-module.md)**
+O projeto já possui:
+- ✅ Banco de dados configurado (PostgreSQL via Neon)
+- ✅ Prisma ORM configurado com todas as models
+- ✅ Sistema completo de usuários (3 tipos: paciente, profissional, staff)
+- ✅ Autenticação JWT
+- ✅ Middlewares de validação
+- ✅ Email service (abstração pronta)
 
 ---
 
-## 📋 Ordem de Criação dos Arquivos
+## ⚡ Setup em 5 Minutos
 
-Siga EXATAMENTE esta ordem:
-
-### **Passo 1: Utils** (Fundação)
-1. ✅ `src/utils/errors.ts` - Classes de erro
-2. ✅ `src/utils/jwt.ts` - Funções JWT
-3. ✅ `src/utils/password.ts` - Hash de senhas
-
-### **Passo 2: Types**
-4. ✅ `src/@types/express.d.ts` - Tipagem do Express
-
-### **Passo 3: Middlewares**
-5. ✅ `src/middlewares/authMiddleware.ts` - Verificar token
-6. ✅ `src/middlewares/roleMiddleware.ts` - Verificar permissões
-7. ✅ `src/middlewares/errorMiddleware.ts` - Tratamento de erros
-
-### **Passo 4: Auth Module**
-8. ✅ `src/repository/authRepository.ts` - Acesso ao banco
-9. ✅ `src/service/authService.ts` - Lógica de negócio
-10. ✅ `src/controller/authController.ts` - Camada HTTP
-11. ✅ `src/routes/authRoutes.ts` - Rotas
-
-### **Passo 5: Integração**
-12. ✅ `src/routes/index.ts` - Agregar todas as rotas
-13. ✅ `src/server.ts` - Iniciar servidor
-
----
-
-## 📝 Checklist Diário
-
-### Hoje (Dia 1):
-- [ ] Instalar dependências
-- [ ] Criar `utils/errors.ts`
-- [ ] Criar `utils/jwt.ts`
-- [ ] Criar `utils/password.ts`
-- [ ] Criar `@types/express.d.ts`
-
-### Amanhã (Dia 2):
-- [ ] Criar `middlewares/authMiddleware.ts`
-- [ ] Criar `middlewares/roleMiddleware.ts`
-- [ ] Criar `middlewares/errorMiddleware.ts`
-
-### Dia 3:
-- [ ] Criar `repository/authRepository.ts`
-- [ ] Criar `service/authService.ts`
-
-### Dia 4:
-- [ ] Criar `controller/authController.ts`
-- [ ] Criar `routes/authRoutes.ts`
-
-### Dia 5:
-- [ ] Criar `routes/index.ts`
-- [ ] Atualizar `server.ts`
-- [ ] Testar endpoints
-
----
-
-## 🎯 Seu Primeiro Endpoint
-
-Depois de implementar o Auth Module, teste:
+### 1. Clone e instale dependências
 
 ```bash
-# Iniciar servidor
-yarn dev
+git clone <url-do-repositorio>
+cd MinhaClinica-api
+yarn install
 ```
 
-```http
-POST http://localhost:3000/api/v1/auth/login
-Content-Type: application/json
+### 2. Configure as variáveis de ambiente
 
-{
-  "email": "admin@saudemais.com.br",
-  "password": "Senha123!",
-  "subdomain": "exemplo"
-}
-```
-
----
-
-## 📚 Documentação de Referência
-
-### Leitura Obrigatória (HOJE):
-1. **[exemplo-auth-module.md](exemplo-auth-module.md)** ⭐ COMECE AQUI
-   - Código completo do Auth Module
-
-2. **[guia-desenvolvimento-backend.md](guia-desenvolvimento-backend.md)** ⭐
-   - Arquitetura completa
-
-### Consulta Constante:
-3. **[checklist-desenvolvimento.md](checklist-desenvolvimento.md)**
-   - Para marcar progresso
-
-4. **[database-schema-explanation.md](database-schema-explanation.md)**
-   - Para entender modelos
-
-### Quando Precisar:
-5. **[dependencias.md](dependencias.md)**
-   - Lista de todas as dependências
-
-6. **[requisitos-sistema.md](requisitos-sistema.md)**
-   - Regras de negócio
-
----
-
-## 💻 Código do server.ts
-
-```typescript
-// src/server.ts
-import express from 'express';
-import cors from 'cors';
-import 'dotenv/config';
-import routes from './routes';
-import { errorMiddleware } from './middlewares/errorMiddleware';
-
-const app = express();
-
-// Middlewares globais
-app.use(cors());
-app.use(express.json());
-
-// Rotas
-app.use('/api/v1', routes);
-
-// Tratamento de erros (sempre por último!)
-app.use(errorMiddleware);
-
-// Iniciar servidor
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📚 API Docs: http://localhost:${PORT}/api/v1`);
-});
-```
-
----
-
-## 🔗 Arquivo routes/index.ts
-
-```typescript
-// src/routes/index.ts
-import { Router } from 'express';
-import authRoutes from './authRoutes';
-
-const router = Router();
-
-router.use('/auth', authRoutes);
-
-// Adicione outras rotas conforme implementa:
-// router.use('/users', userRoutes);
-// router.use('/patients', patientRoutes);
-// etc...
-
-export default router;
-```
-
----
-
-## ⚙️ Variáveis de Ambiente
-
-Certifique-se de ter no `.env`:
+Crie arquivo `.env` na raiz:
 
 ```env
-# Database
-DATABASE_URL="postgresql://usuario:senha@localhost:5432/minhaclinica"
+# Database (PostgreSQL Neon)
+DATABASE_URL="postgresql://usuario:senha@host.neon.tech/minhaclinica?sslmode=require"
 
 # JWT
 JWT_SECRET="seu_secret_super_seguro_aqui_mude_em_producao"
+JWT_EXPIRES_IN="7d"
+REFRESH_TOKEN_SECRET="outro_secret_diferente_para_refresh"
+REFRESH_TOKEN_EXPIRES_IN="30d"
 
-# Server
-PORT=3000
-NODE_ENV=development
+# Frontend URL (para links de verificação)
+FRONTEND_URL="http://localhost:3000"
 
-# CORS
-FRONTEND_URL=http://localhost:5173
+# Email (quando implementar provider real)
+EMAIL_FROM="noreply@minhaclinica.com.br"
+# SENDGRID_API_KEY="sua_chave_aqui"
+# SMTP_HOST="smtp.gmail.com"
+# SMTP_PORT="587"
+# SMTP_USER="seu_email@gmail.com"
+# SMTP_PASS="sua_senha"
+```
+
+### 3. Rode as migrations
+
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
+
+### 4. Inicie o servidor
+
+```bash
+yarn dev
+```
+
+Servidor rodando em: `http://localhost:3000`
+
+---
+
+## 🧪 Teste a API
+
+### Usando Insomnia
+
+1. Importe a collection: `docs/insomnia-users-cadastro-etapas.json`
+2. Configure as variáveis de ambiente no Insomnia
+3. Teste os fluxos de cadastro
+
+### Endpoints Disponíveis
+
+#### Pacientes (Público)
+```http
+POST /api/patients/register
+POST /api/patients/complete
+```
+
+#### Profissionais (Admin Only)
+```http
+POST /api/professionals/invite
+POST /api/professionals/complete
+```
+
+#### Staff (Admin Only)
+```http
+POST /api/staff/invite
+POST /api/staff/complete
+```
+
+#### Autenticação
+```http
+GET /api/auth/verify-email/:token
+```
+
+#### Clínicas
+```http
+POST /api/clinics
+GET /api/clinics/:id
+PUT /api/clinics/:id
+DELETE /api/clinics/:id
 ```
 
 ---
 
-## 🧪 Testando os Endpoints
+## 📂 Estrutura Atual do Projeto
 
-Use uma destas ferramentas:
-- **Insomnia** (recomendado)
-- **Postman**
-- **Thunder Client** (extensão VS Code)
-- **cURL** (linha de comando)
+```
+MinhaClinica-api/
+├── prisma/
+│   ├── schema.prisma              # Schema do banco (19 models)
+│   └── migrations/                # Histórico de migrations
+│       └── 20260209031526_.../   # Migration de verificação
+├── src/
+│   ├── @types/                    # Tipagens TypeScript
+│   ├── controller/                # Controllers HTTP
+│   │   ├── authController.ts     ✅
+│   │   ├── clinicController.ts   ✅
+│   │   ├── patientController.ts  ✅
+│   │   ├── professionalController.ts ✅
+│   │   └── staffController.ts    ✅
+│   ├── database/
+│   │   ├── prisma.ts             # Cliente Prisma
+│   │   └── seed.ts               # Seed de dados
+│   ├── middlewares/
+│   │   ├── auth.ts               ✅ JWT + role check
+│   │   └── validation.ts         ✅ Validação Yup
+│   ├── repository/
+│   │   ├── clinicRepository.ts   ✅
+│   │   ├── patientRepository.ts  ✅
+│   │   └── userRepository.ts     ✅
+│   ├── routes/
+│   │   ├── auth.routes.ts        ✅
+│   │   ├── clinic.routes.ts      ✅
+│   │   ├── patient.routes.ts     ✅
+│   │   ├── professional.routes.ts ✅
+│   │   ├── staff.routes.ts       ✅
+│   │   └── index.ts              ✅ Monta todas as rotas
+│   ├── schemas/                   # Validações Yup
+│   │   ├── clinicSchema.ts       ✅
+│   │   ├── patientSchema.ts      ✅
+│   │   ├── professionalSchema.ts ✅
+│   │   └── staffSchema.ts        ✅
+│   ├── services/
+│   │   ├── auth/
+│   │   │   └── verifyEmailService.ts ✅
+│   │   ├── clinic/
+│   │   │   └── clinicService.ts  ✅
+│   │   ├── email/
+│   │   │   └── emailService.ts   ✅
+│   │   ├── patients/
+│   │   │   └── patientRegistrationService.ts ✅
+│   │   ├── professionals/
+│   │   │   └── professionalRegistrationService.ts ✅
+│   │   └── staff/
+│   │       └── staffRegistrationService.ts ✅
+│   ├── utils/
+│   │   ├── jwtUtils.ts           ✅
+│   │   └── verificationTokenUtils.ts ✅
+│   ├── app.ts                    # Configuração Express
+│   └── server.ts                 # Inicia servidor
+├── docs/                         # Documentação completa
+└── package.json
+```
 
-### Exemplo com cURL:
+---
+
+## 📚 Próximos Passos de Desenvolvimento
+
+### 1. Implementar Login
+- [ ] Criar `LoginService`
+- [ ] Validar status = ACTIVE
+- [ ] Retornar JWT com userId, clinicId, role
+- [ ] Endpoint: `POST /api/auth/login`
+
+### 2. Completar Fluxo do Dono da Clínica
+- [ ] Criar endpoint para owner completar cadastro após verificar clínica
+- [ ] Criar User com role=ADMIN automaticamente
+
+### 3. Implementar Email Provider Real
+- [ ] Escolher: SendGrid, Nodemailer, ou Resend
+- [ ] Criar implementação do EmailProvider
+- [ ] Trocar ConsoleEmailProvider
+
+### 4. Próximos Módulos
+- [ ] CRUD de Especialidades (Specialty)
+- [ ] CRUD de Procedimentos (Procedure)
+- [ ] Sistema de Agendamentos (Appointment)
+
+---
+
+## 📖 Documentação Essencial
+
+### Comece por aqui:
+1. **[RELATORIO-IMPLEMENTACAO-USUARIOS.md](RELATORIO-IMPLEMENTACAO-USUARIOS.md)** ⭐
+   - Entenda TUDO que já foi implementado
+   - Explicação detalhada de cada arquivo
+   - Conceitos e decisões técnicas
+
+2. **[fluxo-cadastro-etapas.md](fluxo-cadastro-etapas.md)**
+   - Diagramas visuais dos fluxos
+
+### Para desenvolver:
+3. **[guia-desenvolvimento-backend.md](guia-desenvolvimento-backend.md)**
+   - Padrão Repository + Service + Controller
+
+4. **[database-schema-explanation.md](database-schema-explanation.md)**
+   - Todos os models e enums explicados
+
+### Referências:
+5. **[requisitos-sistema.md](requisitos-sistema.md)**
+   - Requisitos funcionais e regras de negócio
+
+6. **[documentacao-funcional.md](documentacao-funcional.md)**
+   - Visão de produto
+
+---
+
+## 🔧 Comandos Úteis
+
 ```bash
-curl -X POST http://localhost:3000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@saudemais.com.br",
-    "password": "Senha123!",
-    "subdomain": "exemplo"
-  }'
+# Desenvolvimento
+yarn dev                          # Iniciar servidor (modo watch)
+
+# Prisma
+npx prisma studio                 # Abrir Prisma Studio
+npx prisma migrate dev            # Criar nova migration
+npx prisma migrate deploy         # Aplicar migrations em produção
+npx prisma generate               # Regenerar Prisma Client
+npx prisma db seed                # Rodar seeds
+
+# Git
+git log --oneline                 # Ver histórico de commits
+git status                        # Ver status
 ```
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Erro: "Cannot find module"
+### Erro: "verificationToken não existe no tipo"
 ```bash
-yarn install
+npx prisma generate
 ```
 
-### Erro: "Port 3000 already in use"
-Mude a porta no `.env`:
-```env
+### Banco desatualizado após migration
+```bash
+npx prisma migrate reset  # ⚠️ APENAS EM DEV!
+npx prisma migrate dev
+npx prisma generate
+```
+
+### Porta 3000 já em uso
+```bash
+# Mudar no .env
 PORT=3001
-```
-
-### Erro: Prisma Client não encontrado
-```bash
-yarn db:generate
-```
-
-### Erro: Banco de dados vazio
-```bash
-yarn db:seed
 ```
 
 ---
 
-## 📊 Progresso Esperado
+## 🎯 Fluxo de Desenvolvimento Recomendado
+
+1. **Leia a documentação** (RELATORIO-IMPLEMENTACAO-USUARIOS.md)
+2. **Teste a API existente** (Insomnia collection)
+3. **Entenda o código existente** (veja services, controllers, routes)
+4. **Implemente nova funcionalidade** seguindo o padrão:
+   - Schema Yup → Service → Controller → Route
+5. **Teste** seu código
+6. **Commit** com mensagem descritiva
+7. **Documente** se necessário
+
+---
+
+## 🎓 Dicas para Iniciantes
+
+1. **Sempre gere o Prisma Client** após mudar o schema:
+   ```bash
+   npx prisma generate
+   ```
+
+2. **Use o Prisma Studio** para ver dados no banco:
+   ```bash
+   npx prisma studio
+   ```
+
+3. **Siga o padrão Repository + Service + Controller**
+   - Repository: Acesso ao banco (Prisma)
+   - Service: Lógica de negócio
+   - Controller: Recebe HTTP requests
+
+4. **Valide sempre com Yup** antes de chamar o service
+
+5. **Trate erros** com try/catch nos controllers
+
+6. **Use os tipos do Prisma** para TypeScript safety
+
+---
+
+## 🔗 Links Rápidos
+
+- 📖 [Documentação Completa](README.md)
+- ⭐ [Relatório de Implementação](RELATORIO-IMPLEMENTACAO-USUARIOS.md)
+- 🔄 [Fluxos de Cadastro](fluxo-cadastro-etapas.md)
+- 🗄️ [Schema do Banco](database-schema-explanation.md)
+- 📋 [Checklist](checklist-desenvolvimento.md)
+
+---
+
+**Pronto para começar! 🚀**
+
 
 ### Semana 1:
 - ✅ Auth Module completo
