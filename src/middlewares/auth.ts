@@ -5,14 +5,16 @@ import { NextFunction, Request, Response } from "express";
 declare global {
     namespace Express {
         interface Request {
-            userId?: number;
+            userId?: string;
+            clinicId?: string;
             userRole?: string;
         }
     }
 }
 
 interface JwtPayload {
-    userId: number;
+    userId: string;
+    clinicId: string;
     role: string;
 }
 
@@ -56,6 +58,7 @@ export const authMiddleware = async (
 
         // Adiciona as informações do usuário ao request
         req.userId = decoded.userId;
+        req.clinicId = decoded.clinicId;
         req.userRole = decoded.role;
 
         next();

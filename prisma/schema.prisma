@@ -151,6 +151,10 @@ model Clinic {
   // Multi-tenant
   isActive Boolean @default(true)
 
+  // Verificação de Email
+  verificationToken   String? // Token hasheado para verificação de email
+  verificationExpires DateTime? // Data de expiração do token
+
   // Metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
