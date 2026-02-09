@@ -16,4 +16,7 @@ clinicRoutes.get("/:id", (req, res) => clinicController.getClinicById(req, res))
 // Rota para atualizar uma clínica
 clinicRoutes.put("/:id", (req, res) => clinicController.updateClinic(req, res));
 
+// Rota para deletar uma clínica
+clinicRoutes.delete("/:id", (req, res) => clinicController.deleteClinic(req, res));
+
 export default clinicRoutes;

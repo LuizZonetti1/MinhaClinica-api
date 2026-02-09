@@ -84,4 +84,10 @@ export class ClinicRepository {
             data,
         });
     }
+
+    async delete(id: string) {
+        return prisma.clinic.delete({
+            where: { id },
+        });
+    }
 }

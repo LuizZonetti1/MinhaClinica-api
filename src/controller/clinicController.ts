@@ -1,6 +1,7 @@
 import { CreateClinicService } from "../services/clinics/createClinicService";
 import { UpdateClinicService } from "../services/clinics/updateClinicService";
 import { GetClinicService } from "../services/clinics/getClinicService";
+import { DeleteClinicService } from "../services/clinics/deleteClinicService";
 import { Request, Response } from "express";
 import { ClinicSchema } from "../schemas/clinicSchema";
 
@@ -148,6 +149,32 @@ export class ClinicController {
 
             res.status(400).json({
                 message: error.message || "Erro ao buscar clínica",
+            });
+        }
+    }
+
+    async deleteClinic(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+
+            // Valida se o ID é um UUID válido
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (!uuidRegex.test(id)) {
+                res.status(400).json({
+                    message: "ID da clínica inválido"
+                });
+                return;
+            }
+
+            const deleteClinicService = new DeleteClinicService();
+            await deleteClinicService.execute(id);
+
+            res.status(200).json({
+                message: "Clínica deletada com sucesso",
+            });
+        } catch (error: any) {
+            res.status(400).json({
+                message: error.message || "Erro ao deletar clínica",
             });
         }
     }
