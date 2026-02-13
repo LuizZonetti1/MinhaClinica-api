@@ -6,7 +6,7 @@ import crypto from "node:crypto";
  * @returns Token hexadecimal
  */
 export const generateVerificationToken = (length = 32): string => {
-    return crypto.randomBytes(length).toString("hex");
+  return crypto.randomBytes(length).toString("hex");
 };
 
 /**
@@ -15,9 +15,9 @@ export const generateVerificationToken = (length = 32): string => {
  * @returns Código numérico como string
  */
 export const generateNumericCode = (length = 6): string => {
-    const min = Math.pow(10, length - 1);
-    const max = Math.pow(10, length) - 1;
-    return Math.floor(Math.random() * (max - min + 1) + min).toString();
+  const min = 10 ** (length - 1);
+  const max = 10 ** length - 1;
+  return Math.floor(Math.random() * (max - min + 1) + min).toString();
 };
 
 /**
@@ -26,9 +26,9 @@ export const generateNumericCode = (length = 6): string => {
  * @returns Data de expiração
  */
 export const getTokenExpiration = (hours = 24): Date => {
-    const expiration = new Date();
-    expiration.setHours(expiration.getHours() + hours);
-    return expiration;
+  const expiration = new Date();
+  expiration.setHours(expiration.getHours() + hours);
+  return expiration;
 };
 
 /**
@@ -37,7 +37,7 @@ export const getTokenExpiration = (hours = 24): Date => {
  * @returns true se expirou, false caso contrário
  */
 export const isTokenExpired = (expirationDate: Date): boolean => {
-    return new Date() > new Date(expirationDate);
+  return new Date() > new Date(expirationDate);
 };
 
 /**
@@ -47,7 +47,7 @@ export const isTokenExpired = (expirationDate: Date): boolean => {
  * @returns Hash SHA-256 do token
  */
 export const hashToken = (token: string): string => {
-    return crypto.createHash("sha256").update(token).digest("hex");
+  return crypto.createHash("sha256").update(token).digest("hex");
 };
 
 /**
@@ -57,8 +57,8 @@ export const hashToken = (token: string): string => {
  * @returns true se correspondem, false caso contrário
  */
 export const verifyTokenHash = (token: string, hashedToken: string): boolean => {
-    const hash = hashToken(token);
-    return hash === hashedToken;
+  const hash = hashToken(token);
+  return hash === hashedToken;
 };
 
 /**
@@ -67,11 +67,11 @@ export const verifyTokenHash = (token: string, hashedToken: string): boolean => 
  * @returns Objeto com token, hash e data de expiração
  */
 export const createVerificationData = (expirationHours = 24) => {
-    const token = generateVerificationToken();
+  const token = generateVerificationToken();
 
-    return {
-        token, // Enviar por email
-        hashedToken: hashToken(token), // Salvar no banco
-        expiresAt: getTokenExpiration(expirationHours),
-    };
+  return {
+    token, // Enviar por email
+    hashedToken: hashToken(token), // Salvar no banco
+    expiresAt: getTokenExpiration(expirationHours),
+  };
 };

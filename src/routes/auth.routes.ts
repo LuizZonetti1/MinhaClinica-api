@@ -9,18 +9,11 @@ const authController = new AuthController();
 /**
  * PÚBLICO - Login
  */
-router.post(
-    "/login",
-    validate(loginSchema),
-    (req, res) => authController.login(req, res)
-);
+router.post("/login", validate(loginSchema), (req, res) => authController.login(req, res));
 
 /**
  * PÚBLICO - Verificar email
  */
-router.get(
-    "/verify-email/:token",
-    (req, res) => authController.verifyEmail(req, res)
-);
+router.get("/verify-email/:token", (req, res) => authController.verifyEmail(req, res));
 
 export default router;

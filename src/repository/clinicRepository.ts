@@ -1,93 +1,96 @@
 import { prisma } from "../database/prisma";
 
 export class ClinicRepository {
-    async createClinic(data: {
-        legalName: string,
-        tradeName: string,
-        cnpj: string,
-        email: string,
-        phone: string,
-        zipCode: string,
-        street: string,
-        number: string,
-        neighborhood: string,
-        city: string,
-        state: string,
-        timezone: string,
-        isActive: boolean,
-        complement?: string,
-        logoUrl?: string,
-        website?: string,
-        subdomain?: string,
-        customDomain?: string,
-    }) {
-        return prisma.clinic.create({
-            data,
-        });
-    }
+  async createClinic(data: {
+    legalName: string;
+    tradeName: string;
+    cnpj: string;
+    email: string;
+    phone: string;
+    zipCode: string;
+    street: string;
+    number: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    timezone: string;
+    isActive: boolean;
+    complement?: string;
+    logoUrl?: string;
+    website?: string;
+    subdomain?: string;
+    customDomain?: string;
+  }) {
+    return prisma.clinic.create({
+      data,
+    });
+  }
 
-    async findByNameAndAddress(
-        tradeName: string,
-        street: string,
-        number: string,
-        city: string,
-        state: string
-    ) {
-        return prisma.clinic.findFirst({
-            where: {
-                tradeName,
-                street,
-                number,
-                city,
-                state,
-            },
-        });
-    }
+  async findByNameAndAddress(
+    tradeName: string,
+    street: string,
+    number: string,
+    city: string,
+    state: string,
+  ) {
+    return prisma.clinic.findFirst({
+      where: {
+        tradeName,
+        street,
+        number,
+        city,
+        state,
+      },
+    });
+  }
 
-    async findById(id: string) {
-        return prisma.clinic.findUnique({
-            where: { id },
-        });
-    }
+  async findById(id: string) {
+    return prisma.clinic.findUnique({
+      where: { id },
+    });
+  }
 
-    async findAll() {
-        return prisma.clinic.findMany({
-            orderBy: {
-                createdAt: 'desc', // Mais recentes primeiro
-            },
-        });
-    }
+  async findAll() {
+    return prisma.clinic.findMany({
+      orderBy: {
+        createdAt: "desc", // Mais recentes primeiro
+      },
+    });
+  }
 
-    //update
-    async updateClinic(id: string, data: {
-        legalName?: string,
-        tradeName?: string,
-        cnpj?: string,
-        email?: string,
-        phone?: string,
-        zipCode?: string,
-        street?: string,
-        number?: string,
-        neighborhood?: string,
-        city?: string,
-        state?: string,
-        timezone?: string,
-        isActive?: boolean,
-        complement?: string,
-        logoUrl?: string,
-        website?: string,
-        subdomain?: string,
-        customDomain?: string,
-    }) {
-        return prisma.clinic.update({
-            where: { id },
-            data,
-        });
-    }
+  //update
+  async updateClinic(
+    id: string,
+    data: {
+      legalName?: string;
+      tradeName?: string;
+      cnpj?: string;
+      email?: string;
+      phone?: string;
+      zipCode?: string;
+      street?: string;
+      number?: string;
+      neighborhood?: string;
+      city?: string;
+      state?: string;
+      timezone?: string;
+      isActive?: boolean;
+      complement?: string;
+      logoUrl?: string;
+      website?: string;
+      subdomain?: string;
+      customDomain?: string;
+    },
+  ) {
+    return prisma.clinic.update({
+      where: { id },
+      data,
+    });
+  }
 
-    async delete(id: string) {
-        return prisma.clinic.delete({
-            where: { id },
-        });
-    }
+  async delete(id: string) {
+    return prisma.clinic.delete({
+      where: { id },
+    });
+  }
 }

@@ -1,181 +1,181 @@
-import { CreateClinicService } from "../services/clinics/createClinicService";
-import { UpdateClinicService } from "../services/clinics/updateClinicService";
-import { GetClinicService } from "../services/clinics/getClinicService";
-import { DeleteClinicService } from "../services/clinics/deleteClinicService";
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import { ClinicSchema } from "../schemas/clinicSchema";
+import { CreateClinicService } from "../services/clinics/createClinicService";
+import { DeleteClinicService } from "../services/clinics/deleteClinicService";
+import { GetClinicService } from "../services/clinics/getClinicService";
+import { UpdateClinicService } from "../services/clinics/updateClinicService";
 
 export class ClinicController {
-    async createClinic(req: Request, res: Response): Promise<void> {
-        try {
-            //Validação dos dados recebidos usando o schema Yup
-            const validatedData = await ClinicSchema.create.validate(req.body, {
-                abortEarly: false,    // Retorna todos os erros de uma vez
-                stripUnknown: true,   // Remove campos que não estão no schema
-            });
+  async createClinic(req: Request, res: Response): Promise<void> {
+    try {
+      //Validação dos dados recebidos usando o schema Yup
+      const validatedData = await ClinicSchema.create.validate(req.body, {
+        abortEarly: false, // Retorna todos os erros de uma vez
+        stripUnknown: true, // Remove campos que não estão no schema
+      });
 
-            //Executa o serviço de criação com os dados validados
-            const createClinicService = new CreateClinicService();
+      //Executa o serviço de criação com os dados validados
+      const createClinicService = new CreateClinicService();
 
-            // Remove campos vazios/null antes de enviar
-            const dataToSend = {
-                ...validatedData,
-                subdomain: validatedData.subdomain || undefined,
-                customDomain: validatedData.customDomain || undefined,
-            };
+      // Remove campos vazios/null antes de enviar
+      const dataToSend = {
+        ...validatedData,
+        subdomain: validatedData.subdomain || undefined,
+        customDomain: validatedData.customDomain || undefined,
+      };
 
-            const clinic = await createClinicService.execute(dataToSend);
+      const clinic = await createClinicService.execute(dataToSend);
 
-            // 3. Retorna sucesso
-            res.status(201).json({
-                message: "Clínica criada com sucesso",
-                data: clinic,
-            });
-        } catch (error: any) {
-            // Trata erros de validação do Yup
-            if (error.name === 'ValidationError') {
-                res.status(400).json({
-                    message: "Erro de validação",
-                    errors: error.errors, // Array com todas as mensagens de erro
-                });
-                return;
-            }
+      // 3. Retorna sucesso
+      res.status(201).json({
+        message: "Clínica criada com sucesso",
+        data: clinic,
+      });
+    } catch (error: any) {
+      // Trata erros de validação do Yup
+      if (error.name === "ValidationError") {
+        res.status(400).json({
+          message: "Erro de validação",
+          errors: error.errors, // Array com todas as mensagens de erro
+        });
+        return;
+      }
 
-            // Trata outros erros (ex: clínica duplicada)
-            res.status(400).json({
-                message: error.message || "Erro ao criar clínica",
-            });
-        }
+      // Trata outros erros (ex: clínica duplicada)
+      res.status(400).json({
+        message: error.message || "Erro ao criar clínica",
+      });
     }
+  }
 
-    async updateClinic(req: Request, res: Response): Promise<void> {
-        try {
-            const { id } = req.params; // ID é string (UUID)
+  async updateClinic(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params; // ID é string (UUID)
 
-            // Valida se o ID é um UUID válido
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (!uuidRegex.test(id)) {
-                res.status(400).json({
-                    message: "ID da clínica inválido"
-                });
-                return;
-            }
+      // Valida se o ID é um UUID válido
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        res.status(400).json({
+          message: "ID da clínica inválido",
+        });
+        return;
+      }
 
-            // Validação dos dados recebidos usando o schema Yup
-            const validatedData = await ClinicSchema.update.validate(req.body, {
-                abortEarly: false,
-                stripUnknown: true,
-            });
+      // Validação dos dados recebidos usando o schema Yup
+      const validatedData = await ClinicSchema.update.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
 
-            // Executa o serviço de atualização com os dados validados
-            const updateClinicService = new UpdateClinicService();
+      // Executa o serviço de atualização com os dados validados
+      const updateClinicService = new UpdateClinicService();
 
-            // Remove campos vazios/null antes de enviar
-            const dataToSend = {
-                ...validatedData,
-                subdomain: validatedData.subdomain || undefined,
-                customDomain: validatedData.customDomain || undefined,
-            };
+      // Remove campos vazios/null antes de enviar
+      const dataToSend = {
+        ...validatedData,
+        subdomain: validatedData.subdomain || undefined,
+        customDomain: validatedData.customDomain || undefined,
+      };
 
-            const clinic = await updateClinicService.execute(id, dataToSend);
+      const clinic = await updateClinicService.execute(id, dataToSend);
 
-            res.status(200).json({
-                message: "Clínica atualizada com sucesso",
-                data: clinic,
-            });
-        } catch (error: any) {
-            // Trata erros de validação do Yup
-            if (error.name === 'ValidationError') {
-                res.status(400).json({
-                    message: "Erro de validação",
-                    errors: error.errors,
-                });
-                return;
-            }
+      res.status(200).json({
+        message: "Clínica atualizada com sucesso",
+        data: clinic,
+      });
+    } catch (error: any) {
+      // Trata erros de validação do Yup
+      if (error.name === "ValidationError") {
+        res.status(400).json({
+          message: "Erro de validação",
+          errors: error.errors,
+        });
+        return;
+      }
 
-            // Trata outros erros
-            res.status(400).json({
-                message: error.message || "Erro ao atualizar clínica",
-            });
-        }
+      // Trata outros erros
+      res.status(400).json({
+        message: error.message || "Erro ao atualizar clínica",
+      });
     }
+  }
 
-    // Listar todas as clínicas
-    async listClinics(req: Request, res: Response): Promise<void> {
-        try {
-            const getClinicService = new GetClinicService();
-            const clinics = await getClinicService.getAll();
+  // Listar todas as clínicas
+  async listClinics(req: Request, res: Response): Promise<void> {
+    try {
+      const getClinicService = new GetClinicService();
+      const clinics = await getClinicService.getAll();
 
-            res.status(200).json({
-                message: "Clínicas listadas com sucesso",
-                total: clinics.length,
-                data: clinics,
-            });
-        } catch (error: any) {
-            res.status(400).json({
-                message: error.message || "Erro ao listar clínicas",
-            });
-        }
+      res.status(200).json({
+        message: "Clínicas listadas com sucesso",
+        total: clinics.length,
+        data: clinics,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        message: error.message || "Erro ao listar clínicas",
+      });
     }
+  }
 
-    // Buscar clínica por ID
-    async getClinicById(req: Request, res: Response): Promise<void> {
-        try {
-            const { id } = req.params;
+  // Buscar clínica por ID
+  async getClinicById(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
 
-            // Valida se o ID é um UUID válido
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (!uuidRegex.test(id)) {
-                res.status(400).json({
-                    message: "ID da clínica inválido"
-                });
-                return;
-            }
+      // Valida se o ID é um UUID válido
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        res.status(400).json({
+          message: "ID da clínica inválido",
+        });
+        return;
+      }
 
-            const getClinicService = new GetClinicService();
-            const clinic = await getClinicService.getById(id);
+      const getClinicService = new GetClinicService();
+      const clinic = await getClinicService.getById(id);
 
-            res.status(200).json({
-                message: "Clínica encontrada",
-                data: clinic,
-            });
-        } catch (error: any) {
-            if (error.message === "Clínica não encontrada") {
-                res.status(404).json({
-                    message: error.message,
-                });
-                return;
-            }
+      res.status(200).json({
+        message: "Clínica encontrada",
+        data: clinic,
+      });
+    } catch (error: any) {
+      if (error.message === "Clínica não encontrada") {
+        res.status(404).json({
+          message: error.message,
+        });
+        return;
+      }
 
-            res.status(400).json({
-                message: error.message || "Erro ao buscar clínica",
-            });
-        }
+      res.status(400).json({
+        message: error.message || "Erro ao buscar clínica",
+      });
     }
+  }
 
-    async deleteClinic(req: Request, res: Response): Promise<void> {
-        try {
-            const { id } = req.params;
+  async deleteClinic(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
 
-            // Valida se o ID é um UUID válido
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (!uuidRegex.test(id)) {
-                res.status(400).json({
-                    message: "ID da clínica inválido"
-                });
-                return;
-            }
+      // Valida se o ID é um UUID válido
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        res.status(400).json({
+          message: "ID da clínica inválido",
+        });
+        return;
+      }
 
-            const deleteClinicService = new DeleteClinicService();
-            await deleteClinicService.execute(id);
+      const deleteClinicService = new DeleteClinicService();
+      await deleteClinicService.execute(id);
 
-            res.status(200).json({
-                message: "Clínica deletada com sucesso",
-            });
-        } catch (error: any) {
-            res.status(400).json({
-                message: error.message || "Erro ao deletar clínica",
-            });
-        }
+      res.status(200).json({
+        message: "Clínica deletada com sucesso",
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        message: error.message || "Erro ao deletar clínica",
+      });
     }
+  }
 }

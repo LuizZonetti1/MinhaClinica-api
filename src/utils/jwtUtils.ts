@@ -2,14 +2,14 @@ import jwt, { type SignOptions } from "jsonwebtoken";
 
 // Payload do token JWT
 export interface JwtPayload {
-    userId: string;
-    clinicId: string;
-    role: string;
+  userId: string;
+  clinicId: string;
+  role: string;
 }
 
 // Opções para geração do token
 interface GenerateTokenOptions {
-    expiresIn?: string | number; // Ex: "7d", "24h", "1h", 3600
+  expiresIn?: string | number; // Ex: "7d", "24h", "1h", 3600
 }
 
 /**
@@ -21,32 +21,32 @@ interface GenerateTokenOptions {
  * @returns Token JWT assinado
  */
 export const generateAuthToken = (
-    userId: string,
-    clinicId: string,
-    role: string,
-    options: GenerateTokenOptions = {}
+  userId: string,
+  clinicId: string,
+  role: string,
+  options: GenerateTokenOptions = {},
 ): string => {
-    const secret = process.env.JWT_SECRET;
+  const secret = process.env.JWT_SECRET;
 
-    if (!secret) {
-        throw new Error("JWT_SECRET não está configurado nas variáveis de ambiente");
-    }
+  if (!secret) {
+    throw new Error("JWT_SECRET não está configurado nas variáveis de ambiente");
+  }
 
-    const payload: JwtPayload = {
-        userId,
-        clinicId,
-        role,
-    };
+  const payload: JwtPayload = {
+    userId,
+    clinicId,
+    role,
+  };
 
-    // Token padrão expira em 7 dias
-    const expiresIn = options.expiresIn !== undefined ? options.expiresIn : "7d";
+  // Token padrão expira em 7 dias
+  const expiresIn = options.expiresIn !== undefined ? options.expiresIn : "7d";
 
-    const signOptions: SignOptions = {
-        expiresIn: expiresIn as SignOptions["expiresIn"],
-        subject: userId,
-    };
+  const signOptions: SignOptions = {
+    expiresIn: expiresIn as SignOptions["expiresIn"],
+    subject: userId,
+  };
 
-    return jwt.sign(payload, secret, signOptions);
+  return jwt.sign(payload, secret, signOptions);
 };
 
 /**
@@ -55,24 +55,24 @@ export const generateAuthToken = (
  * @returns Payload decodificado ou lança erro
  */
 export const verifyAuthToken = (token: string): JwtPayload => {
-    const secret = process.env.JWT_SECRET;
+  const secret = process.env.JWT_SECRET;
 
-    if (!secret) {
-        throw new Error("JWT_SECRET não está configurado nas variáveis de ambiente");
-    }
+  if (!secret) {
+    throw new Error("JWT_SECRET não está configurado nas variáveis de ambiente");
+  }
 
-    try {
-        const decoded = jwt.verify(token, secret) as JwtPayload;
-        return decoded;
-    } catch (error) {
-        if (error instanceof jwt.TokenExpiredError) {
-            throw new Error("Token expirado");
-        }
-        if (error instanceof jwt.JsonWebTokenError) {
-            throw new Error("Token inválido");
-        }
-        throw error;
+  try {
+    const decoded = jwt.verify(token, secret) as JwtPayload;
+    return decoded;
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new Error("Token expirado");
     }
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new Error("Token inválido");
+    }
+    throw error;
+  }
 };
 
 /**
@@ -81,27 +81,24 @@ export const verifyAuthToken = (token: string): JwtPayload => {
  * @param clinicId - ID da clínica
  * @returns Token de refresh
  */
-export const generateRefreshToken = (
-    userId: string,
-    clinicId: string
-): string => {
-    const secret = process.env.JWT_SECRET;
+export const generateRefreshToken = (userId: string, clinicId: string): string => {
+  const secret = process.env.JWT_SECRET;
 
-    if (!secret) {
-        throw new Error("JWT_SECRET não está configurado nas variáveis de ambiente");
-    }
+  if (!secret) {
+    throw new Error("JWT_SECRET não está configurado nas variáveis de ambiente");
+  }
 
-    const payload = {
-        userId,
-        clinicId,
-        type: "refresh",
-    };
+  const payload = {
+    userId,
+    clinicId,
+    type: "refresh",
+  };
 
-    // Refresh token expira em 30 dias
-    return jwt.sign(payload, secret, {
-        expiresIn: "30d",
-        subject: userId,
-    });
+  // Refresh token expira em 30 dias
+  return jwt.sign(payload, secret, {
+    expiresIn: "30d",
+    subject: userId,
+  });
 };
 
 /**
@@ -110,9 +107,9 @@ export const generateRefreshToken = (
  * @returns Payload decodificado ou null
  */
 export const decodeToken = (token: string): JwtPayload | null => {
-    try {
-        return jwt.decode(token) as JwtPayload;
-    } catch {
-        return null;
-    }
+  try {
+    return jwt.decode(token) as JwtPayload;
+  } catch {
+    return null;
+  }
 };

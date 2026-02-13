@@ -35,6 +35,21 @@ Esta pasta contém toda a documentação necessária para desenvolvimento do bac
 
 ---
 
+### 📱 [GUIA-FRONTEND.md](GUIA-FRONTEND.md) - **NOVO!**
+**Descrição:** Guia completo de integração para desenvolvedores frontend.
+
+**Conteúdo:**
+- ✅ O que está pronto no backend (endpoints disponíveis)
+- 🔧 Como integrar com cada endpoint (exemplos de código)
+- 📋 O que precisa ser implementado no frontend (checklist)
+- 🚀 Funcionalidades futuras planejadas
+- 🎨 Link para prompts de design das telas
+- 🛠️ Stack recomendada e estrutura de pastas
+
+**Quando usar:** Para equipe frontend entender toda a API e começar desenvolvimento.
+
+---
+
 ## 📖 DOCUMENTAÇÃO DE REFERÊNCIA
 
 ### 1. 🗄️ [database-schema-explanation.md](database-schema-explanation.md)
@@ -126,6 +141,19 @@ Esta pasta contém toda a documentação necessária para desenvolvimento do bac
 
 ---
 
+### 🎨 [PROMPTS-DESIGN-TELAS.md](PROMPTS-DESIGN-TELAS.md)
+**Descrição:** Prompts para geração de interfaces com IA (Figma AI, Midjourney, DALL-E).
+
+**Conteúdo:**
+- Guia de estilo (cores, tipografia)
+- 10 prompts detalhados para cada tela
+- 10 prompts condensados otimizados para Figma (< 5000 chars)
+- Telas: Login, Registro (3 etapas), Dashboard, Usuários, Portal Paciente, etc.
+
+**Como usar:** Copie e cole os prompts nas ferramentas de IA para gerar mockups.
+
+---
+
 ### 🔄 [fluxo-cadastro-etapas.md](fluxo-cadastro-etapas.md)
 **Descrição:** Diagramas dos fluxos de cadastro em 3 etapas.
 
@@ -158,10 +186,15 @@ O sistema completo de cadastro de usuários em 3 etapas já está funcionando. V
 1. **📖 Leia primeiro:** [RELATORIO-IMPLEMENTACAO-USUARIOS.md](RELATORIO-IMPLEMENTACAO-USUARIOS.md)
    - Entenda tudo que foi feito e por quê
    
-2. **🧪 Teste a API:** Importe [insomnia-users-cadastro-etapas.json](insomnia-users-cadastro-etapas.json)
+2. **📱 Para Frontend:** [GUIA-FRONTEND.md](GUIA-FRONTEND.md) ⭐ **NOVO!**
+   - Guia completo de integração com todos os endpoints
+   - O que implementar no frontend
+   - Stack recomendada e estrutura de pastas
+   
+3. **🧪 Teste a API:** Importe [insomnia-users-cadastro-etapas.json](insomnia-users-cadastro-etapas.json)
    - Teste todos os fluxos (paciente, profissional, staff)
    
-3. **🔍 Veja os fluxos:** [fluxo-cadastro-etapas.md](fluxo-cadastro-etapas.md)
+4. **🔍 Veja os fluxos:** [fluxo-cadastro-etapas.md](fluxo-cadastro-etapas.md)
    - Diagramas visuais das 3 etapas
 
 ### 🚀 Para Desenvolver Novas Funcionalidades

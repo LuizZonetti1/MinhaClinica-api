@@ -3,12 +3,7 @@
  * Implementar com Nodemailer, SendGrid, Resend, etc.
  */
 export interface EmailProvider {
-    sendEmail(options: {
-        to: string;
-        subject: string;
-        html: string;
-        text?: string;
-    }): Promise<void>;
+  sendEmail(options: { to: string; subject: string; html: string; text?: string }): Promise<void>;
 }
 
 /**
@@ -16,23 +11,23 @@ export interface EmailProvider {
  * Abstração para envio de emails
  */
 export class EmailService {
-    private provider: EmailProvider;
+  private provider: EmailProvider;
 
-    constructor(provider: EmailProvider) {
-        this.provider = provider;
-    }
+  constructor(provider: EmailProvider) {
+    this.provider = provider;
+  }
 
-    /**
-     * Envia email de verificação para paciente
-     */
-    async sendPatientVerificationEmail(
-        email: string,
-        name: string,
-        verificationToken: string
-    ): Promise<void> {
-        const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=patient`;
+  /**
+   * Envia email de verificação para paciente
+   */
+  async sendPatientVerificationEmail(
+    email: string,
+    name: string,
+    verificationToken: string,
+  ): Promise<void> {
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=patient`;
 
-        const html = `
+    const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -72,26 +67,26 @@ export class EmailService {
 </html>
         `;
 
-        await this.provider.sendEmail({
-            to: email,
-            subject: "Verifique seu email - Minha Clínica",
-            html,
-            text: `Olá ${name}, clique no link para verificar seu email: ${verificationUrl}`,
-        });
-    }
+    await this.provider.sendEmail({
+      to: email,
+      subject: "Verifique seu email - Minha Clínica",
+      html,
+      text: `Olá ${name}, clique no link para verificar seu email: ${verificationUrl}`,
+    });
+  }
 
-    /**
-     * Envia convite para profissional
-     */
-    async sendProfessionalInviteEmail(
-        email: string,
-        name: string,
-        clinicName: string,
-        verificationToken: string
-    ): Promise<void> {
-        const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=professional`;
+  /**
+   * Envia convite para profissional
+   */
+  async sendProfessionalInviteEmail(
+    email: string,
+    name: string,
+    clinicName: string,
+    verificationToken: string,
+  ): Promise<void> {
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=professional`;
 
-        const html = `
+    const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -131,28 +126,28 @@ export class EmailService {
 </html>
         `;
 
-        await this.provider.sendEmail({
-            to: email,
-            subject: `Convite para trabalhar na ${clinicName}`,
-            html,
-            text: `Olá ${name}, você foi convidado para trabalhar na ${clinicName}. Clique no link: ${verificationUrl}`,
-        });
-    }
+    await this.provider.sendEmail({
+      to: email,
+      subject: `Convite para trabalhar na ${clinicName}`,
+      html,
+      text: `Olá ${name}, você foi convidado para trabalhar na ${clinicName}. Clique no link: ${verificationUrl}`,
+    });
+  }
 
-    /**
-     * Envia convite para recepcionista/admin
-     */
-    async sendStaffInviteEmail(
-        email: string,
-        name: string,
-        clinicName: string,
-        role: "RECEPTIONIST" | "ADMIN",
-        verificationToken: string
-    ): Promise<void> {
-        const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=staff`;
-        const roleText = role === "ADMIN" ? "Administrador" : "Recepcionista";
+  /**
+   * Envia convite para recepcionista/admin
+   */
+  async sendStaffInviteEmail(
+    email: string,
+    name: string,
+    clinicName: string,
+    role: "RECEPTIONIST" | "ADMIN",
+    verificationToken: string,
+  ): Promise<void> {
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=staff`;
+    const roleText = role === "ADMIN" ? "Administrador" : "Recepcionista";
 
-        const html = `
+    const html = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -192,13 +187,13 @@ export class EmailService {
 </html>
         `;
 
-        await this.provider.sendEmail({
-            to: email,
-            subject: `Convite para ${roleText} - ${clinicName}`,
-            html,
-            text: `Olá ${name}, você foi convidado para ser ${roleText} na ${clinicName}. Clique no link: ${verificationUrl}`,
-        });
-    }
+    await this.provider.sendEmail({
+      to: email,
+      subject: `Convite para ${roleText} - ${clinicName}`,
+      html,
+      text: `Olá ${name}, você foi convidado para ser ${roleText} na ${clinicName}. Clique no link: ${verificationUrl}`,
+    });
+  }
 }
 
 /**
@@ -206,16 +201,16 @@ export class EmailService {
  * Use em desenvolvimento ou substitua por Nodemailer/SendGrid
  */
 export class ConsoleEmailProvider implements EmailProvider {
-    async sendEmail(options: {
-        to: string;
-        subject: string;
-        html: string;
-        text?: string;
-    }): Promise<void> {
-        console.log("\n========== EMAIL ENVIADO ==========");
-        console.log("Para:", options.to);
-        console.log("Assunto:", options.subject);
-        console.log("Texto:", options.text);
-        console.log("===================================\n");
-    }
+  async sendEmail(options: {
+    to: string;
+    subject: string;
+    html: string;
+    text?: string;
+  }): Promise<void> {
+    console.log("\n========== EMAIL ENVIADO ==========");
+    console.log("Para:", options.to);
+    console.log("Assunto:", options.subject);
+    console.log("Texto:", options.text);
+    console.log("===================================\n");
+  }
 }

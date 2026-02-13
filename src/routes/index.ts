@@ -1,9 +1,9 @@
 import { Router } from "express";
+import authRoutes from "./auth.routes";
 import clinicRoutes from "./clinic.routes";
 import patientRoutes from "./patient.routes";
 import professionalRoutes from "./professional.routes";
 import staffRoutes from "./staff.routes";
-import authRoutes from "./auth.routes";
 
 const routes = Router();
 
