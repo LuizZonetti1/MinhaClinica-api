@@ -114,14 +114,30 @@ export class AuthController {
 
   /**
    * GET /api/auth/verify-email/:token — link clicado no email
-   * Verifica o token, gera o JWT temporário e redireciona direto para completar cadastro
+   *
+   * Comportamento duplo:
+   * - Chamado via fetch/axios (Accept: application/json): retorna JSON com tempToken e redirectUrl
+   * - Chamado via navegação direta do browser (Accept: text/html): redireciona para o frontend
    */
   async verifyEmailLink(req: Request, res: Response): Promise<void> {
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
-    const { token } = req.params;
+
+    // Suporta token tanto em path param quanto em query param
+    const token = (req.params.token || req.query.token) as string;
+
+    // Detecta se é uma chamada via fetch/axios ou navegação direta do browser
+    const acceptHeader = req.headers.accept ?? "";
+    const isApiCall =
+      acceptHeader.includes("application/json") ||
+      req.headers["x-requested-with"] === "XMLHttpRequest" ||
+      !!req.headers["origin"];
 
     if (!token) {
-      res.redirect(`${frontendUrl}/cadastro?erro=token_invalido`);
+      if (isApiCall) {
+        res.status(400).json({ error: "Token não fornecido" });
+      } else {
+        res.redirect(`${frontendUrl}/cadastro?erro=token_invalido`);
+      }
       return;
     }
 
@@ -129,20 +145,35 @@ export class AuthController {
       const service = new VerifyEmailService();
       const result = await service.execute(String(token));
 
-      // Redireciona para a tela de completar cadastro já com o JWT temporário
       const params = new URLSearchParams({
         tempToken: result.tempToken,
         name: result.name,
         email: result.email,
       });
+      const redirectUrl = `${frontendUrl}/completar-cadastro?${params.toString()}`;
 
-      res.redirect(`${frontendUrl}/completar-cadastro?${params.toString()}`);
+      if (isApiCall) {
+        // Retorna JSON para o frontend navegar por conta própria
+        res.status(200).json({
+          tempToken: result.tempToken,
+          name: result.name,
+          email: result.email,
+          redirectUrl,
+        });
+      } else {
+        res.redirect(redirectUrl);
+      }
     } catch (error) {
       const isExpired =
         error instanceof Error && error.message.toLowerCase().includes("expirado");
-
       const errorCode = isExpired ? "token_expirado" : "token_invalido";
-      res.redirect(`${frontendUrl}/cadastro?erro=${errorCode}`);
+
+      if (isApiCall) {
+        const statusCode = isExpired ? 410 : 400;
+        res.status(statusCode).json({ error: error instanceof Error ? error.message : "Token inválido" });
+      } else {
+        res.redirect(`${frontendUrl}/cadastro?erro=${errorCode}`);
+      }
     }
   }
 }
