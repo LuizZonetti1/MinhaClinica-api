@@ -1,9 +1,10 @@
 import { prisma } from "../../database/prisma";
+import { generateTempRegistrationToken } from "../../utils/jwtUtils";
 import { hashToken, isTokenExpired } from "../../utils/verificationTokenUtils";
 
 /**
  * VERIFICAR EMAIL - ETAPA 2
- * Verifica token de email (funciona para todos os tipos)
+ * Verifica token de email e retorna JWT temporário para Etapa 3
  */
 export class VerifyEmailService {
   async execute(token: string) {
@@ -19,20 +20,32 @@ export class VerifyEmailService {
     });
 
     if (!user) {
-      throw new Error("Token inválido ou usuário já ativo");
+      throw new Error("Token inválido ou email já verificado");
     }
 
     // Verificar expiração
     if (!user.verificationExpires || isTokenExpired(user.verificationExpires)) {
-      throw new Error("Token expirado");
+      throw new Error("Token expirado. Solicite um novo link de verificação.");
     }
 
-    // Retornar dados do usuário para o frontend completar cadastro
+    // Atualizar status para EMAIL_VERIFIED e invalidar o token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        status: "EMAIL_VERIFIED",
+        verificationToken: null,
+        verificationExpires: null,
+      },
+    });
+
+    // Gerar JWT temporário com scope restrito (válido por 30 min)
+    const tempToken = generateTempRegistrationToken(user.id, user.clinicId);
+
     return {
+      tempToken,
       userId: user.id,
       name: user.name,
       email: user.email,
-      role: user.role,
       message: "Email verificado com sucesso. Complete seu cadastro.",
     };
   }

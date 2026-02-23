@@ -51,7 +51,7 @@ export class LoginService {
         email: user.email,
         role: user.role,
         clinicId: user.clinicId,
-        clinicName: user.clinic.tradeName,
+        clinicName: user.clinic?.tradeName ?? null,
       },
     };
   }
