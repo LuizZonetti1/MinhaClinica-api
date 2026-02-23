@@ -1,3 +1,4 @@
+import type { Gender } from "../../generated/prisma";
 import { prisma } from "../database/prisma";
 
 export class PatientRepository {
@@ -6,11 +7,11 @@ export class PatientRepository {
    */
   async createPatient(data: {
     userId: string;
-    clinicId: string;
+    clinicId?: string; // Opcional: vinculado ao agendar, não ao registrar
     cpf: string;
     rg?: string;
     dateOfBirth: Date;
-    gender: string; // "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY"
+    gender: Gender;
     zipCode?: string;
     street?: string;
     number?: string;
@@ -19,17 +20,22 @@ export class PatientRepository {
     city?: string;
     state?: string;
     alternativePhone?: string;
+    bloodType?: string;
     allergies?: string;
+    medications?: string;
+    conditions?: string;
     observations?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
   }) {
     return prisma.patient.create({
       data: {
         userId: data.userId,
-        clinicId: data.clinicId,
+        clinicId: data.clinicId ?? null,
         cpf: data.cpf,
         rg: data.rg,
         dateOfBirth: data.dateOfBirth,
-        gender: data.gender as any,
+        gender: data.gender,
         zipCode: data.zipCode,
         street: data.street,
         number: data.number,
@@ -38,8 +44,13 @@ export class PatientRepository {
         city: data.city,
         state: data.state,
         alternativePhone: data.alternativePhone,
+        bloodType: data.bloodType,
         allergies: data.allergies,
+        medications: data.medications,
+        conditions: data.conditions,
         observations: data.observations,
+        emergencyContactName: data.emergencyContactName,
+        emergencyContactPhone: data.emergencyContactPhone,
       },
     });
   }
@@ -148,7 +159,7 @@ export class PatientRepository {
     data: Partial<{
       rg: string;
       dateOfBirth: Date;
-      gender: string;
+      gender: Gender;
       zipCode: string;
       street: string;
       number: string;
@@ -157,14 +168,19 @@ export class PatientRepository {
       city: string;
       state: string;
       alternativePhone: string;
+      bloodType: string;
       allergies: string;
+      medications: string;
+      conditions: string;
       observations: string;
+      emergencyContactName: string;
+      emergencyContactPhone: string;
       isActive: boolean;
     }>,
   ) {
     return prisma.patient.update({
       where: { id: patientId },
-      data: data as any,
+      data,
     });
   }
 

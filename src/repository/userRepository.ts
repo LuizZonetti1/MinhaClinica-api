@@ -2,20 +2,20 @@ import { prisma } from "../database/prisma";
 
 export class UserRepository {
   async createUser(data: {
-    clinicId: string;
+    clinicId?: string; // Opcional: null para pacientes, preenchido para staff/admin
     name: string;
     cpf: string;
     email: string;
     phone: string;
-    password: string; // Já deve vir hasheado
-    role: string; // "ADMIN" | "RECEPTIONIST" | "PROFESSIONAL" | "PATIENT"
-    status?: string; // Opcional, default: "ACTIVE"
+    password: string;
+    role: string;
+    status?: string;
     avatarUrl?: string;
-    mustChangePassword?: boolean; // Opcional, default: true
+    mustChangePassword?: boolean;
   }) {
     return prisma.user.create({
       data: {
-        clinicId: data.clinicId,
+        clinicId: data.clinicId ?? null,
         name: data.name,
         cpf: data.cpf,
         email: data.email,
@@ -35,21 +35,23 @@ export class UserRepository {
     });
   }
 
-  async findByEmail(clinicId: string, email: string) {
+  // Busca por email globalmente (pacientes) ou dentro de uma clínica (staff)
+  async findByEmail(emailOrClinicId: string, emailOrUndefined?: string) {
+    const isClinicScoped = emailOrUndefined !== undefined;
     return prisma.user.findFirst({
-      where: {
-        clinicId,
-        email,
-      },
+      where: isClinicScoped
+        ? { clinicId: emailOrClinicId, email: emailOrUndefined }
+        : { email: emailOrClinicId },
     });
   }
 
-  async findByCpf(clinicId: string, cpf: string) {
+  // Busca por CPF globalmente (pacientes) ou dentro de uma clínica (staff)
+  async findByCpf(cpfOrClinicId: string, cpfOrUndefined?: string) {
+    const isClinicScoped = cpfOrUndefined !== undefined;
     return prisma.user.findFirst({
-      where: {
-        clinicId,
-        cpf,
-      },
+      where: isClinicScoped
+        ? { clinicId: cpfOrClinicId, cpf: cpfOrUndefined }
+        : { cpf: cpfOrClinicId },
     });
   }
 
@@ -165,37 +167,3 @@ export class UserRepository {
     });
   }
 }
-
-/*
-id       String @id @default(uuid())
-  clinicId String
-  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-
-  // Dados pessoais
-  name  String
-  cpf   String @db.VarChar(11)
-  email String
-  phone String @db.VarChar(15)
-
-  // Autenticação
-  password String // Hash bcrypt
-  role     UserRole
-  status   UserStatus @default(ACTIVE)
-
-  // Controle de acesso
-  mustChangePassword Boolean   @default(true)
-  lastLoginAt        DateTime?
-  loginAttempts      Int       @default(0)
-  blockedUntil       DateTime?
-
-  // Avatar
-  avatarUrl String?
-
-  // Consentimento LGPD
-  termsAcceptedAt   DateTime?
-  privacyAcceptedAt DateTime?
-
-  // Metadata
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-*/
