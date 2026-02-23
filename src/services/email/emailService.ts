@@ -56,7 +56,7 @@ export class EmailService {
             <p>Ou copie e cole este link no seu navegador:</p>
             <p style="word-break: break-all; color: #666;">${verificationUrl}</p>
             <p style="margin-top: 30px; font-size: 14px; color: #666;">
-                Este link expira em 24 horas.
+                Este link expira em 25 minutos.
             </p>
         </div>
         <div class="footer">
