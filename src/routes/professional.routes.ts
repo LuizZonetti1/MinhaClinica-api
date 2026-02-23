@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { ProfessionalController } from "../controller/professionalController";
-import { authMiddleware, checkRole } from "../middlewares/auth";
+import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
 import {
   completeProfessionalSchema,
@@ -11,7 +11,8 @@ const router = Router();
 const professionalController = new ProfessionalController();
 
 /**
- * PROTEGIDO (ADMIN) - Convidar profissional
+ * PROTEGIDO (ADMIN) — Convidar profissional
+ * POST /api/professionals/invite
  */
 router.post(
   "/invite",
@@ -22,10 +23,11 @@ router.post(
 );
 
 /**
- * SEMI-PÚBLICO - Completar cadastro
- * Requer userId no req (vindo de token temporário após verificar email)
+ * PROTEGIDO (tempToken) — Completar cadastro após verificar email
+ * POST /api/professionals/complete
+ * Requer: Authorization: Bearer <tempToken>
  */
-router.post("/complete", validate(completeProfessionalSchema), (req, res) =>
+router.post("/complete", tempRegistrationAuth, validate(completeProfessionalSchema), (req, res) =>
   professionalController.complete(req, res),
 );
 

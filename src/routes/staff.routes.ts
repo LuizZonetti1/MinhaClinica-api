@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { StaffController } from "../controller/staffController";
-import { authMiddleware, checkRole } from "../middlewares/auth";
+import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
 import { completeStaffSchema, inviteStaffSchema } from "../schemas/staffSchema";
 
@@ -8,7 +8,8 @@ const router = Router();
 const staffController = new StaffController();
 
 /**
- * PROTEGIDO (ADMIN) - Convidar staff
+ * PROTEGIDO (ADMIN) — Convidar staff
+ * POST /api/staff/invite
  */
 router.post(
   "/invite",
@@ -19,10 +20,11 @@ router.post(
 );
 
 /**
- * SEMI-PÚBLICO - Completar cadastro
- * Requer userId no req (vindo de token temporário após verificar email)
+ * PROTEGIDO (tempToken) — Completar cadastro após verificar email
+ * POST /api/staff/complete
+ * Requer: Authorization: Bearer <tempToken>
  */
-router.post("/complete", validate(completeStaffSchema), (req, res) =>
+router.post("/complete", tempRegistrationAuth, validate(completeStaffSchema), (req, res) =>
   staffController.complete(req, res),
 );
 
