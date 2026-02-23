@@ -11,10 +11,10 @@ export class PatientController {
    */
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { clinicId, name, email } = req.body;
+      const { name, email } = req.body;
 
       const service = new RegisterPatientService();
-      const result = await service.execute({ clinicId, name, email });
+      const result = await service.execute({ name, email });
 
       res.status(201).json(result);
     } catch (error) {

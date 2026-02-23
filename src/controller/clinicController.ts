@@ -50,7 +50,7 @@ export class ClinicController {
 
   async updateClinic(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params; // ID é string (UUID)
+      const id = req.params.id as string;
 
       // Valida se o ID é um UUID válido
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -121,7 +121,7 @@ export class ClinicController {
   // Buscar clínica por ID
   async getClinicById(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
 
       // Valida se o ID é um UUID válido
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -155,7 +155,7 @@ export class ClinicController {
 
   async deleteClinic(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
 
       // Valida se o ID é um UUID válido
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
