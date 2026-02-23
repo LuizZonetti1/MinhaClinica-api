@@ -32,6 +32,17 @@ export const getTokenExpiration = (hours = 24): Date => {
 };
 
 /**
+ * Calcula a data de expiração em minutos
+ * @param minutes - Quantidade de minutos até expirar
+ * @returns Data de expiração
+ */
+export const getTokenExpirationMinutes = (minutes: number): Date => {
+  const expiration = new Date();
+  expiration.setMinutes(expiration.getMinutes() + minutes);
+  return expiration;
+};
+
+/**
  * Verifica se um token expirou
  * @param expirationDate - Data de expiração do token
  * @returns true se expirou, false caso contrário
@@ -63,15 +74,15 @@ export const verifyTokenHash = (token: string, hashedToken: string): boolean => 
 
 /**
  * Gera dados completos para um token de verificação
- * @param expirationHours - Horas até expiração (padrão: 24)
+ * @param expirationMinutes - Minutos até expiração (padrão: 25)
  * @returns Objeto com token, hash e data de expiração
  */
-export const createVerificationData = (expirationHours = 24) => {
+export const createVerificationData = (expirationMinutes = 25) => {
   const token = generateVerificationToken();
 
   return {
     token, // Enviar por email
     hashedToken: hashToken(token), // Salvar no banco
-    expiresAt: getTokenExpiration(expirationHours),
+    expiresAt: getTokenExpirationMinutes(expirationMinutes),
   };
 };

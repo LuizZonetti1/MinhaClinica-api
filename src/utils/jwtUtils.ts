@@ -3,8 +3,15 @@ import jwt, { type SignOptions } from "jsonwebtoken";
 // Payload do token JWT
 export interface JwtPayload {
   userId: string;
-  clinicId: string;
+  clinicId: string | null;
   role: string;
+}
+
+// Payload do token temporário de cadastro
+export interface TempRegistrationPayload {
+  userId: string;
+  clinicId: string | null;
+  scope: "register_complete";
 }
 
 // Opções para geração do token
@@ -22,7 +29,7 @@ interface GenerateTokenOptions {
  */
 export const generateAuthToken = (
   userId: string,
-  clinicId: string,
+  clinicId: string | null | undefined,
   role: string,
   options: GenerateTokenOptions = {},
 ): string => {
@@ -34,7 +41,7 @@ export const generateAuthToken = (
 
   const payload: JwtPayload = {
     userId,
-    clinicId,
+    clinicId: clinicId ?? null,
     role,
   };
 
@@ -99,6 +106,43 @@ export const generateRefreshToken = (userId: string, clinicId: string): string =
     expiresIn: "30d",
     subject: userId,
   });
+};
+
+/**
+ * Gera um token JWT temporário usado apenas para completar o cadastro (Etapa 3)
+ * @param userId - ID do usuário com email verificado
+ * @param clinicId - ID da clínica
+ * @returns Token JWT temporário com scope restrito (expira em 30 min)
+ */
+export const generateTempRegistrationToken = (userId: string, clinicId: string | null): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET não está configurado");
+
+  const payload: TempRegistrationPayload = {
+    userId,
+    clinicId,
+    scope: "register_complete",
+  };
+
+  return jwt.sign(payload, secret, { expiresIn: "30m", subject: userId });
+};
+
+/**
+ * Verifica e decodifica um token temporário de cadastro
+ * @param token - Token temporário
+ * @returns Payload decodificado ou lança erro
+ */
+export const verifyTempRegistrationToken = (token: string): TempRegistrationPayload => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET não está configurado");
+
+  const decoded = jwt.verify(token, secret) as TempRegistrationPayload;
+
+  if (decoded.scope !== "register_complete") {
+    throw new Error("Token inválido para esta operação");
+  }
+
+  return decoded;
 };
 
 /**
