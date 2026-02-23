@@ -1,12 +1,13 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { verifyTempRegistrationToken } from "../utils/jwtUtils";
 
 // Estende a interface Request do Express para incluir dados do usuário
 declare global {
   namespace Express {
     interface Request {
       userId?: string;
-      clinicId?: string;
+      clinicId?: string | null;
       userRole?: string;
     }
   }
@@ -14,7 +15,7 @@ declare global {
 
 interface JwtPayload {
   userId: string;
-  clinicId: string;
+  clinicId: string | null;
   role: string;
 }
 
@@ -93,4 +94,42 @@ export const checkRole = (...allowedRoles: string[]) => {
 
     next();
   };
+};
+
+/**
+ * Middleware para o token temporário de registro (Etapa 3)
+ * Aceita apenas tokens com scope "register_complete"
+ */
+export const tempRegistrationAuth = (req: Request, res: Response, next: NextFunction): void => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      res.status(401).json({ error: "Token de registro não fornecido" });
+      return;
+    }
+
+    const parts = authHeader.split(" ");
+    if (parts.length !== 2 || !/^Bearer$/i.test(parts[0])) {
+      res.status(401).json({ error: "Formato de token inválido" });
+      return;
+    }
+
+    const decoded = verifyTempRegistrationToken(parts[1]);
+
+    req.userId = decoded.userId;
+    req.clinicId = decoded.clinicId;
+
+    next();
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({ error: "Token de registro expirado. Reinicie o cadastro." });
+      return;
+    }
+    if (error instanceof jwt.JsonWebTokenError || error instanceof Error) {
+      res.status(401).json({ error: "Token de registro inválido" });
+      return;
+    }
+    res.status(500).json({ error: "Erro ao validar token de registro" });
+  }
 };
