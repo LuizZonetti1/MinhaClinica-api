@@ -6,6 +6,29 @@ import { createVerificationData } from "../../utils/verificationTokenUtils";
 import { ConsoleEmailProvider, EmailService } from "../email/emailService";
 
 /**
+ * Valida dígitos verificadores do CPF
+ */
+function isValidCPF(cpf: string): boolean {
+  const cleaned = cpf.replace(/\D/g, "");
+  if (cleaned.length !== 11) return false;
+  if (/^(\d)\1+$/.test(cleaned)) return false;
+
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += Number.parseInt(cleaned[i]) * (10 - i);
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== Number.parseInt(cleaned[9])) return false;
+
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += Number.parseInt(cleaned[i]) * (11 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== Number.parseInt(cleaned[10])) return false;
+
+  return true;
+}
+
+/**
  * REGISTRO DE PACIENTE - ETAPA 1
  * Usuário se cadastra sozinho (público)
  */
@@ -13,20 +36,19 @@ export class RegisterPatientService {
   private userRepository = new UserRepository();
   private emailService = new EmailService(new ConsoleEmailProvider());
 
-  async execute(data: { clinicId: string; name: string; email: string }) {
-    // Verificar se email já existe
-    const existingUser = await this.userRepository.findByEmail(data.clinicId, data.email);
+  async execute(data: { name: string; email: string }) {
+    // Verificar se email já existe globalmente
+    const existingUser = await this.userRepository.findByEmail(data.email);
 
     if (existingUser) {
-      throw new Error("Email já cadastrado nesta clínica");
+      throw Object.assign(new Error("Email já cadastrado"), { statusCode: 409 });
     }
 
-    // Criar token de verificação
-    const verification = createVerificationData(24); // 24 horas
+    // Criar token de verificação (25 minutos)
+    const verification = createVerificationData(25);
 
-    // Criar usuário com status pendente
+    // Criar usuário com status pendente (sem clínica — paciente é global)
     const user = await this.userRepository.createUser({
-      clinicId: data.clinicId,
       name: data.name,
       email: data.email,
       phone: "00000000000", // Temporário
@@ -80,8 +102,13 @@ export class CompletePatientService {
       city?: string;
       state?: string;
       alternativePhone?: string;
+      bloodType?: string;
       allergies?: string;
+      medications?: string;
+      conditions?: string;
       observations?: string;
+      emergencyContactName?: string;
+      emergencyContactPhone?: string;
     },
   ) {
     // Buscar usuário
@@ -91,43 +118,52 @@ export class CompletePatientService {
       throw new Error("Usuário não encontrado");
     }
 
-    if (user.status !== "PENDING_ACTIVATION") {
-      throw new Error("Usuário já ativo ou status inválido");
+    if (user.status !== "EMAIL_VERIFIED") {
+      throw new Error("Email não verificado ou cadastro já concluído");
     }
 
     if (user.role !== "PATIENT") {
       throw new Error("Tipo de usuário inválido");
     }
 
-    // Verificar se CPF já existe em outro usuário
-    const existingCpf = await this.userRepository.findByCpf(user.clinicId, data.cpf);
+    // Validar dígitos verificadores do CPF
+    const cleanCpf = data.cpf.replace(/\D/g, "");
+    if (!isValidCPF(cleanCpf)) {
+      throw new Error("CPF inválido");
+    }
+
+    // Verificar se CPF já existe em outro usuário (busca global)
+    const existingCpf = await this.userRepository.findByCpf(cleanCpf);
     if (existingCpf && existingCpf.id !== userId) {
-      throw new Error("CPF já cadastrado");
+      throw Object.assign(new Error("CPF já cadastrado"), { statusCode: 409 });
     }
 
     // Hash da senha
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
+    // Normalizar campos formatados pelo frontend
+    const cleanPhone = data.phone.replace(/\D/g, "");
+    const cleanZipCode = data.zipCode ? data.zipCode.replace(/\D/g, "") : undefined;
+
     // Atualizar dados do usuário
     await prisma.user.update({
       where: { id: userId },
       data: {
-        cpf: data.cpf,
-        phone: data.phone,
+        cpf: cleanCpf,
+        phone: cleanPhone,
         password: hashedPassword,
         status: "ACTIVE", // Ativa o usuário
       },
     });
 
-    // Criar registro de paciente
+    // Criar registro de paciente (sem clínica — vínculo ocorre ao agendar consulta)
     const patient = await this.patientRepository.createPatient({
       userId,
-      clinicId: user.clinicId,
-      cpf: data.cpf,
+      cpf: cleanCpf,
       rg: data.rg,
       dateOfBirth: data.dateOfBirth,
       gender: data.gender,
-      zipCode: data.zipCode,
+      zipCode: cleanZipCode,
       street: data.street,
       number: data.number,
       complement: data.complement,
@@ -135,8 +171,13 @@ export class CompletePatientService {
       city: data.city,
       state: data.state,
       alternativePhone: data.alternativePhone,
+      bloodType: data.bloodType,
       allergies: data.allergies,
+      medications: data.medications,
+      conditions: data.conditions,
       observations: data.observations,
+      emergencyContactName: data.emergencyContactName,
+      emergencyContactPhone: data.emergencyContactPhone,
     });
 
     // Limpar token de verificação
