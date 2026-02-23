@@ -96,6 +96,16 @@ export const completePatientSchema = yup.object({
   dateOfBirth: yup
     .date()
     .required("Data de nascimento é obrigatória")
+    .transform((value, originalValue) => {
+      // Aceita ISO, date object ou string DD/MM/YYYY
+      if (originalValue instanceof Date) return originalValue;
+      if (typeof originalValue === "string") {
+        // Tenta DD/MM/YYYY
+        const brFormat = originalValue.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (brFormat) return new Date(`${brFormat[3]}-${brFormat[2]}-${brFormat[1]}`);
+      }
+      return value;
+    })
     .max(new Date(), "Data de nascimento não pode ser futura")
     .typeError("Data de nascimento inválida"),
 
@@ -135,7 +145,7 @@ export const completePatientSchema = yup.object({
     .test("alt-phone-format", "Telefone alternativo inválido", (v) => {
       if (!v) return true;
       const digits = v.replace(/\D/g, "");
-      return digits.length >= 10 && digits.length <= 11;
+      return digits.length >= 8 && digits.length <= 11;
     }),
 
   // Dados médicos
@@ -159,6 +169,6 @@ export const completePatientSchema = yup.object({
     .test("emergency-phone-format", "Telefone de emergência inválido", (v) => {
       if (!v) return true;
       const digits = v.replace(/\D/g, "");
-      return digits.length >= 10 && digits.length <= 11;
+      return digits.length >= 8 && digits.length <= 11;
     }),
 });
