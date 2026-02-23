@@ -25,8 +25,13 @@ export class InviteProfessionalService {
       throw new Error("Apenas administradores podem convidar profissionais");
     }
 
+    if (!admin.clinicId) {
+      throw new Error("Admin não está vinculado a uma clínica");
+    }
+    const adminClinicId = admin.clinicId; // string (narrowed)
+
     // Verificar se email já existe
-    const existingUser = await this.userRepository.findByEmail(admin.clinicId, data.email);
+    const existingUser = await this.userRepository.findByEmail(adminClinicId, data.email);
 
     if (existingUser) {
       throw new Error("Email já cadastrado nesta clínica");
@@ -34,7 +39,7 @@ export class InviteProfessionalService {
 
     // Buscar nome da clínica
     const clinic = await prisma.clinic.findUnique({
-      where: { id: admin.clinicId },
+      where: { id: adminClinicId },
     });
 
     if (!clinic) {
@@ -46,7 +51,7 @@ export class InviteProfessionalService {
 
     // Criar usuário com status pendente
     const user = await this.userRepository.createUser({
-      clinicId: admin.clinicId,
+      clinicId: adminClinicId,
       name: data.name,
       email: data.email,
       phone: "00000000000", // Temporário
@@ -115,8 +120,13 @@ export class CompleteProfessionalService {
       throw new Error("Tipo de usuário inválido");
     }
 
+    if (!user.clinicId) {
+      throw new Error("Profissional não está vinculado a uma clínica");
+    }
+    const userClinicId = user.clinicId; // string (narrowed)
+
     // Verificar se CPF já existe em outro usuário
-    const existingCpf = await this.userRepository.findByCpf(user.clinicId, data.cpf);
+    const existingCpf = await this.userRepository.findByCpf(userClinicId, data.cpf);
     if (existingCpf && existingCpf.id !== userId) {
       throw new Error("CPF já cadastrado");
     }
@@ -141,7 +151,7 @@ export class CompleteProfessionalService {
     const professional = await prisma.professional.create({
       data: {
         userId,
-        clinicId: user.clinicId,
+        clinicId: userClinicId,
         professionalCouncil: data.professionalCouncil,
         registrationNumber: data.registrationNumber,
         registrationState: data.registrationState,
