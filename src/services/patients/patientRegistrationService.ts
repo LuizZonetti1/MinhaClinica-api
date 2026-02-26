@@ -5,6 +5,7 @@ import { UserRepository } from "../../repository/userRepository";
 import { UserRole, UserStatus } from "../../types/enums";
 import type { CompletePatientInput, RegisterPatientInput } from "../../types/user";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
+import { generateTempRegistrationToken } from "../../utils/jwtUtils";
 import { createEmailProvider, EmailService } from "../email/emailService";
 
 /**
@@ -43,6 +44,40 @@ export class RegisterPatientService {
     const existingUser = await this.userRepository.findByEmail(data.email);
 
     if (existingUser) {
+      // Verificou o email mas não finalizou o cadastro → gerar novo token e ir direto para etapa 3
+      if (existingUser.status === UserStatus.EMAIL_VERIFIED) {
+        const tempToken = generateTempRegistrationToken(existingUser.id, existingUser.clinicId);
+        return {
+          message: "Email já verificado. Continue para completar seu cadastro.",
+          email: existingUser.email,
+          tempToken,
+          redirectToComplete: true,
+        };
+      }
+
+      // Ainda não verificou o email → reenviar link
+      if (existingUser.status === UserStatus.PENDING_ACTIVATION) {
+        const verification = createVerificationData(25);
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            name: data.name,
+            verificationToken: verification.hashedToken,
+            verificationExpires: verification.expiresAt,
+          },
+        });
+        await this.emailService.sendPatientVerificationEmail(
+          existingUser.email,
+          data.name,
+          verification.token,
+        );
+        return {
+          message: "Cadastro iniciado. Verifique seu email para continuar.",
+          email: existingUser.email,
+        };
+      }
+
+      // Cadastro completo → erro
       throw Object.assign(new Error("Email já cadastrado"), { statusCode: 409 });
     }
 
