@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { verifyTempRegistrationToken } from "../utils/jwtUtils";
+import type { UserRole } from "../types/enums";
+import { type JwtPayload, verifyTempRegistrationToken } from "../utils/jwtUtils";
 
 // Estende a interface Request do Express para incluir dados do usuário
 declare global {
@@ -8,15 +9,9 @@ declare global {
     interface Request {
       userId?: string;
       clinicId?: string | null;
-      userRole?: string;
+      userRole?: UserRole;
     }
   }
-}
-
-interface JwtPayload {
-  userId: string;
-  clinicId: string | null;
-  role: string;
 }
 
 export const authMiddleware = async (
@@ -80,7 +75,7 @@ export const authMiddleware = async (
 };
 
 // Middleware opcional para verificar roles específicos
-export const checkRole = (...allowedRoles: string[]) => {
+export const checkRole = (...allowedRoles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.userRole) {
       res.status(401).json({ error: "Usuário não autenticado" });

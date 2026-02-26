@@ -1,4 +1,5 @@
 import { prisma } from "../../database/prisma";
+import { UserStatus } from "../../types/enums";
 import { generateTempRegistrationToken } from "../../utils/jwtUtils";
 import { hashToken, isTokenExpired } from "../../utils/verificationTokenUtils";
 
@@ -15,7 +16,7 @@ export class VerifyEmailService {
     const user = await prisma.user.findFirst({
       where: {
         verificationToken: hashedToken,
-        status: "PENDING_ACTIVATION",
+        status: UserStatus.PENDING_ACTIVATION,
       },
     });
 
@@ -32,7 +33,7 @@ export class VerifyEmailService {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        status: "EMAIL_VERIFIED",
+        status: UserStatus.EMAIL_VERIFIED,
         verificationToken: null,
         verificationExpires: null,
       },

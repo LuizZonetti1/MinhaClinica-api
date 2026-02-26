@@ -1,18 +1,9 @@
 import { prisma } from "../database/prisma";
+import { UserStatus } from "../types/enums";
+import type { CreateUserInput, UpdateUserInput, UserFiltersInput } from "../types/user";
 
 export class UserRepository {
-  async createUser(data: {
-    clinicId?: string; // Opcional: null para pacientes, preenchido para staff/admin
-    name: string;
-    cpf: string;
-    email: string;
-    phone: string;
-    password: string;
-    role: string;
-    status?: string;
-    avatarUrl?: string;
-    mustChangePassword?: boolean;
-  }) {
+  async createUser(data: CreateUserInput) {
     return prisma.user.create({
       data: {
         clinicId: data.clinicId ?? null,
@@ -21,8 +12,8 @@ export class UserRepository {
         email: data.email,
         phone: data.phone,
         password: data.password,
-        role: data.role as any,
-        status: (data.status as any) || "ACTIVE",
+        role: data.role,
+        status: data.status ?? UserStatus.ACTIVE,
         avatarUrl: data.avatarUrl,
         mustChangePassword: data.mustChangePassword ?? true,
       },
@@ -55,19 +46,10 @@ export class UserRepository {
     });
   }
 
-  async updateUser(
-    userId: string,
-    data: Partial<{
-      name: string;
-      email: string;
-      phone: string;
-      avatarUrl: string;
-      status: string;
-    }>,
-  ) {
+  async updateUser(userId: string, data: UpdateUserInput) {
     return prisma.user.update({
       where: { id: userId },
-      data: data as any,
+      data,
     });
   }
 
@@ -110,7 +92,7 @@ export class UserRepository {
     return prisma.user.update({
       where: { id: userId },
       data: {
-        status: "BLOCKED" as any,
+        status: UserStatus.BLOCKED,
         blockedUntil,
       },
     });
@@ -120,7 +102,7 @@ export class UserRepository {
     return prisma.user.findMany({
       where: {
         clinicId,
-        status: "PENDING_ACTIVATION",
+        status: UserStatus.PENDING_ACTIVATION,
       },
       orderBy: {
         createdAt: "desc",
@@ -128,19 +110,12 @@ export class UserRepository {
     });
   }
 
-  async findAllByClinic(
-    clinicId: string,
-    filters?: {
-      role?: string;
-      status?: string;
-      search?: string;
-    },
-  ) {
+  async findAllByClinic(clinicId: string, filters?: UserFiltersInput) {
     return prisma.user.findMany({
       where: {
         clinicId,
-        role: filters?.role as any,
-        status: filters?.status as any,
+        role: filters?.role,
+        status: filters?.status,
         ...(filters?.search && {
           OR: [
             { name: { contains: filters.search, mode: "insensitive" } },

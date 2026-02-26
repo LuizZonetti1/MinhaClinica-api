@@ -6,6 +6,7 @@ import {
   completeProfessionalSchema,
   inviteProfessionalSchema,
 } from "../schemas/professionalSchema";
+import { UserRole } from "../types/enums";
 
 const router = Router();
 const professionalController = new ProfessionalController();
@@ -17,7 +18,7 @@ const professionalController = new ProfessionalController();
 router.post(
   "/invite",
   authMiddleware,
-  checkRole("ADMIN"),
+  checkRole(UserRole.ADMIN),
   validate(inviteProfessionalSchema),
   (req, res) => professionalController.invite(req, res),
 );

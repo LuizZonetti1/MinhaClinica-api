@@ -1,5 +1,5 @@
-import type { Gender } from "../../generated/prisma";
 import { prisma } from "../database/prisma";
+import type { Gender } from "../types/enums";
 
 export class PatientRepository {
   /**

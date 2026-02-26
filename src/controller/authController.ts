@@ -164,13 +164,14 @@ export class AuthController {
         res.redirect(redirectUrl);
       }
     } catch (error) {
-      const isExpired =
-        error instanceof Error && error.message.toLowerCase().includes("expirado");
+      const isExpired = error instanceof Error && error.message.toLowerCase().includes("expirado");
       const errorCode = isExpired ? "token_expirado" : "token_invalido";
 
       if (isApiCall) {
         const statusCode = isExpired ? 410 : 400;
-        res.status(statusCode).json({ error: error instanceof Error ? error.message : "Token inválido" });
+        res
+          .status(statusCode)
+          .json({ error: error instanceof Error ? error.message : "Token inválido" });
       } else {
         res.redirect(`${frontendUrl}/cadastro?erro=${errorCode}`);
       }

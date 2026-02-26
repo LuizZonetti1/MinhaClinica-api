@@ -3,6 +3,7 @@ import { StaffController } from "../controller/staffController";
 import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
 import { completeStaffSchema, inviteStaffSchema } from "../schemas/staffSchema";
+import { UserRole } from "../types/enums";
 
 const router = Router();
 const staffController = new StaffController();
@@ -14,7 +15,7 @@ const staffController = new StaffController();
 router.post(
   "/invite",
   authMiddleware,
-  checkRole("ADMIN"),
+  checkRole(UserRole.ADMIN),
   validate(inviteStaffSchema),
   (req, res) => staffController.invite(req, res),
 );

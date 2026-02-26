@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../../database/prisma";
+import { UserStatus } from "../../types/enums";
 import { generateAuthToken } from "../../utils/jwtUtils";
 
 /**
@@ -23,7 +24,7 @@ export class LoginService {
     }
 
     // Verificar se conta está ativa
-    if (user.status !== "ACTIVE") {
+    if (user.status !== UserStatus.ACTIVE) {
       throw new Error("Conta não está ativa. Complete seu cadastro ou aguarde aprovação.");
     }
 

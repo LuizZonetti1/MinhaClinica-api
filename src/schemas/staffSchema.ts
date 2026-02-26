@@ -1,4 +1,7 @@
 import * as yup from "yup";
+import { UserRole } from "../types/enums";
+
+const STAFF_ROLES = [UserRole.RECEPTIONIST, UserRole.ADMIN];
 
 /**
  * Schema para convidar recepcionista (Admin apenas)
@@ -20,7 +23,7 @@ export const inviteStaffSchema = yup.object({
   role: yup
     .string()
     .required("Papel é obrigatório")
-    .oneOf(["RECEPTIONIST", "ADMIN"], "Papel deve ser RECEPTIONIST ou ADMIN"),
+    .oneOf(STAFF_ROLES, "Papel deve ser RECEPTIONIST ou ADMIN"),
 });
 
 /**

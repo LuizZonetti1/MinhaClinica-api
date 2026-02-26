@@ -2,8 +2,10 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../../database/prisma";
 import { PatientRepository } from "../../repository/patientRepository";
 import { UserRepository } from "../../repository/userRepository";
+import { UserRole, UserStatus } from "../../types/enums";
+import type { CompletePatientInput, RegisterPatientInput } from "../../types/user";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
-import { ConsoleEmailProvider, EmailService } from "../email/emailService";
+import { createEmailProvider, EmailService } from "../email/emailService";
 
 /**
  * Valida dígitos verificadores do CPF
@@ -34,9 +36,9 @@ function isValidCPF(cpf: string): boolean {
  */
 export class RegisterPatientService {
   private userRepository = new UserRepository();
-  private emailService = new EmailService(new ConsoleEmailProvider());
+  private emailService = new EmailService(createEmailProvider());
 
-  async execute(data: { name: string; email: string }) {
+  async execute(data: RegisterPatientInput) {
     // Verificar se email já existe globalmente
     const existingUser = await this.userRepository.findByEmail(data.email);
 
@@ -54,8 +56,8 @@ export class RegisterPatientService {
       phone: "00000000000", // Temporário
       cpf: "00000000000", // Temporário
       password: "temp", // Temporário
-      role: "PATIENT",
-      status: "PENDING_ACTIVATION",
+      role: UserRole.PATIENT,
+      status: UserStatus.PENDING_ACTIVATION,
       mustChangePassword: false,
     });
 
@@ -85,32 +87,7 @@ export class CompletePatientService {
   private userRepository = new UserRepository();
   private patientRepository = new PatientRepository();
 
-  async execute(
-    userId: string,
-    data: {
-      cpf: string;
-      phone: string;
-      password: string;
-      dateOfBirth: Date;
-      gender: "MALE" | "FEMALE" | "OTHER" | "PREFER_NOT_TO_SAY";
-      rg?: string;
-      zipCode?: string;
-      street?: string;
-      number?: string;
-      complement?: string;
-      neighborhood?: string;
-      city?: string;
-      state?: string;
-      alternativePhone?: string;
-      bloodType?: string;
-      allergies?: string;
-      medications?: string;
-      conditions?: string;
-      observations?: string;
-      emergencyContactName?: string;
-      emergencyContactPhone?: string;
-    },
-  ) {
+  async execute(userId: string, data: CompletePatientInput) {
     // Buscar usuário
     const user = await this.userRepository.findById(userId);
 
@@ -118,11 +95,11 @@ export class CompletePatientService {
       throw new Error("Usuário não encontrado");
     }
 
-    if (user.status !== "EMAIL_VERIFIED") {
+    if (user.status !== UserStatus.EMAIL_VERIFIED) {
       throw new Error("Email não verificado ou cadastro já concluído");
     }
 
-    if (user.role !== "PATIENT") {
+    if (user.role !== UserRole.PATIENT) {
       throw new Error("Tipo de usuário inválido");
     }
 
@@ -152,7 +129,7 @@ export class CompletePatientService {
         cpf: cleanCpf,
         phone: cleanPhone,
         password: hashedPassword,
-        status: "ACTIVE", // Ativa o usuário
+        status: UserStatus.ACTIVE, // Ativa o usuário
       },
     });
 

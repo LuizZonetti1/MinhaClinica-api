@@ -1,10 +1,11 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
+import type { UserRole } from "../types/enums";
 
 // Payload do token JWT
 export interface JwtPayload {
   userId: string;
   clinicId: string | null;
-  role: string;
+  role: UserRole;
 }
 
 // Payload do token temporário de cadastro
@@ -30,7 +31,7 @@ interface GenerateTokenOptions {
 export const generateAuthToken = (
   userId: string,
   clinicId: string | null | undefined,
-  role: string,
+  role: UserRole,
   options: GenerateTokenOptions = {},
 ): string => {
   const secret = process.env.JWT_SECRET;

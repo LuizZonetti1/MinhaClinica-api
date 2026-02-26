@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { Gender } from "../types/enums";
 
 const VALID_UF = [
   "AC",
@@ -31,7 +32,7 @@ const VALID_UF = [
 ];
 
 // Mapeamento de gênero PT → enum (para compat. com o frontend)
-const GENDER_MAP: Record<string, string> = {
+const GENDER_MAP: Record<string, Gender> = {
   masculino: "MALE",
   feminino: "FEMALE",
   outro: "OTHER",
@@ -43,6 +44,8 @@ const GENDER_MAP: Record<string, string> = {
   OTHER: "OTHER",
   PREFER_NOT_TO_SAY: "PREFER_NOT_TO_SAY",
 };
+
+const GENDER_VALUES = Object.values(Gender);
 
 /**
  * Schema para registro inicial de paciente (público)
@@ -113,7 +116,7 @@ export const completePatientSchema = yup.object({
     .string()
     .required("Gênero é obrigatório")
     .transform((v) => GENDER_MAP[v] ?? v)
-    .oneOf(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"], "Gênero inválido"),
+    .oneOf(GENDER_VALUES, "Gênero inválido"),
 
   // Opcionais
   rg: yup.string().nullable().max(20),

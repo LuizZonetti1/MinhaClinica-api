@@ -1,20 +1,21 @@
 import { prisma } from "../../database/prisma";
+import { UserStatus } from "../../types/enums";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
-import { ConsoleEmailProvider, EmailService } from "../email/emailService";
+import { createEmailProvider, EmailService } from "../email/emailService";
 
 /**
  * REENVIAR VERIFICAÇÃO DE EMAIL
  * Invalida token anterior, gera novo e reenvia o email
  */
 export class ResendVerificationService {
-  private emailService = new EmailService(new ConsoleEmailProvider());
+  private emailService = new EmailService(createEmailProvider());
 
   async execute(data: { email: string }) {
     // Buscar usuário pendente (busca global — paciente não tem clínica)
     const user = await prisma.user.findFirst({
       where: {
         email: data.email,
-        status: "PENDING_ACTIVATION",
+        status: UserStatus.PENDING_ACTIVATION,
       },
     });
 

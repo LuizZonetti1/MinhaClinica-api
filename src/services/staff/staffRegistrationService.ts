@@ -1,8 +1,10 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../../database/prisma";
 import { UserRepository } from "../../repository/userRepository";
+import { UserRole, UserStatus } from "../../types/enums";
+import type { CompleteStaffInput, InviteStaffInput } from "../../types/user";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
-import { ConsoleEmailProvider, EmailService } from "../email/emailService";
+import { createEmailProvider, EmailService } from "../email/emailService";
 
 /**
  * CONVIDAR STAFF (Recepcionista/Admin) - ETAPA 1
@@ -10,19 +12,12 @@ import { ConsoleEmailProvider, EmailService } from "../email/emailService";
  */
 export class InviteStaffService {
   private userRepository = new UserRepository();
-  private emailService = new EmailService(new ConsoleEmailProvider());
+  private emailService = new EmailService(createEmailProvider());
 
-  async execute(
-    adminId: string,
-    data: {
-      name: string;
-      email: string;
-      role: "RECEPTIONIST" | "ADMIN";
-    },
-  ) {
+  async execute(adminId: string, data: InviteStaffInput) {
     // Verificar se quem está convidando é admin
     const admin = await this.userRepository.findById(adminId);
-    if (!admin || admin.role !== "ADMIN") {
+    if (!admin || admin.role !== UserRole.ADMIN) {
       throw new Error("Apenas administradores podem convidar staff");
     }
 
@@ -59,7 +54,7 @@ export class InviteStaffService {
       cpf: "00000000000", // Temporário
       password: "temp", // Temporário
       role: data.role,
-      status: "PENDING_ACTIVATION",
+      status: UserStatus.PENDING_ACTIVATION,
       mustChangePassword: false,
     });
 
@@ -95,14 +90,7 @@ export class InviteStaffService {
 export class CompleteStaffService {
   private userRepository = new UserRepository();
 
-  async execute(
-    userId: string,
-    data: {
-      cpf: string;
-      phone: string;
-      password: string;
-    },
-  ) {
+  async execute(userId: string, data: CompleteStaffInput) {
     // Buscar usuário
     const user = await this.userRepository.findById(userId);
 
@@ -110,11 +98,11 @@ export class CompleteStaffService {
       throw new Error("Usuário não encontrado");
     }
 
-    if (user.status !== "PENDING_ACTIVATION") {
+    if (user.status !== UserStatus.PENDING_ACTIVATION) {
       throw new Error("Usuário já ativo ou status inválido");
     }
 
-    if (user.role !== "RECEPTIONIST" && user.role !== "ADMIN") {
+    if (user.role !== UserRole.RECEPTIONIST && user.role !== UserRole.ADMIN) {
       throw new Error("Tipo de usuário inválido");
     }
 
@@ -139,7 +127,7 @@ export class CompleteStaffService {
         cpf: data.cpf,
         phone: data.phone,
         password: hashedPassword,
-        status: "ACTIVE", // Ativa o usuário
+        status: UserStatus.ACTIVE, // Ativa o usuário
         mustChangePassword: true, // Staff deve trocar senha no primeiro login
         verificationToken: null,
         verificationExpires: null,

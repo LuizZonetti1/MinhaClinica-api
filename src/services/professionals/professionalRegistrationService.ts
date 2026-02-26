@@ -1,8 +1,10 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../../database/prisma";
 import { UserRepository } from "../../repository/userRepository";
+import { UserRole, UserStatus } from "../../types/enums";
+import type { CompleteProfessionalInput, InviteProfessionalInput } from "../../types/user";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
-import { ConsoleEmailProvider, EmailService } from "../email/emailService";
+import { createEmailProvider, EmailService } from "../email/emailService";
 
 /**
  * CONVIDAR PROFISSIONAL - ETAPA 1
@@ -10,18 +12,12 @@ import { ConsoleEmailProvider, EmailService } from "../email/emailService";
  */
 export class InviteProfessionalService {
   private userRepository = new UserRepository();
-  private emailService = new EmailService(new ConsoleEmailProvider());
+  private emailService = new EmailService(createEmailProvider());
 
-  async execute(
-    adminId: string,
-    data: {
-      name: string;
-      email: string;
-    },
-  ) {
+  async execute(adminId: string, data: InviteProfessionalInput) {
     // Verificar se quem está convidando é admin
     const admin = await this.userRepository.findById(adminId);
-    if (!admin || admin.role !== "ADMIN") {
+    if (!admin || admin.role !== UserRole.ADMIN) {
       throw new Error("Apenas administradores podem convidar profissionais");
     }
 
@@ -57,8 +53,8 @@ export class InviteProfessionalService {
       phone: "00000000000", // Temporário
       cpf: "00000000000", // Temporário
       password: "temp", // Temporário
-      role: "PROFESSIONAL",
-      status: "PENDING_ACTIVATION",
+      role: UserRole.PROFESSIONAL,
+      status: UserStatus.PENDING_ACTIVATION,
       mustChangePassword: false,
     });
 
@@ -93,18 +89,7 @@ export class InviteProfessionalService {
 export class CompleteProfessionalService {
   private userRepository = new UserRepository();
 
-  async execute(
-    userId: string,
-    data: {
-      cpf: string;
-      phone: string;
-      password: string;
-      professionalCouncil: string;
-      registrationNumber: string;
-      registrationState: string;
-      defaultAppointmentDuration?: number;
-    },
-  ) {
+  async execute(userId: string, data: CompleteProfessionalInput) {
     // Buscar usuário
     const user = await this.userRepository.findById(userId);
 
@@ -112,11 +97,11 @@ export class CompleteProfessionalService {
       throw new Error("Usuário não encontrado");
     }
 
-    if (user.status !== "PENDING_ACTIVATION") {
+    if (user.status !== UserStatus.PENDING_ACTIVATION) {
       throw new Error("Usuário já ativo ou status inválido");
     }
 
-    if (user.role !== "PROFESSIONAL") {
+    if (user.role !== UserRole.PROFESSIONAL) {
       throw new Error("Tipo de usuário inválido");
     }
 
@@ -141,7 +126,7 @@ export class CompleteProfessionalService {
         cpf: data.cpf,
         phone: data.phone,
         password: hashedPassword,
-        status: "ACTIVE", // Ativa o usuário
+        status: UserStatus.ACTIVE, // Ativa o usuário
         verificationToken: null,
         verificationExpires: null,
       },
