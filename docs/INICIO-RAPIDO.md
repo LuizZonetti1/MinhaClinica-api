@@ -7,6 +7,7 @@ Guia para configurar ambiente e começar a desenvolver!
 ## ✅ O QUE JÁ ESTÁ PRONTO
 
 O projeto já possui:
+
 - ✅ Banco de dados configurado (PostgreSQL via Neon)
 - ✅ Prisma ORM configurado com todas as models
 - ✅ Sistema completo de usuários (3 tipos: paciente, profissional, staff)
@@ -80,29 +81,34 @@ Servidor rodando em: `http://localhost:3000`
 ### Endpoints Disponíveis
 
 #### Pacientes (Público)
+
 ```http
 POST /api/patients/register
 POST /api/patients/complete
 ```
 
 #### Profissionais (Admin Only)
+
 ```http
 POST /api/professionals/invite
 POST /api/professionals/complete
 ```
 
 #### Staff (Admin Only)
+
 ```http
 POST /api/staff/invite
 POST /api/staff/complete
 ```
 
 #### Autenticação
+
 ```http
 GET /api/auth/verify-email/:token
 ```
 
 #### Clínicas
+
 ```http
 POST /api/clinics
 GET /api/clinics/:id
@@ -177,21 +183,25 @@ MinhaClinica-api/
 ## 📚 Próximos Passos de Desenvolvimento
 
 ### 1. Implementar Login
+
 - [ ] Criar `LoginService`
 - [ ] Validar status = ACTIVE
 - [ ] Retornar JWT com userId, clinicId, role
 - [ ] Endpoint: `POST /api/auth/login`
 
 ### 2. Completar Fluxo do Dono da Clínica
+
 - [ ] Criar endpoint para owner completar cadastro após verificar clínica
 - [ ] Criar User com role=ADMIN automaticamente
 
 ### 3. Implementar Email Provider Real
+
 - [ ] Escolher: SendGrid, Nodemailer, ou Resend
 - [ ] Criar implementação do EmailProvider
 - [ ] Trocar ConsoleEmailProvider
 
 ### 4. Próximos Módulos
+
 - [ ] CRUD de Especialidades (Specialty)
 - [ ] CRUD de Procedimentos (Procedure)
 - [ ] Sistema de Agendamentos (Appointment)
@@ -201,26 +211,32 @@ MinhaClinica-api/
 ## 📖 Documentação Essencial
 
 ### Comece por aqui:
+
 1. **[RELATORIO-IMPLEMENTACAO-USUARIOS.md](RELATORIO-IMPLEMENTACAO-USUARIOS.md)** ⭐
+
    - Entenda TUDO que já foi implementado
    - Explicação detalhada de cada arquivo
    - Conceitos e decisões técnicas
-
 2. **[fluxo-cadastro-etapas.md](fluxo-cadastro-etapas.md)**
+
    - Diagramas visuais dos fluxos
 
 ### Para desenvolver:
-3. **[guia-desenvolvimento-backend.md](guia-desenvolvimento-backend.md)**
-   - Padrão Repository + Service + Controller
 
+3. **[guia-desenvolvimento-backend.md](guia-desenvolvimento-backend.md)**
+
+   - Padrão Repository + Service + Controller
 4. **[database-schema-explanation.md](database-schema-explanation.md)**
+
    - Todos os models e enums explicados
 
 ### Referências:
-5. **[requisitos-sistema.md](requisitos-sistema.md)**
-   - Requisitos funcionais e regras de negócio
 
+5. **[requisitos-sistema.md](requisitos-sistema.md)**
+
+   - Requisitos funcionais e regras de negócio
 6. **[documentacao-funcional.md](documentacao-funcional.md)**
+
    - Visão de produto
 
 ---
@@ -248,11 +264,13 @@ git status                        # Ver status
 ## 🐛 Troubleshooting
 
 ### Erro: "verificationToken não existe no tipo"
+
 ```bash
 npx prisma generate
 ```
 
 ### Banco desatualizado após migration
+
 ```bash
 npx prisma migrate reset  # ⚠️ APENAS EM DEV!
 npx prisma migrate dev
@@ -260,6 +278,7 @@ npx prisma generate
 ```
 
 ### Porta 3000 já em uso
+
 ```bash
 # Mudar no .env
 PORT=3001
@@ -283,24 +302,22 @@ PORT=3001
 ## 🎓 Dicas para Iniciantes
 
 1. **Sempre gere o Prisma Client** após mudar o schema:
+
    ```bash
    npx prisma generate
    ```
-
 2. **Use o Prisma Studio** para ver dados no banco:
+
    ```bash
    npx prisma studio
    ```
-
 3. **Siga o padrão Repository + Service + Controller**
+
    - Repository: Acesso ao banco (Prisma)
    - Service: Lógica de negócio
    - Controller: Recebe HTTP requests
-
 4. **Valide sempre com Yup** antes de chamar o service
-
 5. **Trate erros** com try/catch nos controllers
-
 6. **Use os tipos do Prisma** para TypeScript safety
 
 ---
@@ -317,25 +334,29 @@ PORT=3001
 
 **Pronto para começar! 🚀**
 
-
 ### Semana 1:
+
 - ✅ Auth Module completo
 - ✅ Middlewares funcionando
 - ✅ Login/Register testados
 
 ### Semana 2:
+
 - ✅ User Module completo
 - ✅ Gestão de usuários funcionando
 
 ### Semana 3-4:
+
 - ✅ Specialty Module
 - ✅ Procedure Module
 
 ### Semana 5-6:
+
 - ✅ Professional Module
 - ✅ Patient Module
 
 ### Semana 7-8:
+
 - ✅ Appointment Module (COMPLEXO!)
 
 ---
@@ -354,12 +375,14 @@ PORT=3001
 ## 💡 Dicas Finais
 
 ✅ **FAÇA:**
+
 - Clone o código do exemplo exatamente como está
 - Teste cada arquivo após criar
 - Use o checklist para não se perder
 - Commit após cada módulo concluído
 
 ❌ **NÃO FAÇA:**
+
 - Não pule o Auth Module!
 - Não tente criar tudo de uma vez
 - Não ignore os middlewares
