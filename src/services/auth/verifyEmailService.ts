@@ -1,5 +1,5 @@
 import { prisma } from "../../database/prisma";
-import { UserStatus } from "../../types/enums";
+import { UserRole, UserStatus } from "../../types/enums";
 import { generateTempRegistrationToken } from "../../utils/jwtUtils";
 import { hashToken, isTokenExpired } from "../../utils/verificationTokenUtils";
 
@@ -45,6 +45,7 @@ export class VerifyEmailService {
     return {
       tempToken,
       userId: user.id,
+      role: user.role as (typeof UserRole)[keyof typeof UserRole],
       name: user.name,
       email: user.email,
       message: "Email verificado com sucesso. Complete seu cadastro.",

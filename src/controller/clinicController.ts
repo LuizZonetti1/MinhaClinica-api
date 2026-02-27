@@ -4,7 +4,6 @@ import {
   clinicRegisterStartSchema,
   clinicUpdateSchema,
 } from "../schemas/clinicSchema";
-import { VerifyEmailService } from "../services/auth/verifyEmailService";
 import {
   CompleteClinicOwnerService,
   RegisterClinicService,
@@ -13,6 +12,8 @@ import {
 import { DeleteClinicService } from "../services/clinics/deleteClinicService";
 import { GetClinicService } from "../services/clinics/getClinicService";
 import { UpdateClinicService } from "../services/clinics/updateClinicService";
+import { VerifyEmailService } from "../services/auth/verifyEmailService";
+import { resolveVerifyRedirect } from "../utils/verifyRedirectUtils";
 
 export class ClinicController {
   async updateClinic(req: Request, res: Response): Promise<void> {
@@ -204,6 +205,15 @@ export class ClinicController {
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Erro ao reenviar verificação" });
     }
+  }
+
+  /**
+   * GET /api/clinics/verify-email/:token — link clicado no e-mail
+   * Detecta a role do usuário e redireciona para a tela correta no frontend.
+   * Para ADMIN redireciona para /clinica/registro/completo
+   */
+  async verifyEmailLink(req: Request, res: Response): Promise<void> {
+    return resolveVerifyRedirect(req, res);
   }
 
   /**

@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { LoginService } from "../services/auth/loginService";
 import { ResendVerificationService } from "../services/auth/resendVerificationService";
 import { VerifyEmailService } from "../services/auth/verifyEmailService";
@@ -6,6 +6,7 @@ import {
   CompletePatientService,
   RegisterPatientService,
 } from "../services/patients/patientRegistrationService";
+import { resolveVerifyRedirect } from "../utils/verifyRedirectUtils";
 
 export class AuthController {
   /**
@@ -114,67 +115,10 @@ export class AuthController {
 
   /**
    * GET /api/auth/verify-email/:token — link clicado no email
-   *
-   * Comportamento duplo:
-   * - Chamado via fetch/axios (Accept: application/json): retorna JSON com tempToken e redirectUrl
-   * - Chamado via navegação direta do browser (Accept: text/html): redireciona para o frontend
+   * Detecta a role do usuário e redireciona para a tela correta no frontend.
+   * Suporta PATIENT, PROFESSIONAL e RECEPTIONIST.
    */
   async verifyEmailLink(req: Request, res: Response): Promise<void> {
-    const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
-
-    // Suporta token tanto em path param quanto em query param
-    const token = (req.params.token || req.query.token) as string;
-
-    // Detecta se é uma chamada via fetch/axios ou navegação direta do browser
-    const acceptHeader = req.headers.accept ?? "";
-    const isApiCall =
-      acceptHeader.includes("application/json") ||
-      req.headers["x-requested-with"] === "XMLHttpRequest" ||
-      !!req.headers["origin"];
-
-    if (!token) {
-      if (isApiCall) {
-        res.status(400).json({ error: "Token não fornecido" });
-      } else {
-        res.redirect(`${frontendUrl}/cadastro?erro=token_invalido`);
-      }
-      return;
-    }
-
-    try {
-      const service = new VerifyEmailService();
-      const result = await service.execute(String(token));
-
-      const params = new URLSearchParams({
-        tempToken: result.tempToken,
-        name: result.name,
-        email: result.email,
-      });
-      const redirectUrl = `${frontendUrl}/completar-cadastro?${params.toString()}`;
-
-      if (isApiCall) {
-        // Retorna JSON para o frontend navegar por conta própria
-        res.status(200).json({
-          tempToken: result.tempToken,
-          name: result.name,
-          email: result.email,
-          redirectUrl,
-        });
-      } else {
-        res.redirect(redirectUrl);
-      }
-    } catch (error) {
-      const isExpired = error instanceof Error && error.message.toLowerCase().includes("expirado");
-      const errorCode = isExpired ? "token_expirado" : "token_invalido";
-
-      if (isApiCall) {
-        const statusCode = isExpired ? 410 : 400;
-        res
-          .status(statusCode)
-          .json({ error: error instanceof Error ? error.message : "Token inválido" });
-      } else {
-        res.redirect(`${frontendUrl}/cadastro?erro=${errorCode}`);
-      }
-    }
+    return resolveVerifyRedirect(req, res);
   }
 }
