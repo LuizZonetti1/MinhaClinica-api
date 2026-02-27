@@ -51,8 +51,7 @@ export class EmailService {
             <h1>🏥 Bem-vindo à Minha Clínica</h1>
         </div>
         <div class="content">
-            <h2>Olá, ${name}!</h2>
-            <p>Obrigado por se cadastrar como paciente.</p>
+            <h2>Olá, ${name}!</h2><p>Seja bem-vindo(a) ao Minha Clínica.</p>
             <p>Para ativar sua conta, clique no botão abaixo:</p>
             <center>
                 <a href="${verificationUrl}" class="button">Verificar Email</a>
@@ -76,6 +75,70 @@ export class EmailService {
       subject: "Verifique seu email - Minha Clínica",
       html,
       text: `Olá ${name}, clique no link para verificar seu email: ${verificationUrl}`,
+    });
+  }
+
+  /**
+   * Envia email de verificação para o dono/responsável da clínica (Etapa 1 do cadastro)
+   */
+  async sendClinicOwnerVerificationEmail(
+    email: string,
+    ownerName: string,
+    clinicTradeName: string,
+    verificationToken: string,
+  ): Promise<void> {
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=clinic`;
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #6366F1; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+        .button { display: inline-block; padding: 12px 30px; background-color: #6366F1; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+        .clinic-box { background: #EEF2FF; border-left: 4px solid #6366F1; padding: 12px 16px; border-radius: 4px; margin: 16px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Cadastro de Clínica — Minha Clínica</h1>
+        </div>
+        <div class="content">
+            <h2>Olá, ${ownerName}!</h2>
+            <p>Recebemos a solicitação de cadastro da clínica:</p>
+            <div class="clinic-box">
+                <strong>${clinicTradeName}</strong>
+            </div>
+            <p>Para confirmar seu e-mail e continuar o cadastro, clique no botão abaixo:</p>
+            <center>
+                <a href="${verificationUrl}" class="button">Confirmar E-mail</a>
+            </center>
+            <p>Ou copie e cole este link no seu navegador:</p>
+            <p style="word-break: break-all; color: #666;">${verificationUrl}</p>
+            <p style="margin-top: 30px; font-size: 14px; color: #666;">
+                Este link expira em <strong>25 minutos</strong>.
+                Após confirmar o e-mail, você será redirecionado para completar seus dados de acesso.
+            </p>
+        </div>
+        <div class="footer">
+            <p>Se você não solicitou este cadastro, por favor ignore este email.</p>
+        </div>
+    </div>
+</body>
+</html>
+    `;
+
+    await this.provider.sendEmail({
+      to: email,
+      subject: `Confirme seu e-mail — Cadastro da ${clinicTradeName}`,
+      html,
+      text: `Olá ${ownerName}, clique no link para confirmar seu e-mail e continuar o cadastro da ${clinicTradeName}: ${verificationUrl}`,
     });
   }
 

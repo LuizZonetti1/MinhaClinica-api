@@ -56,6 +56,36 @@ export interface CompletePatientInput {
   emergencyContactPhone?: string;
 }
 
+// ── Registro de clínica (etapas) ──────────────────────────────────────────────
+
+export interface RegisterClinicInput {
+  // Dados da clínica
+  legalName: string;
+  tradeName: string;
+  cnpj: string;
+  clinicEmail: string;
+  phone: string;
+  zipCode: string;
+  street: string;
+  number: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  complement?: string;
+  website?: string;
+  subdomain?: string | null;
+  timezone?: string;
+  // Dados do dono
+  ownerName: string;
+  ownerEmail: string;
+}
+
+export interface CompleteClinicOwnerInput {
+  password: string;
+  cpf: string;
+  phone: string;
+}
+
 export interface InviteStaffInput {
   name: string;
   email: string;
