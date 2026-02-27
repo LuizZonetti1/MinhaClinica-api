@@ -58,7 +58,7 @@ clinicRoutes.post("/register/complete", authLimiter, tempRegistrationAuth, (req,
   clinicController.registerComplete(req, res),
 );
 
-// ── Gestão de clínicas (admin/autenticado) ──────────────────────────────────
+// ── Gestão de clínicas (autenticado) ────────────────────────────────────────
 
 // Rota para listar todas as clínicas
 clinicRoutes.get("/list", (req, res) => clinicController.listClinics(req, res));
