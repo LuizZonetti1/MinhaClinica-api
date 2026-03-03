@@ -1,5 +1,5 @@
 import { prisma } from "../../database/prisma";
-import { UserRole, UserStatus } from "../../types/enums";
+import { type UserRole, UserStatus } from "../../types/enums";
 import { generateTempRegistrationToken } from "../../utils/jwtUtils";
 import { hashToken, isTokenExpired } from "../../utils/verificationTokenUtils";
 
@@ -40,7 +40,7 @@ export class VerifyEmailService {
     });
 
     // Gerar JWT temporário com scope restrito (válido por 30 min)
-    const tempToken = generateTempRegistrationToken(user.id, user.clinicId);
+    const tempToken = generateTempRegistrationToken(user.id, user.clinicId, user.role as UserRole);
 
     return {
       tempToken,
