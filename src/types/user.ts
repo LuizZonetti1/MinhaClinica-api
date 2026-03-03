@@ -3,10 +3,10 @@ import type { Gender, UserRole, UserStatus } from "./enums";
 export interface CreateUserInput {
   clinicId?: string | null;
   name: string;
-  cpf: string;
+  cpf?: string | null; // Opcional — preenchido na Etapa 3
   email: string;
-  phone: string;
-  password: string;
+  phone?: string | null; // Opcional — preenchido na Etapa 3
+  password?: string; // Opcional — preenchido na Etapa 3
   role: UserRole;
   status?: UserStatus;
   avatarUrl?: string | null;

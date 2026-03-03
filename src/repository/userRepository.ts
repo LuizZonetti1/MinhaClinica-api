@@ -8,10 +8,10 @@ export class UserRepository {
       data: {
         clinicId: data.clinicId ?? null,
         name: data.name,
-        cpf: data.cpf,
+        cpf: data.cpf ?? null,
         email: data.email,
-        phone: data.phone,
-        password: data.password,
+        phone: data.phone ?? null,
+        password: data.password ?? "pending",
         role: data.role,
         status: data.status ?? UserStatus.ACTIVE,
         avatarUrl: data.avatarUrl,
