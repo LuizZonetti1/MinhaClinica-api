@@ -12,6 +12,8 @@ export interface JwtPayload {
 export interface TempRegistrationPayload {
   userId: string;
   clinicId: string | null;
+  role: UserRole;
+  type: "temp_registration";
   scope: "register_complete";
 }
 
@@ -113,15 +115,22 @@ export const generateRefreshToken = (userId: string, clinicId: string): string =
  * Gera um token JWT temporário usado apenas para completar o cadastro (Etapa 3)
  * @param userId - ID do usuário com email verificado
  * @param clinicId - ID da clínica
+ * @param role - Papel do usuário (ADMIN, PROFESSIONAL, RECEPTIONIST, PATIENT)
  * @returns Token JWT temporário com scope restrito (expira em 30 min)
  */
-export const generateTempRegistrationToken = (userId: string, clinicId: string | null): string => {
+export const generateTempRegistrationToken = (
+  userId: string,
+  clinicId: string | null,
+  role: UserRole,
+): string => {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error("JWT_SECRET não está configurado");
 
   const payload: TempRegistrationPayload = {
     userId,
     clinicId,
+    role,
+    type: "temp_registration",
     scope: "register_complete",
   };
 
