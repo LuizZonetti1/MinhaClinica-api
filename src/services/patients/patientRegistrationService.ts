@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/correctness/useParseIntRadix: <explanation> */
 import bcrypt from "bcryptjs";
 import { prisma } from "../../database/prisma";
 import { PatientRepository } from "../../repository/patientRepository";
@@ -33,7 +32,11 @@ export class RegisterPatientService {
     if (existingUser) {
       // Verificou o email mas não finalizou o cadastro → gerar novo token e ir direto para etapa 3
       if (existingUser.status === UserStatus.EMAIL_VERIFIED) {
-        const tempToken = generateTempRegistrationToken(existingUser.id, existingUser.clinicId);
+        const tempToken = generateTempRegistrationToken(
+          existingUser.id,
+          existingUser.clinicId,
+          existingUser.role as (typeof UserRole)[keyof typeof UserRole],
+        );
         return {
           message: "Email já verificado. Continue para completar seu cadastro.",
           email: existingUser.email,
@@ -75,9 +78,6 @@ export class RegisterPatientService {
     const user = await this.userRepository.createUser({
       name: data.name,
       email: data.email,
-      phone: "00000000000", // Temporário
-      cpf: "00000000000", // Temporário
-      password: "temp", // Temporário
       role: UserRole.PATIENT,
       status: UserStatus.PENDING_ACTIVATION,
       mustChangePassword: false,
