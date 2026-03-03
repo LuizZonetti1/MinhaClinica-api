@@ -6,10 +6,12 @@ import { tempRegistrationAuth } from "../middlewares/auth";
 const clinicRoutes = Router();
 const clinicController = new ClinicController();
 
+const isDev = process.env.NODE_ENV !== "production";
+
 // Rate limits
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: isDev ? 1000 : 10,
   message: { error: "Muitas requisições. Tente novamente em 1 minuto." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -17,7 +19,7 @@ const authLimiter = rateLimit({
 
 const emailLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: isDev ? 1000 : 5,
   message: { error: "Limite de envio de e-mails atingido. Aguarde 15 minutos." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -57,6 +59,13 @@ clinicRoutes.post("/register/resend-verification", emailLimiter, (req, res) =>
 clinicRoutes.post("/register/complete", authLimiter, tempRegistrationAuth, (req, res) =>
   clinicController.registerComplete(req, res),
 );
+
+/**
+ * PÚBLICO — Link clicado no e-mail pelo responsável da clínica
+ * GET /api/clinics/verify-email/:token
+ * Verifica o token, gera tempToken JWT e redireciona para o frontend completar cadastro
+ */
+clinicRoutes.get("/verify-email/:token", (req, res) => clinicController.verifyEmailLink(req, res));
 
 // ── Gestão de clínicas (autenticado) ────────────────────────────────────────
 

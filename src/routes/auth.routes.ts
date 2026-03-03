@@ -74,10 +74,12 @@ function flattenPatientBody(req: Request, _res: Response, next: NextFunction): v
 const router = Router();
 const authController = new AuthController();
 
+const isDev = process.env.NODE_ENV !== "production";
+
 // Rate limit geral para endpoints de auth (10 req/min por IP)
 const authLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: isDev ? 1000 : 10,
   message: { error: "Muitas requisições. Tente novamente em 1 minuto." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -86,7 +88,7 @@ const authLimiter = rateLimit({
 // Rate limit mais restritivo para envio de email (5 req/15min por IP)
 const emailLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: isDev ? 1000 : 5,
   message: { error: "Limite de envio de emails atingido. Aguarde 15 minutos." },
   standardHeaders: true,
   legacyHeaders: false,

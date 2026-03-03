@@ -4,6 +4,7 @@ import {
   clinicRegisterStartSchema,
   clinicUpdateSchema,
 } from "../schemas/clinicSchema";
+import { VerifyEmailService } from "../services/auth/verifyEmailService";
 import {
   CompleteClinicOwnerService,
   RegisterClinicService,
@@ -12,7 +13,6 @@ import {
 import { DeleteClinicService } from "../services/clinics/deleteClinicService";
 import { GetClinicService } from "../services/clinics/getClinicService";
 import { UpdateClinicService } from "../services/clinics/updateClinicService";
-import { VerifyEmailService } from "../services/auth/verifyEmailService";
 import { resolveVerifyRedirect } from "../utils/verifyRedirectUtils";
 
 export class ClinicController {

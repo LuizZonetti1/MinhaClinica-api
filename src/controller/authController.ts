@@ -1,4 +1,4 @@
-import type { NextFunction, Request, Response } from "express";
+import type { Request, Response } from "express";
 import { LoginService } from "../services/auth/loginService";
 import { ResendVerificationService } from "../services/auth/resendVerificationService";
 import { VerifyEmailService } from "../services/auth/verifyEmailService";
