@@ -261,9 +261,9 @@ model User {
 
   // Dados pessoais
   name  String
-  cpf   String  @db.VarChar(11)
+  cpf   String? @db.VarChar(11) // Preenchido na Etapa 3
   email String
-  phone String  @db.VarChar(15)
+  phone String? @db.VarChar(15) // Preenchido na Etapa 3
 
   // Autenticação
   password String // Hash bcrypt
