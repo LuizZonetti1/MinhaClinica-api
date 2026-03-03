@@ -23,7 +23,11 @@ export class RegisterClinicService {
     if (existingUser) {
       // E-mail verificado mas cadastro não concluído → manda direto para etapa 3
       if (existingUser.status === UserStatus.EMAIL_VERIFIED) {
-        const tempToken = generateTempRegistrationToken(existingUser.id, existingUser.clinicId);
+        const tempToken = generateTempRegistrationToken(
+          existingUser.id,
+          existingUser.clinicId,
+          existingUser.role as (typeof UserRole)[keyof typeof UserRole],
+        );
         return {
           message: "E-mail já verificado. Continue para completar seus dados de acesso.",
           email: ownerEmail,
@@ -111,9 +115,6 @@ export class RegisterClinicService {
       clinicId: clinic.id,
       name: ownerName,
       email: ownerEmail,
-      phone: "00000000000", // temporário — preenchido na etapa 3
-      cpf: "00000000000", // temporário — preenchido na etapa 3
-      password: "temp", // temporário — substituído na etapa 3
       role: UserRole.ADMIN,
       status: UserStatus.PENDING_ACTIVATION,
       mustChangePassword: false,
