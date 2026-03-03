@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { UserRole } from "../types/enums";
 import { VerifyEmailService } from "../services/auth/verifyEmailService";
+import { UserRole } from "../types/enums";
 
 /**
  * Mapa de rotas de sucesso por role
@@ -62,6 +62,7 @@ export async function resolveVerifyRedirect(req: Request, res: Response): Promis
     const successPath = SUCCESS_ROUTES[result.role] ?? "/completar-cadastro";
     const params = new URLSearchParams({
       tempToken: result.tempToken,
+      role: result.role,
       name: result.name,
       email: result.email,
     });
@@ -79,8 +80,7 @@ export async function resolveVerifyRedirect(req: Request, res: Response): Promis
       res.redirect(redirectUrl);
     }
   } catch (error) {
-    const isExpired =
-      error instanceof Error && error.message.toLowerCase().includes("expirado");
+    const isExpired = error instanceof Error && error.message.toLowerCase().includes("expirado");
     const errorCode = isExpired ? "token_expirado" : "token_invalido";
 
     if (isApi) {
