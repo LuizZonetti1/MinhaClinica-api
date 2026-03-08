@@ -87,7 +87,9 @@ export class EmailService {
     clinicTradeName: string,
     verificationToken: string,
   ): Promise<void> {
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=clinic`;
+    // Aponta para o endpoint backend que faz o redirect para o frontend
+    const apiUrl = process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 3001}`;
+    const verificationUrl = `${apiUrl}/api/clinics/verify-email/${verificationToken}`;
 
     const html = `
 <!DOCTYPE html>
