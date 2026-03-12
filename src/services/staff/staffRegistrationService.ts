@@ -98,7 +98,7 @@ export class CompleteStaffService {
       throw new Error("Usuário não encontrado");
     }
 
-    if (user.status !== UserStatus.PENDING_ACTIVATION) {
+    if (user.status !== UserStatus.EMAIL_VERIFIED) {
       throw new Error("Usuário já ativo ou status inválido");
     }
 
