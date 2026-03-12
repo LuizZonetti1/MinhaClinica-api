@@ -2,7 +2,7 @@ import * as yup from "yup";
 
 /**
  * Schema para convidar profissional (Admin apenas)
- * Apenas nome e email
+ * Campos de pre-cadastro: nome, email e especialidade
  */
 export const inviteProfessionalSchema = yup.object({
   name: yup
@@ -16,6 +16,12 @@ export const inviteProfessionalSchema = yup.object({
     .required("Email é obrigatório")
     .email("Email inválido")
     .max(100, "Email deve ter no máximo 100 caracteres"),
+
+  specialty: yup
+    .string()
+    .required("Especialidade é obrigatória")
+    .min(2, "Especialidade deve ter no mínimo 2 caracteres")
+    .max(100, "Especialidade deve ter no máximo 100 caracteres"),
 });
 
 /**
@@ -57,3 +63,53 @@ export const completeProfessionalSchema = yup.object({
     .integer("Duração deve ser um número inteiro")
     .default(30),
 });
+
+/**
+ * Schema para atualizar profissional (Admin)
+ * Todos os campos sao opcionais, mas ao menos um deve ser enviado
+ */
+export const updateProfessionalSchema = yup
+  .object({
+    name: yup
+      .string()
+      .optional()
+      .min(3, "Nome deve ter no mínimo 3 caracteres")
+      .max(100, "Nome deve ter no máximo 100 caracteres"),
+
+    email: yup
+      .string()
+      .optional()
+      .email("Email inválido")
+      .max(100, "Email deve ter no máximo 100 caracteres"),
+
+    specialty: yup
+      .string()
+      .optional()
+      .min(2, "Especialidade deve ter no mínimo 2 caracteres")
+      .max(100, "Especialidade deve ter no máximo 100 caracteres"),
+
+    professionalCouncil: yup
+      .string()
+      .optional()
+      .max(50, "Conselho profissional deve ter no máximo 50 caracteres"),
+
+    registrationNumber: yup
+      .string()
+      .optional()
+      .max(50, "Número de registro deve ter no máximo 50 caracteres"),
+
+    registrationState: yup.string().optional().matches(/^[A-Za-z]{2}$/, "Estado deve ter 2 letras"),
+
+    defaultAppointmentDuration: yup
+      .number()
+      .optional()
+      .positive("Duração deve ser positiva")
+      .integer("Duração deve ser um número inteiro"),
+
+    isActive: yup.boolean().optional(),
+  })
+  .test(
+    "at-least-one-field",
+    "Informe ao menos um campo para atualizar",
+    (value) => !!value && Object.values(value).some((item) => item !== undefined),
+  );

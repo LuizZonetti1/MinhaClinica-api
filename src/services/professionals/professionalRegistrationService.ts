@@ -45,6 +45,16 @@ export class InviteProfessionalService {
     // Criar token de verificação
     const verification = createVerificationData(48); // 48 horas
 
+    // Buscar ou criar a especialidade na clínica
+    const specialtyRecord = await prisma.specialty.upsert({
+      where: { clinicId_name: { clinicId: adminClinicId, name: data.specialty } },
+      update: {},
+      create: {
+        clinicId: adminClinicId,
+        name: data.specialty,
+      },
+    });
+
     // Criar usuário com status pendente
     const user = await this.userRepository.createUser({
       clinicId: adminClinicId,
@@ -58,12 +68,13 @@ export class InviteProfessionalService {
       mustChangePassword: false,
     });
 
-    // Salvar token de verificação
+    // Salvar token de verificação e especialidade pendente
     await prisma.user.update({
       where: { id: user.id },
       data: {
         verificationToken: verification.hashedToken,
         verificationExpires: verification.expiresAt,
+        pendingSpecialtyId: specialtyRecord.id,
       },
     });
 
@@ -97,7 +108,7 @@ export class CompleteProfessionalService {
       throw new Error("Usuário não encontrado");
     }
 
-    if (user.status !== UserStatus.PENDING_ACTIVATION) {
+    if (user.status !== UserStatus.EMAIL_VERIFIED) {
       throw new Error("Usuário já ativo ou status inválido");
     }
 
@@ -132,7 +143,7 @@ export class CompleteProfessionalService {
       },
     });
 
-    // Criar registro de profissional
+    // Criar registro de profissional e vincular especialidade pendente
     const professional = await prisma.professional.create({
       data: {
         userId,
@@ -143,6 +154,23 @@ export class CompleteProfessionalService {
         defaultAppointmentDuration: data.defaultAppointmentDuration || 30,
       },
     });
+
+    // Vincular especialidade pendente (definida no convite)
+    if (user.pendingSpecialtyId) {
+      await prisma.professionalSpecialty.create({
+        data: {
+          professionalId: professional.id,
+          specialtyId: user.pendingSpecialtyId,
+          isPrimary: true,
+        },
+      });
+
+      // Limpar specialtyId pendente do usuário
+      await prisma.user.update({
+        where: { id: userId },
+        data: { pendingSpecialtyId: null },
+      });
+    }
 
     return {
       userId: user.id,

@@ -101,6 +101,7 @@ export interface CompleteStaffInput {
 export interface InviteProfessionalInput {
   name: string;
   email: string;
+  specialty: string;
 }
 
 export interface CompleteProfessionalInput {
@@ -111,4 +112,21 @@ export interface CompleteProfessionalInput {
   registrationNumber: string;
   registrationState: string;
   defaultAppointmentDuration?: number;
+}
+
+export interface UpdateProfessionalInput {
+  name?: string;
+  email?: string;
+  specialty?: string;
+  professionalCouncil?: string;
+  registrationNumber?: string;
+  registrationState?: string;
+  defaultAppointmentDuration?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateReceptionInput {
+  name?: string;
+  email?: string;
+  isActive?: boolean;
 }
