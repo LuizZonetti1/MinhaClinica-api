@@ -4,8 +4,8 @@ import { UserRole } from "../types/enums";
 const STAFF_ROLES = [UserRole.RECEPTIONIST, UserRole.ADMIN];
 
 /**
- * Schema para convidar recepcionista (Admin apenas)
- * Apenas nome e email
+ * Schema para convidar recepcionista/admin (Admin apenas)
+ * Campos de pre-cadastro: nome e email
  */
 export const inviteStaffSchema = yup.object({
   name: yup
@@ -46,3 +46,29 @@ export const completeStaffSchema = yup.object({
     .min(6, "Senha deve ter no mínimo 6 caracteres")
     .max(50, "Senha deve ter no máximo 50 caracteres"),
 });
+
+/**
+ * Schema para atualizar recepcionista (Admin)
+ * Todos os campos sao opcionais, mas ao menos um deve ser enviado
+ */
+export const updateReceptionSchema = yup
+  .object({
+    name: yup
+      .string()
+      .optional()
+      .min(3, "Nome deve ter no mínimo 3 caracteres")
+      .max(100, "Nome deve ter no máximo 100 caracteres"),
+
+    email: yup
+      .string()
+      .optional()
+      .email("Email inválido")
+      .max(100, "Email deve ter no máximo 100 caracteres"),
+
+    isActive: yup.boolean().optional(),
+  })
+  .test(
+    "at-least-one-field",
+    "Informe ao menos um campo para atualizar",
+    (value) => !!value && Object.values(value).some((item) => item !== undefined),
+  );
