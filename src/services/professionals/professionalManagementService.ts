@@ -416,23 +416,17 @@ export class DeactivateProfessionalService {
 
     if (upcomingActiveAppointments > 0) {
       throw new Error(
-        "Nao e possivel desativar: existem agendamentos ativos vinculados a este profissional",
+        "Nao e possivel remover: existem agendamentos ativos vinculados a este profissional",
       );
     }
 
-    await prisma.$transaction([
-      prisma.professional.update({
-        where: { id: professional.id },
-        data: { isActive: false },
-      }),
-      prisma.user.update({
-        where: { id: professional.user.id },
-        data: { status: UserStatus.INACTIVE },
-      }),
-    ]);
+    // Deletar o usuário — o registro de Professional é removido em cascade
+    await prisma.user.delete({
+      where: { id: professional.user.id },
+    });
 
     return {
-      message: "Profissional desativado com sucesso",
+      message: "Profissional removido com sucesso",
     };
   }
 }

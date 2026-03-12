@@ -281,17 +281,16 @@ export class DeactivateReceptionService {
 
     if (upcomingActiveAppointments > 0) {
       throw new Error(
-        "Nao e possivel desativar: existem agendamentos ativos criados por este recepcionista",
+        "Nao e possivel remover: existem agendamentos ativos criados por este recepcionista",
       );
     }
 
-    await prisma.user.update({
+    await prisma.user.delete({
       where: { id: receptionist.id },
-      data: { status: UserStatus.INACTIVE },
     });
 
     return {
-      message: "Recepcionista desativado com sucesso",
+      message: "Recepcionista removido com sucesso",
     };
   }
 }
