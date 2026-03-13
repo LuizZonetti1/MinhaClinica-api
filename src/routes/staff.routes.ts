@@ -1,12 +1,42 @@
 import { Router } from "express";
+import { ProfileController } from "../controller/profileController";
 import { StaffController } from "../controller/staffController";
 import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
-import { completeStaffSchema, inviteStaffSchema, updateReceptionSchema } from "../schemas/staffSchema";
+import {
+  completeStaffSchema,
+  inviteStaffSchema,
+  updateReceptionSchema,
+} from "../schemas/staffSchema";
 import { UserRole } from "../types/enums";
 
 const router = Router();
 const staffController = new StaffController();
+const profileController = new ProfileController();
+
+/**
+ * PROTEGIDO (ADMIN) — Visualizar todos os dados do admin autenticado
+ * GET /api/staff/me
+ */
+router.get("/me", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  profileController.getMe(req, res),
+);
+
+/**
+ * PROTEGIDO (ADMIN) — Atualizar nome e telefone do admin
+ * PATCH /api/staff/me
+ */
+router.patch("/me", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  profileController.updateMe(req, res),
+);
+
+/**
+ * PROTEGIDO (ADMIN) — Alterar senha do admin
+ * PATCH /api/staff/me/password
+ */
+router.patch("/me/password", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  profileController.changePassword(req, res),
+);
 
 /**
  * PROTEGIDO (ADMIN) — Convidar staff

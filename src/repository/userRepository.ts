@@ -26,6 +26,17 @@ export class UserRepository {
     });
   }
 
+  async findWithClinic(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        clinic: {
+          include: { settings: true },
+        },
+      },
+    });
+  }
+
   // Busca por email globalmente (pacientes) ou dentro de uma clínica (staff)
   async findByEmail(emailOrClinicId: string, emailOrUndefined?: string) {
     const isClinicScoped = emailOrUndefined !== undefined;
