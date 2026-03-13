@@ -199,11 +199,24 @@ model ClinicSettings {
   allowOnlineBooking         Boolean @default(true)
   requirePatientConfirmation Boolean @default(true)
 
+  // Horário de funcionamento (configurações da página de configurações)
+  openTime          String @default("08:00") @db.VarChar(5) // HH:mm
+  closeTime         String @default("18:00") @db.VarChar(5) // HH:mm
+  workingDaysPreset String @default("WEEKDAYS") @db.VarChar(20) // WEEKDAYS | MON_TO_SAT | ALL_WEEK
+
   // Notificações
   sendAppointmentConfirmation Boolean @default(true)
   sendAppointmentReminder     Boolean @default(true)
   reminderHoursBefore         Int     @default(24)
   sendBirthdayMessage         Boolean @default(true)
+  sendCancellationAlert       Boolean @default(true)
+  sendNewPatientAlert         Boolean @default(false)
+  sendDailyReport             Boolean @default(false)
+
+  // Segurança
+  twoFactorEnabled      Boolean @default(false)
+  accessLogEnabled      Boolean @default(true)
+  sessionTimeoutMinutes Int     @default(30)
 
   // Visual
   primaryColor   String  @default("#3B82F6")
