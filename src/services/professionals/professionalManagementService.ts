@@ -4,6 +4,7 @@ import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
 import { UserRepository } from "../../repository/userRepository";
 import { AppointmentStatus, UserRole, UserStatus } from "../../types/enums";
+import type { ProfessionalDetails } from "../../types/professional";
 import type { UpdateProfessionalInput } from "../../types/user";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
 import { createEmailProvider, EmailService } from "../email/emailService";
@@ -32,27 +33,7 @@ const toRegistrationStatus = (status: string) => {
 const hasAnyDefinedField = (data: Record<string, unknown>) =>
   Object.values(data).some((value) => value !== undefined);
 
-export interface ProfessionalDetails {
-  id: string;
-  userId: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  status: string;
-  registrationStatus: string;
-  avatarUrl: string | null;
-  lastLoginAt: Date | null;
-  createdAt: Date;
-  isActive: boolean;
-  professionalCouncil: string;
-  registrationNumber: string;
-  registrationState: string;
-  defaultAppointmentDuration: number;
-  specialties: Array<{ id: string; name: string; isPrimary: boolean }>;
-  appointmentsThisMonth: number;
-  upcomingActiveAppointments: number;
-  canDeactivate: boolean;
-}
+export type { ProfessionalDetails };
 
 export class GetProfessionalByIdService {
   async execute(clinicId: string, professionalId: string): Promise<ProfessionalDetails> {

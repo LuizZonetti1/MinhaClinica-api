@@ -3,24 +3,14 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
 import { UserRole } from "../../types/enums";
+import type { ReceptionistListItem } from "../../types/receptionist";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
-export interface ReceptionistListItem {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  status: string;
-  role: string;
-  avatarUrl: string | null;
-  lastLoginAt: Date | null;
-  createdAt: Date;
-  appointmentsThisMonth: number;
-}
+export type { ReceptionistListItem };
 
 export class GetReceptionistsService {
   async execute(clinicId: string): Promise<ReceptionistListItem[]> {

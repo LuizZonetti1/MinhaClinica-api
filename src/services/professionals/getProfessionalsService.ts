@@ -2,29 +2,14 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
+import type { ProfessionalListItem } from "../../types/professional";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
-export interface ProfessionalListItem {
-  id: string;
-  userId: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  status: string;
-  avatarUrl: string | null;
-  lastLoginAt: Date | null;
-  createdAt: Date;
-  isActive: boolean;
-  professionalCouncil: string;
-  registrationNumber: string;
-  registrationState: string;
-  specialties: string[];
-  appointmentsThisMonth: number;
-}
+export type { ProfessionalListItem };
 
 export class GetProfessionalsService {
   async execute(clinicId: string): Promise<ProfessionalListItem[]> {

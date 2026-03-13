@@ -4,6 +4,7 @@ import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
 import { UserRepository } from "../../repository/userRepository";
 import { AppointmentStatus, UserRole, UserStatus } from "../../types/enums";
+import type { ReceptionDetails } from "../../types/receptionist";
 import type { UpdateReceptionInput } from "../../types/user";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
 import { createEmailProvider, EmailService } from "../email/emailService";
@@ -32,21 +33,7 @@ const toRegistrationStatus = (status: string) => {
 const hasAnyDefinedField = (data: Record<string, unknown>) =>
   Object.values(data).some((value) => value !== undefined);
 
-export interface ReceptionDetails {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  status: string;
-  registrationStatus: string;
-  role: string;
-  avatarUrl: string | null;
-  lastLoginAt: Date | null;
-  createdAt: Date;
-  appointmentsThisMonth: number;
-  upcomingActiveAppointments: number;
-  canDeactivate: boolean;
-}
+export type { ReceptionDetails };
 
 export class GetReceptionByIdService {
   async execute(clinicId: string, receptionistId: string): Promise<ReceptionDetails> {
