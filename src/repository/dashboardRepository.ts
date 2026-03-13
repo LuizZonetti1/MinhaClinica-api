@@ -1,5 +1,5 @@
 import { prisma } from "../database/prisma";
-import { AppointmentStatus, TransactionType } from "../types/enums";
+import { AppointmentStatus, TransactionType, UserRole, UserStatus } from "../types/enums";
 
 export class DashboardRepository {
   async countPatients(clinicId: string): Promise<number> {
@@ -42,6 +42,16 @@ export class DashboardRepository {
   async countProfessionals(clinicId: string): Promise<number> {
     return prisma.professional.count({
       where: { clinicId },
+    });
+  }
+
+  async countActiveProfessionals(clinicId: string): Promise<number> {
+    return prisma.user.count({
+      where: {
+        clinicId,
+        role: UserRole.PROFESSIONAL,
+        status: UserStatus.ACTIVE,
+      },
     });
   }
 
