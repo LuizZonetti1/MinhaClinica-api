@@ -21,5 +21,10 @@
   },
   "[jsonc]": {
     "editor.defaultFormatter": "biomejs.biome"
+  },
+  "chat.tools.terminal.autoApprove": {
+    "npx tsc": true,
+    "git add": true,
+    "git commit": true
   }
 }
