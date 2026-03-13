@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import multer, { type StorageEngine } from "multer";
 
-// ── Pasta raiz de uploads (fora de src, na raiz do projeto) ─────────────────
-export const UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
+// ── Pasta raiz de uploads (dentro de src/) ───────────────────────────────────
+export const UPLOADS_DIR = path.resolve(process.cwd(), "src", "uploads");
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE_MB = 5;
