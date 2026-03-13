@@ -1,7 +1,11 @@
 import type { Request, Response } from "express";
 import {
+  clinicInfoUpdateSchema,
+  clinicNotificationsUpdateSchema,
   clinicRegisterCompleteSchema,
   clinicRegisterStartSchema,
+  clinicScheduleUpdateSchema,
+  clinicSecurityUpdateSchema,
   clinicUpdateSchema,
 } from "../schemas/clinicSchema";
 import { VerifyEmailService } from "../services/auth/verifyEmailService";
@@ -10,9 +14,17 @@ import {
   RegisterClinicService,
   ResendClinicVerificationService,
 } from "../services/clinics/clinicRegistrationService";
+import {
+  GetClinicSettingsService,
+  UpdateClinicInfoService,
+  UpdateClinicNotificationsService,
+  UpdateClinicScheduleService,
+  UpdateClinicSecurityService,
+} from "../services/clinics/clinicSettingsService";
 import { DeleteClinicService } from "../services/clinics/deleteClinicService";
 import { GetClinicService } from "../services/clinics/getClinicService";
 import { UpdateClinicService } from "../services/clinics/updateClinicService";
+import type { WorkingDaysPreset } from "../types/clinic";
 import { resolveVerifyRedirect } from "../utils/verifyRedirectUtils";
 
 export class ClinicController {
@@ -238,6 +250,146 @@ export class ClinicController {
       }
       const status = error.statusCode ?? 400;
       res.status(status).json({ error: error.message || "Erro ao completar cadastro da clínica" });
+    }
+  }
+
+  // ── Configurações da clínica (página de Configurações) ──────────────────────
+
+  /**
+   * GET /api/clinics/settings
+   * Retorna as configurações completas da clínica do admin autenticado
+   */
+  async getSettings(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+
+      const service = new GetClinicSettingsService();
+      const data = await service.execute(clinicId);
+
+      res.status(200).json({ data });
+    } catch (error: any) {
+      if (error.message === "Clínica não encontrada") {
+        res.status(404).json({ message: error.message });
+        return;
+      }
+      res.status(400).json({ message: error.message || "Erro ao buscar configurações" });
+    }
+  }
+
+  /**
+   * PATCH /api/clinics/settings/info
+   * Atualiza os dados básicos (nome, CNPJ, telefone, e-mail, endereço)
+   */
+  async updateInfo(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+
+      const validatedData = await clinicInfoUpdateSchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
+
+      const service = new UpdateClinicInfoService();
+      const clinic = await service.execute(clinicId, validatedData);
+
+      res.status(200).json({ message: "Informações atualizadas com sucesso", data: clinic });
+    } catch (error: any) {
+      if (error.name === "ValidationError") {
+        res.status(400).json({ message: "Erro de validação", errors: error.errors });
+        return;
+      }
+      res.status(400).json({ message: error.message || "Erro ao atualizar informações" });
+    }
+  }
+
+  /**
+   * PATCH /api/clinics/settings/schedule
+   * Atualiza as configurações de horário e agenda
+   */
+  async updateSchedule(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+
+      const validatedData = await clinicScheduleUpdateSchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
+
+      const service = new UpdateClinicScheduleService();
+      const settings = await service.execute(clinicId, {
+        ...validatedData,
+        workingDaysPreset: validatedData.workingDaysPreset as WorkingDaysPreset | undefined,
+      });
+
+      res
+        .status(200)
+        .json({ message: "Configurações de agenda atualizadas com sucesso", data: settings });
+    } catch (error: any) {
+      if (error.name === "ValidationError") {
+        res.status(400).json({ message: "Erro de validação", errors: error.errors });
+        return;
+      }
+      res
+        .status(400)
+        .json({ message: error.message || "Erro ao atualizar configurações de agenda" });
+    }
+  }
+
+  /**
+   * PATCH /api/clinics/settings/notifications
+   * Atualiza as preferências de notificações
+   */
+  async updateNotifications(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+
+      const validatedData = await clinicNotificationsUpdateSchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
+
+      const service = new UpdateClinicNotificationsService();
+      const settings = await service.execute(clinicId, validatedData);
+
+      res
+        .status(200)
+        .json({ message: "Configurações de notificações atualizadas com sucesso", data: settings });
+    } catch (error: any) {
+      if (error.name === "ValidationError") {
+        res.status(400).json({ message: "Erro de validação", errors: error.errors });
+        return;
+      }
+      res.status(400).json({ message: error.message || "Erro ao atualizar notificações" });
+    }
+  }
+
+  /**
+   * PATCH /api/clinics/settings/security
+   * Atualiza as configurações de segurança
+   */
+  async updateSecurity(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+
+      const validatedData = await clinicSecurityUpdateSchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
+
+      const service = new UpdateClinicSecurityService();
+      const settings = await service.execute(clinicId, validatedData);
+
+      res
+        .status(200)
+        .json({ message: "Configurações de segurança atualizadas com sucesso", data: settings });
+    } catch (error: any) {
+      if (error.name === "ValidationError") {
+        res.status(400).json({ message: "Erro de validação", errors: error.errors });
+        return;
+      }
+      res
+        .status(400)
+        .json({ message: error.message || "Erro ao atualizar configurações de segurança" });
     }
   }
 }

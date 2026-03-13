@@ -1,7 +1,8 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { ClinicController } from "../controller/clinicController";
-import { tempRegistrationAuth } from "../middlewares/auth";
+import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
+import { UserRole } from "../types/enums";
 
 const clinicRoutes = Router();
 const clinicController = new ClinicController();
@@ -71,6 +72,54 @@ clinicRoutes.get("/verify-email/:token", (req, res) => clinicController.verifyEm
 
 // Rota para listar todas as clínicas
 clinicRoutes.get("/list", (req, res) => clinicController.listClinics(req, res));
+
+// ── Configurações da clínica (página de Configurações — apenas ADMIN) ─────────
+// IMPORTANTE: estas rotas devem ficar antes de /:id para não serem capturadas como parâmetro
+
+/**
+ * GET /api/clinics/settings
+ * Retorna todas as configurações da clínica do admin autenticado
+ */
+clinicRoutes.get("/settings", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  clinicController.getSettings(req, res),
+);
+
+/**
+ * PATCH /api/clinics/settings/info
+ * Atualiza dados básicos: nome, CNPJ, telefone, e-mail, endereço
+ */
+clinicRoutes.patch("/settings/info", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  clinicController.updateInfo(req, res),
+);
+
+/**
+ * PATCH /api/clinics/settings/schedule
+ * Atualiza configurações de horário: abertura, fechamento, intervalo, dias
+ */
+clinicRoutes.patch("/settings/schedule", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  clinicController.updateSchedule(req, res),
+);
+
+/**
+ * PATCH /api/clinics/settings/notifications
+ * Atualiza preferências de notificações (toggles)
+ */
+clinicRoutes.patch(
+  "/settings/notifications",
+  authMiddleware,
+  checkRole(UserRole.ADMIN),
+  (req, res) => clinicController.updateNotifications(req, res),
+);
+
+/**
+ * PATCH /api/clinics/settings/security
+ * Atualiza configurações de segurança: 2FA, log de acessos, timeout de sessão
+ */
+clinicRoutes.patch("/settings/security", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  clinicController.updateSecurity(req, res),
+);
+
+// ── Consulta/atualização genérica por ID ─────────────────────────────────────
 
 // Rota para buscar clínica por ID
 clinicRoutes.get("/:id", (req, res) => clinicController.getClinicById(req, res));
