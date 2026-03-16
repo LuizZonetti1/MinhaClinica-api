@@ -22,4 +22,27 @@ export class TransactionRepository {
       },
     });
   }
+
+  async list(clinicId: string, startDate: Date) {
+    return prisma.financialRecord.findMany({
+      where: {
+        clinicId,
+        referenceDate: { gte: startDate },
+      },
+      orderBy: { referenceDate: "desc" },
+      select: {
+        id: true,
+        type: true,
+        description: true,
+        notes: true,
+        category: true,
+        amount: true,
+        paymentMethod: true,
+        paymentStatus: true,
+        referenceDate: true,
+        dueDate: true,
+        createdAt: true,
+      },
+    });
+  }
 }

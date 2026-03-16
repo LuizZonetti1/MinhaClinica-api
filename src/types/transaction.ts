@@ -1,5 +1,32 @@
 import type { PaymentMethod, PaymentStatus, TransactionType } from "./enums";
 
+export type TransactionPeriod = "1m" | "3m" | "6m" | "12m";
+
+export interface TransactionListItem {
+  id: string;
+  type: TransactionType;
+  title: string;
+  description: string | null;
+  category: string | null;
+  amount: number;
+  paymentMethod: PaymentMethod | null;
+  paymentStatus: PaymentStatus;
+  referenceDate: Date;
+  dueDate: Date | null;
+  createdAt: Date;
+}
+
+export interface TransactionListResponse {
+  period: TransactionPeriod;
+  startDate: string;
+  transactions: TransactionListItem[];
+  summary: {
+    totalIncome: number;
+    totalExpense: number;
+    net: number;
+  };
+}
+
 export interface CreateTransactionInput {
   clinicId: string;
   userId: string;

@@ -1,7 +1,10 @@
 import type { Request, Response } from "express";
 import { createTransactionSchema } from "../schemas/transactionSchema";
 import { CreateTransactionService } from "../services/reports/createTransactionService";
-import type { CreateTransactionInput } from "../types/transaction";
+import { ListTransactionsService } from "../services/transactions/listTransactionsService";
+import type { CreateTransactionInput, TransactionPeriod } from "../types/transaction";
+
+const VALID_PERIODS: TransactionPeriod[] = ["1m", "3m", "6m", "12m"];
 
 export class TransactionController {
   async create(req: Request, res: Response): Promise<void> {
@@ -47,6 +50,35 @@ export class TransactionController {
         res.status(500).json({ error: error.message });
       } else {
         res.status(500).json({ error: "Erro ao criar transação" });
+      }
+    }
+  }
+
+  async list(req: Request, res: Response): Promise<void> {
+    try {
+      const { clinicId } = req;
+
+      if (!clinicId) {
+        res.status(400).json({ error: "Clínica não identificada no token" });
+        return;
+      }
+
+      const period = (req.query.period as string) ?? "1m";
+
+      if (!VALID_PERIODS.includes(period as TransactionPeriod)) {
+        res.status(400).json({ error: "Período inválido. Use: 1m, 3m, 6m ou 12m" });
+        return;
+      }
+
+      const service = new ListTransactionsService();
+      const data = await service.execute(clinicId, period as TransactionPeriod);
+
+      res.status(200).json(data);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(500).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Erro ao listar transações" });
       }
     }
   }
