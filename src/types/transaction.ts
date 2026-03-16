@@ -43,6 +43,19 @@ export interface CreateTransactionInput {
   notes?: string | null;
 }
 
+export interface UpdateTransactionInput {
+  type?: TransactionType;
+  title?: string;
+  description?: string;
+  amount?: number;
+  category?: string | null;
+  paymentMethod?: PaymentMethod | null;
+  paymentStatus?: PaymentStatus;
+  referenceDate?: string; // YYYY-MM-DD
+  dueDate?: string | null; // YYYY-MM-DD
+  notes?: string | null;
+}
+
 export interface TransactionRecord {
   id: string;
   clinicId: string;

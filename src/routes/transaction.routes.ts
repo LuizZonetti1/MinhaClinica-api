@@ -22,4 +22,12 @@ router.post("/", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
   transactionController.create(req, res),
 );
 
+/**
+ * PUT /api/transactions/:id
+ * Atualiza os dados de uma transação financeira
+ */
+router.put("/:id", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  transactionController.update(req, res),
+);
+
 export default router;
