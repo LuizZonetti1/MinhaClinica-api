@@ -14,12 +14,4 @@ router.get("/", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
   reportController.getReport(req, res),
 );
 
-/**
- * POST /api/reports/transactions
- * Cria uma transação financeira manual (INCOME ou EXPENSE)
- */
-router.post("/transactions", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
-  reportController.createTransaction(req, res),
-);
-
 export default router;

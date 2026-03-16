@@ -1,14 +1,14 @@
-import { ReportRepository } from "../../repository/reportRepository";
-import type { CreateTransactionInput } from "../../repository/reportRepository";
+import { TransactionRepository } from "../../repository/transactionRepository";
+import type { CreateTransactionInput } from "../../types/transaction";
 
 export class CreateTransactionService {
-  private repository: ReportRepository;
+  private repository: TransactionRepository;
 
   constructor() {
-    this.repository = new ReportRepository();
+    this.repository = new TransactionRepository();
   }
 
   async execute(input: CreateTransactionInput) {
-    return this.repository.createTransaction(input);
+    return this.repository.create(input);
   }
 }
