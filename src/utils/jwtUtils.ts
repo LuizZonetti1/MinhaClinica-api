@@ -6,6 +6,7 @@ export interface JwtPayload {
   userId: string;
   clinicId: string | null;
   role: UserRole;
+  name: string;
 }
 
 // Payload do token temporário de cadastro
@@ -34,6 +35,7 @@ export const generateAuthToken = (
   userId: string,
   clinicId: string | null | undefined,
   role: UserRole,
+  name: string,
   options: GenerateTokenOptions = {},
 ): string => {
   const secret = process.env.JWT_SECRET;
@@ -46,6 +48,7 @@ export const generateAuthToken = (
     userId,
     clinicId: clinicId ?? null,
     role,
+    name,
   };
 
   // Token padrão expira em 7 dias

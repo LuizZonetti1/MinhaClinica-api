@@ -71,7 +71,10 @@ export class TransactionController {
       }
 
       const service = new ListTransactionsService();
-      const data = await service.execute(clinicId, period as TransactionPeriod);
+      const data = await service.execute(clinicId, period as TransactionPeriod, {
+        userId: req.userId!,
+        userName: req.userName ?? "Desconhecido",
+      });
 
       res.status(200).json(data);
     } catch (error) {

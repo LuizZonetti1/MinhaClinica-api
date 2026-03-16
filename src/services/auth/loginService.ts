@@ -36,7 +36,7 @@ export class LoginService {
     }
 
     // Gerar token JWT
-    const token = generateAuthToken(user.id, user.clinicId, user.role);
+    const token = generateAuthToken(user.id, user.clinicId, user.role, user.name);
 
     // Atualizar último login
     await prisma.user.update({

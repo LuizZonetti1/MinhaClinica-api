@@ -21,7 +21,11 @@ const PERIOD_MONTHS: Record<TransactionPeriod, number | null> = {
 export class ListTransactionsService {
   private repository = new TransactionRepository();
 
-  async execute(clinicId: string, period: TransactionPeriod): Promise<TransactionListResponse> {
+  async execute(
+    clinicId: string,
+    period: TransactionPeriod,
+    currentUser: { userId: string; userName: string },
+  ): Promise<TransactionListResponse> {
     const now = dayjs().tz(DEFAULT_TIMEZONE);
 
     const startDate =
@@ -39,13 +43,14 @@ export class ListTransactionsService {
 
     const records = await this.repository.list(clinicId, startDate);
 
-    // Busca nomes dos usuários em lote
-    const userIds = [...new Set(records.map((r) => r.createdBy))];
+    // Busca nomes dos usuários em lote (exceto o próprio usuário do token)
+    const otherIds = [...new Set(records.map((r) => r.createdBy).filter((id) => id !== currentUser.userId))];
     const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
+      where: { id: { in: otherIds } },
       select: { id: true, name: true },
     });
     const userNameMap = new Map(users.map((u) => [u.id, u.name]));
+    userNameMap.set(currentUser.userId, currentUser.userName);
 
     const transactions = records.map((r) => ({
       id: r.id,

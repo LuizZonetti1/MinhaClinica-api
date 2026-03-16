@@ -10,6 +10,7 @@ declare global {
       userId?: string;
       clinicId?: string | null;
       userRole?: UserRole;
+      userName?: string;
     }
   }
 }
@@ -56,6 +57,7 @@ export const authMiddleware = async (
     req.userId = decoded.userId;
     req.clinicId = decoded.clinicId;
     req.userRole = decoded.role;
+    req.userName = decoded.name;
 
     next();
   } catch (error) {
