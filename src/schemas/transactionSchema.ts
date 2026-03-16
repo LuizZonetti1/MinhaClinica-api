@@ -30,7 +30,11 @@ export const updateTransactionSchema = yup.object({
 
   category: yup.string().max(100).optional().nullable(),
 
-  paymentMethod: yup.string().oneOf(paymentMethods, "Método de pagamento inválido").optional().nullable(),
+  paymentMethod: yup
+    .string()
+    .oneOf(paymentMethods, "Método de pagamento inválido")
+    .optional()
+    .nullable(),
 
   paymentStatus: yup.string().oneOf(paymentStatuses, "Status de pagamento inválido").optional(),
 

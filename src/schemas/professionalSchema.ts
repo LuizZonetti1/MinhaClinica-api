@@ -63,9 +63,7 @@ export const completeProfessionalSchema = yup.object({
     .integer("Duração deve ser um número inteiro")
     .default(30),
 
-  formations: yup
-    .string()
-    .optional(),
+  formations: yup.string().optional(),
 });
 
 /**
@@ -102,7 +100,10 @@ export const updateProfessionalSchema = yup
       .optional()
       .max(50, "Número de registro deve ter no máximo 50 caracteres"),
 
-    registrationState: yup.string().optional().matches(/^[A-Za-z]{2}$/, "Estado deve ter 2 letras"),
+    registrationState: yup
+      .string()
+      .optional()
+      .matches(/^[A-Za-z]{2}$/, "Estado deve ter 2 letras"),
 
     defaultAppointmentDuration: yup
       .number()
@@ -112,10 +113,7 @@ export const updateProfessionalSchema = yup
 
     isActive: yup.boolean().optional(),
 
-    formations: yup
-      .string()
-      .optional()
-      .max(1000, "Formações deve ter no máximo 1000 caracteres"),
+    formations: yup.string().optional().max(1000, "Formações deve ter no máximo 1000 caracteres"),
   })
   .test(
     "at-least-one-field",
