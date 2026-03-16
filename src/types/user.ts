@@ -112,6 +112,7 @@ export interface CompleteProfessionalInput {
   registrationNumber: string;
   registrationState: string;
   defaultAppointmentDuration?: number;
+  formations?: string;
 }
 
 export interface UpdateProfessionalInput {
@@ -123,6 +124,7 @@ export interface UpdateProfessionalInput {
   registrationState?: string;
   defaultAppointmentDuration?: number;
   isActive?: boolean;
+  formations?: string;
 }
 
 export interface UpdateReceptionInput {

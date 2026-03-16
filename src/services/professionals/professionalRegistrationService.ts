@@ -152,6 +152,7 @@ export class CompleteProfessionalService {
         registrationNumber: data.registrationNumber,
         registrationState: data.registrationState,
         defaultAppointmentDuration: data.defaultAppointmentDuration || 30,
+        formations: data.formations ?? null,
       },
     });
 

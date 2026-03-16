@@ -179,6 +179,7 @@ export class UpdateProfessionalService {
       registrationState: data.registrationState?.trim().toUpperCase(),
       defaultAppointmentDuration: data.defaultAppointmentDuration,
       isActive: data.isActive,
+      formations: data.formations,
     };
 
     if (!hasAnyDefinedField(normalizedData)) {
@@ -209,6 +210,7 @@ export class UpdateProfessionalService {
       registrationState?: string;
       defaultAppointmentDuration?: number;
       isActive?: boolean;
+      formations?: string;
     } = {};
 
     if (normalizedData.name !== undefined) {
@@ -237,6 +239,10 @@ export class UpdateProfessionalService {
 
     if (normalizedData.isActive !== undefined) {
       professionalUpdateData.isActive = normalizedData.isActive;
+    }
+
+    if (normalizedData.formations !== undefined) {
+      professionalUpdateData.formations = normalizedData.formations;
     }
 
     let shouldResendInvite = false;

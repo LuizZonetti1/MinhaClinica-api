@@ -62,6 +62,10 @@ export const completeProfessionalSchema = yup.object({
     .positive("Duração deve ser positiva")
     .integer("Duração deve ser um número inteiro")
     .default(30),
+
+  formations: yup
+    .string()
+    .optional(),
 });
 
 /**
@@ -107,6 +111,11 @@ export const updateProfessionalSchema = yup
       .integer("Duração deve ser um número inteiro"),
 
     isActive: yup.boolean().optional(),
+
+    formations: yup
+      .string()
+      .optional()
+      .max(1000, "Formações deve ter no máximo 1000 caracteres"),
   })
   .test(
     "at-least-one-field",

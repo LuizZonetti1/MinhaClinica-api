@@ -360,6 +360,9 @@ model Professional {
   registrationNumber  String
   registrationState   String @db.VarChar(2)
 
+  // Formações acadêmicas
+  formations String? @db.Text // Ex: "Medicina - USP (2015), Especialização em Cardiologia - UNIFESP (2018)"
+
   // Configuração de agenda
   defaultAppointmentDuration Int    @default(30) // minutos
   calendarColor              String @default("#3B82F6") // Cor na agenda
