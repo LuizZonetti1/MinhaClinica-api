@@ -50,7 +50,10 @@ export class ReportService {
     const now = dayjs().tz(DEFAULT_TIMEZONE);
     const months = PERIOD_MONTHS[period];
     // subtract(months - 1) garante que startDate coincide com o primeiro monthKey
-    const startDate = now.subtract(months - 1, "month").startOf("month").toDate();
+    const startDate = now
+      .subtract(months - 1, "month")
+      .startOf("month")
+      .toDate();
 
     const [appointments, financials] = await Promise.all([
       this.repository.getAppointmentsInPeriod(clinicId, startDate),
@@ -64,10 +67,17 @@ export class ReportService {
     }
 
     // ── Summary ──────────────────────────────────────────────────────────────
-    const cancelledStatuses = new Set<AppointmentStatus>([AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW]);
+    const cancelledStatuses = new Set<AppointmentStatus>([
+      AppointmentStatus.CANCELLED,
+      AppointmentStatus.NO_SHOW,
+    ]);
 
-    const consultationsCount = appointments.filter((a) => !cancelledStatuses.has(a.status as AppointmentStatus)).length;
-    const cancellationsCount = appointments.filter((a) => cancelledStatuses.has(a.status as AppointmentStatus)).length;
+    const consultationsCount = appointments.filter(
+      (a) => !cancelledStatuses.has(a.status as AppointmentStatus),
+    ).length;
+    const cancellationsCount = appointments.filter((a) =>
+      cancelledStatuses.has(a.status as AppointmentStatus),
+    ).length;
 
     const totalRevenue = financials
       .filter((f) => f.type === TransactionType.INCOME)
@@ -153,7 +163,10 @@ export class ReportService {
       AppointmentStatus.IN_PROGRESS,
       AppointmentStatus.WAITING,
     ]);
-    const pendingStatuses = new Set<AppointmentStatus>([AppointmentStatus.SCHEDULED, AppointmentStatus.RESCHEDULED]);
+    const pendingStatuses = new Set<AppointmentStatus>([
+      AppointmentStatus.SCHEDULED,
+      AppointmentStatus.RESCHEDULED,
+    ]);
 
     let confirmed = 0;
     let pending = 0;
