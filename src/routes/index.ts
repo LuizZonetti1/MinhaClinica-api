@@ -5,6 +5,7 @@ import dashboardRoutes from "./dashboard.routes";
 import patientRoutes from "./patient.routes";
 import professionalRoutes from "./professional.routes";
 import receptionRoutes from "./reception.routes";
+import reportRoutes from "./report.routes";
 import staffRoutes from "./staff.routes";
 
 const routes = Router();
@@ -20,6 +21,7 @@ routes.use("/staff", staffRoutes);
 routes.use("/reception", receptionRoutes);
 routes.use("/patients", patientRoutes);
 routes.use("/dashboard", dashboardRoutes);
+routes.use("/reports", reportRoutes);
 
 // Auxiliar de testes — REMOVER antes de produção
 
