@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { prisma } from "../../database/prisma";
 import { TransactionRepository } from "../../repository/transactionRepository";
 import { TransactionType } from "../../types/enums";
 import type { TransactionListResponse, TransactionPeriod } from "../../types/transaction";
@@ -26,7 +27,10 @@ export class ListTransactionsService {
     const startDate =
       period === "1m"
         ? now.startOf("month").toDate()
-        : now.subtract(PERIOD_MONTHS[period] as number, "month").startOf("day").toDate();
+        : now
+            .subtract(PERIOD_MONTHS[period] as number, "month")
+            .startOf("day")
+            .toDate();
 
     const startDateStr =
       period === "1m"
@@ -34,6 +38,14 @@ export class ListTransactionsService {
         : now.subtract(PERIOD_MONTHS[period] as number, "month").format("YYYY-MM-DD");
 
     const records = await this.repository.list(clinicId, startDate);
+
+    // Busca nomes dos usuários em lote
+    const userIds = [...new Set(records.map((r) => r.createdBy))];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true },
+    });
+    const userNameMap = new Map(users.map((u) => [u.id, u.name]));
 
     const transactions = records.map((r) => ({
       id: r.id,
@@ -47,6 +59,7 @@ export class ListTransactionsService {
       referenceDate: r.referenceDate,
       dueDate: r.dueDate,
       createdAt: r.createdAt,
+      createdByName: userNameMap.get(r.createdBy) ?? "Desconhecido",
     }));
 
     const totalIncome = transactions

@@ -42,6 +42,7 @@ export class TransactionRepository {
         referenceDate: true,
         dueDate: true,
         createdAt: true,
+        createdBy: true,
       },
     });
   }
