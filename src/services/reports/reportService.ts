@@ -49,7 +49,8 @@ export class ReportService {
   async getReportData(clinicId: string, period: ReportPeriod): Promise<ReportData> {
     const now = dayjs().tz(DEFAULT_TIMEZONE);
     const months = PERIOD_MONTHS[period];
-    const startDate = now.subtract(months, "month").startOf("month").toDate();
+    // subtract(months - 1) garante que startDate coincide com o primeiro monthKey
+    const startDate = now.subtract(months - 1, "month").startOf("month").toDate();
 
     const [appointments, financials] = await Promise.all([
       this.repository.getAppointmentsInPeriod(clinicId, startDate),
@@ -85,7 +86,8 @@ export class ReportService {
     }
 
     for (const a of appointments) {
-      const key = dayjs(a.appointmentDate).format("YYYY-MM");
+      // @db.Date chega como UTC midnight — usar .utc() evita shift de timezone
+      const key = dayjs(a.appointmentDate).utc().format("YYYY-MM");
       if (!apptByMonth[key]) continue;
       if (cancelledStatuses.has(a.status as AppointmentStatus)) {
         apptByMonth[key].cancellations++;
@@ -101,7 +103,8 @@ export class ReportService {
     }
 
     for (const f of financials) {
-      const key = dayjs(f.referenceDate).format("YYYY-MM");
+      // @db.Date chega como UTC midnight — usar .utc() evita shift de timezone
+      const key = dayjs(f.referenceDate).utc().format("YYYY-MM");
       if (!finByMonth[key]) continue;
       if (f.type === TransactionType.INCOME) {
         finByMonth[key].entradas += Number(f.amount);
