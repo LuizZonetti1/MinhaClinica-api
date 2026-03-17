@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { ActivateReceptionPatientService } from "../services/auth/activateReceptionPatientService";
 import { LoginService } from "../services/auth/loginService";
 import { ResendVerificationService } from "../services/auth/resendVerificationService";
 import { VerifyEmailService } from "../services/auth/verifyEmailService";
@@ -120,5 +121,30 @@ export class AuthController {
    */
   async verifyEmailLink(req: Request, res: Response): Promise<void> {
     return resolveVerifyRedirect(req, res);
+  }
+
+  /**
+   * POST /api/auth/activate-account
+   * Ativa conta de paciente cadastrado pela recepção
+   */
+  async activateAccount(req: Request, res: Response): Promise<void> {
+    try {
+      const { token } = req.body;
+      if (!token) {
+        res.status(400).json({ error: "Token não fornecido" });
+        return;
+      }
+      const service = new ActivateReceptionPatientService();
+      const result = await service.execute(token);
+      res.status(200).json(result);
+    } catch (error) {
+      if (error instanceof Error) {
+        const statusCode =
+          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
+        res.status(statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Erro ao ativar conta" });
+      }
+    }
   }
 }

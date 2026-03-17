@@ -143,6 +143,14 @@ router.post(
 );
 
 /**
+ * PÚBLICO — Ativar conta de paciente cadastrado pela recepção
+ * POST /api/auth/activate-account
+ */
+router.post("/activate-account", authLimiter, (req, res) =>
+  authController.activateAccount(req, res),
+);
+
+/**
  * PÚBLICO — Link do email (redireciona para o frontend)
  * GET /api/auth/verify-email/:token
  */

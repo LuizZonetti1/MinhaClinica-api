@@ -263,6 +263,74 @@ export class EmailService {
       text: `Olá ${name}, você foi convidado para ser ${roleText} na ${clinicName}. Clique no link: ${verificationUrl}`,
     });
   }
+
+  /**
+   * Envia email de boas-vindas para paciente cadastrado pela recepção
+   * Contém: email de login, senha temporária gerada e botão "Ativar Conta"
+   */
+  async sendReceptionWelcomeEmail(
+    email: string,
+    name: string,
+    temporaryPassword: string,
+    activationToken: string,
+  ): Promise<void> {
+    const activationUrl = `${process.env.FRONTEND_URL}/ativar-conta?token=${activationToken}`;
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #0EA5E9; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+        .button { display: inline-block; padding: 12px 30px; background-color: #0EA5E9; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+        .credentials { background: #E0F2FE; border-left: 4px solid #0EA5E9; padding: 16px 20px; border-radius: 4px; margin: 20px 0; }
+        .credentials p { margin: 6px 0; font-size: 15px; }
+        .credentials strong { font-family: monospace; font-size: 16px; color: #0369A1; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Bem-vindo(a) à Minha Clínica</h1>
+        </div>
+        <div class="content">
+            <h2>Olá, ${name}!</h2>
+            <p>Sua conta foi criada pela equipe de recepção da clínica. Abaixo estão suas credenciais de acesso:</p>
+            <div class="credentials">
+                <p>📧 <strong>E-mail:</strong> ${email}</p>
+                <p>🔑 <strong>Senha temporária:</strong> <strong>${temporaryPassword}</strong></p>
+            </div>
+            <p>Para ativar sua conta e começar a usar o portal do paciente, clique no botão abaixo:</p>
+            <center>
+                <a href="${activationUrl}" class="button">Ativar Conta</a>
+            </center>
+            <p>Ou copie e cole este link no seu navegador:</p>
+            <p style="word-break: break-all; color: #666;">${activationUrl}</p>
+            <p style="margin-top: 20px; font-size: 14px; color: #666;">
+                Este link de ativação expira em <strong>48 horas</strong>.<br>
+                Você pode trocar sua senha a qualquer momento após fazer login.
+            </p>
+        </div>
+        <div class="footer">
+            <p>Se você não esperava este email, entre em contato com a clínica.</p>
+        </div>
+    </div>
+</body>
+</html>
+    `;
+
+    await this.provider.sendEmail({
+      to: email,
+      subject: "Sua conta foi criada — Ative agora | Minha Clínica",
+      html,
+      text: `Olá ${name}, sua conta foi criada pela recepção. E-mail: ${email} | Senha: ${temporaryPassword} | Ative sua conta: ${activationUrl}`,
+    });
+  }
 }
 
 /**

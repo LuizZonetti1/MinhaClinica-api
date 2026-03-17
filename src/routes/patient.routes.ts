@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { PatientController } from "../controller/patientController";
 import { authMiddleware, checkRole } from "../middlewares/auth";
+import { validate } from "../middlewares/validation";
+import { receptionRegisterPatientSchema } from "../schemas/patientSchema";
 import { UserRole } from "../types/enums";
 
 const router = Router();
@@ -23,6 +25,18 @@ router.get(
   authMiddleware,
   checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
   (req, res) => patientController.getSummary(req, res),
+);
+
+/**
+ * PROTEGIDO (ADMIN/RECEPTIONIST) — Cadastro de paciente pela recepção
+ * POST /api/patients/register-by-reception
+ */
+router.post(
+  "/register-by-reception",
+  authMiddleware,
+  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
+  validate(receptionRegisterPatientSchema),
+  (req, res) => patientController.registerByReception(req, res),
 );
 
 // Cadastro de pacientes via /api/auth/register/*

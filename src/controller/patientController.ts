@@ -7,6 +7,7 @@ import {
   CompletePatientService,
   RegisterPatientService,
 } from "../services/patients/patientRegistrationService";
+import { ReceptionPatientRegistrationService } from "../services/patients/receptionPatientRegistrationService";
 
 export class PatientController {
   /**
@@ -52,6 +53,26 @@ export class PatientController {
         res.status(400).json({ error: error.message });
       } else {
         res.status(500).json({ error: "Erro ao completar cadastro" });
+      }
+    }
+  }
+
+  /**
+   * POST /api/patients/register-by-reception
+   * Cadastro de paciente pela recepção (ADMIN | RECEPTIONIST)
+   */
+  async registerByReception(req: Request, res: Response): Promise<void> {
+    try {
+      const service = new ReceptionPatientRegistrationService();
+      const result = await service.execute(req.body);
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof Error) {
+        const statusCode =
+          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
+        res.status(statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Erro ao cadastrar paciente" });
       }
     }
   }
