@@ -7,6 +7,13 @@ export interface DashboardSummary {
   referenceDate: string;
 }
 
+export interface ReceptionDashboardSummary {
+  date: string;
+  waitingCheckin: number;
+  checkinsDone: number;
+  pendingConfirmations: number;
+}
+
 export interface MonthlyFinancials {
   income: number;
   expense: number;

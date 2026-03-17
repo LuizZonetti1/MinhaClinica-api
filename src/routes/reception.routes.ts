@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { ReceptionDashboardController } from "../controller/receptionDashboardController";
 import { StaffController } from "../controller/staffController";
 import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
@@ -7,6 +8,18 @@ import { UserRole } from "../types/enums";
 
 const router = Router();
 const staffController = new StaffController();
+const receptionDashboardController = new ReceptionDashboardController();
+
+/**
+ * PROTEGIDO (ADMIN | RECEPTIONIST) — Resumo do dia para a recepção
+ * GET /api/reception/dashboard
+ */
+router.get(
+  "/dashboard",
+  authMiddleware,
+  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
+  (req, res) => receptionDashboardController.getSummary(req, res),
+);
 
 /**
  * PROTEGIDO (ADMIN) — Listar recepcionistas
