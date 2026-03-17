@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { prisma } from "../../database/prisma";
+import { ClinicRepository } from "../../repository/clinicRepository";
 import { PatientRepository } from "../../repository/patientRepository";
 import { UserRepository } from "../../repository/userRepository";
 import type { ReceptionRegisterPatientInput } from "../../types/patient";
@@ -43,10 +44,15 @@ function generateRandomPassword(length = 12): string {
 export class ReceptionPatientRegistrationService {
   private userRepository = new UserRepository();
   private patientRepository = new PatientRepository();
+  private clinicRepository = new ClinicRepository();
   private emailService = new EmailService(createEmailProvider());
 
-  async execute(data: ReceptionRegisterPatientInput) {
-    // ── 1) Verificar duplicidade de email ──────────────────────────────────
+  async execute(data: ReceptionRegisterPatientInput, clinicId: string) {
+    // ── 0) Buscar nome da clínica para o email ───────────────────────────────
+    const clinic = await this.clinicRepository.findById(clinicId);
+    const clinicName = clinic?.tradeName ?? clinic?.legalName ?? "Minha Clínica";
+
+    // ── 1) Verificar duplicidade de email ────────────────────────────────────
     const existingUser = await this.userRepository.findByEmail(data.email);
 
     if (existingUser) {
@@ -61,7 +67,7 @@ export class ReceptionPatientRegistrationService {
       throw Object.assign(new Error("Email já cadastrado"), { statusCode: 409 });
     }
 
-    // ── 2) Verificar duplicidade de CPF ────────────────────────────────────
+    // ── 2) Verificar duplicidade de CPF ──────────────────────────────────────
     const cleanCpf = data.cpf.replace(/\D/g, "");
     const existingCpf = await this.userRepository.findByCpf(cleanCpf);
     if (existingCpf) {
@@ -130,6 +136,7 @@ export class ReceptionPatientRegistrationService {
       data.name,
       temporaryPassword,
       activation.token,
+      clinicName,
     );
 
     return {

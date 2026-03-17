@@ -273,6 +273,7 @@ export class EmailService {
     name: string,
     temporaryPassword: string,
     activationToken: string,
+    clinicName: string,
   ): Promise<void> {
     const activationUrl = `${process.env.FRONTEND_URL}/ativar-conta?token=${activationToken}`;
 
@@ -290,6 +291,7 @@ export class EmailService {
         .credentials { background: #E0F2FE; border-left: 4px solid #0EA5E9; padding: 16px 20px; border-radius: 4px; margin: 20px 0; }
         .credentials p { margin: 6px 0; font-size: 15px; }
         .credentials strong { font-family: monospace; font-size: 16px; color: #0369A1; }
+        .clinic-box { background: #F0F9FF; border-left: 4px solid #0EA5E9; padding: 10px 16px; border-radius: 4px; margin: 12px 0; font-weight: bold; }
         .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
     </style>
 </head>
@@ -300,12 +302,14 @@ export class EmailService {
         </div>
         <div class="content">
             <h2>Olá, ${name}!</h2>
-            <p>Sua conta foi criada pela equipe de recepção da clínica. Abaixo estão suas credenciais de acesso:</p>
+            <p>Sua conta foi criada pela equipe de recepção da:</p>
+            <div class="clinic-box">${clinicName}</div>
+            <p>Abaixo estão suas credenciais de acesso ao portal do paciente:</p>
             <div class="credentials">
                 <p>📧 <strong>E-mail:</strong> ${email}</p>
                 <p>🔑 <strong>Senha temporária:</strong> <strong>${temporaryPassword}</strong></p>
             </div>
-            <p>Para ativar sua conta e começar a usar o portal do paciente, clique no botão abaixo:</p>
+            <p>Para ativar sua conta, clique no botão abaixo:</p>
             <center>
                 <a href="${activationUrl}" class="button">Ativar Conta</a>
             </center>
@@ -326,9 +330,9 @@ export class EmailService {
 
     await this.provider.sendEmail({
       to: email,
-      subject: "Sua conta foi criada — Ative agora | Minha Clínica",
+      subject: `Sua conta foi criada pela ${clinicName} — Ative agora | Minha Clínica`,
       html,
-      text: `Olá ${name}, sua conta foi criada pela recepção. E-mail: ${email} | Senha: ${temporaryPassword} | Ative sua conta: ${activationUrl}`,
+      text: `Olá ${name}, sua conta foi criada pela recepção da ${clinicName}. E-mail: ${email} | Senha: ${temporaryPassword} | Ative sua conta: ${activationUrl}`,
     });
   }
 }

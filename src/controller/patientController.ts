@@ -63,8 +63,15 @@ export class PatientController {
    */
   async registerByReception(req: Request, res: Response): Promise<void> {
     try {
+      const clinicId = req.clinicId;
+
+      if (!clinicId) {
+        res.status(400).json({ error: "Clínica não identificada no token" });
+        return;
+      }
+
       const service = new ReceptionPatientRegistrationService();
-      const result = await service.execute(req.body);
+      const result = await service.execute(req.body, clinicId);
       res.status(201).json(result);
     } catch (error) {
       if (error instanceof Error) {
