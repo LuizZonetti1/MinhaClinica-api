@@ -75,13 +75,9 @@ export class GetAvailableSlotsService {
 
     // Lunch break (se configurado)
     const lunchStart =
-      workingHours?.lunchBreakStart != null
-        ? timeToMinutes(workingHours.lunchBreakStart)
-        : null;
+      workingHours?.lunchBreakStart != null ? timeToMinutes(workingHours.lunchBreakStart) : null;
     const lunchEnd =
-      workingHours?.lunchBreakEnd != null
-        ? timeToMinutes(workingHours.lunchBreakEnd)
-        : null;
+      workingHours?.lunchBreakEnd != null ? timeToMinutes(workingHours.lunchBreakEnd) : null;
 
     // Converter bloqueios de agenda para ranges de minutos do dia
     const blockedRanges: { start: number; end: number }[] = [];
@@ -117,10 +113,7 @@ export class GetAvailableSlotsService {
       const slotEnd = current + duration;
 
       const inLunch =
-        lunchStart !== null &&
-        lunchEnd !== null &&
-        current < lunchEnd &&
-        slotEnd > lunchStart;
+        lunchStart !== null && lunchEnd !== null && current < lunchEnd && slotEnd > lunchStart;
 
       const isBlocked = blockedRanges.some((b) => current < b.end && slotEnd > b.start);
 

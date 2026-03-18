@@ -1,5 +1,5 @@
 import { prisma } from "../database/prisma";
-import { TransactionType } from "../types/enums";
+import type { TransactionType } from "../types/enums";
 
 export class ReportRepository {
   async getAppointmentsInPeriod(clinicId: string, startDate: Date) {

@@ -17,9 +17,6 @@ export const createAppointmentSchema = yup.object({
     .required("Hora de início é obrigatória")
     .matches(/^\d{2}:\d{2}$/, "Hora deve estar no formato HH:MM"),
   notes: yup.string().optional(),
-  channel: yup
-    .string()
-    .oneOf(Object.values(AppointmentChannel), "Canal inválido")
-    .optional(),
+  channel: yup.string().oneOf(Object.values(AppointmentChannel), "Canal inválido").optional(),
   procedureId: yup.string().optional(),
 });

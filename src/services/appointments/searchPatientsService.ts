@@ -19,6 +19,8 @@ export class SearchPatientsService {
       name: p.user.name,
       cpf: p.cpf,
       phone: p.user.phone,
+      avatarUrl: p.user.avatarUrl,
+      status: p.user.status,
     }));
   }
 }

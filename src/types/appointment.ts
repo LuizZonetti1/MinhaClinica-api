@@ -8,6 +8,8 @@ export interface PatientSearchItem {
   name: string;
   cpf: string;
   phone: string | null;
+  avatarUrl: string | null;
+  status: string;
 }
 
 // ── Listagem de profissionais (Etapa 2) ───────────────────────────────────────
@@ -20,21 +22,22 @@ export interface ProfessionalListItem {
   defaultAppointmentDuration: number;
   bufferTime: number;
   calendarColor: string;
+  avatarUrl: string | null;
 }
 
 // ── Slots disponíveis (Etapa 2) ───────────────────────────────────────────────
 
 export interface TimeSlot {
-  startTime: string;  // "HH:MM"
-  endTime: string;    // "HH:MM"
+  startTime: string; // "HH:MM"
+  endTime: string; // "HH:MM"
   available: boolean; // false = já tem agendamento nesse horário
 }
 
 export interface AvailableSlotsResult {
-  date: string;           // "YYYY-MM-DD"
+  date: string; // "YYYY-MM-DD"
   professionalId: string;
-  duration: number;       // minutos por consulta
-  bufferTime: number;     // minutos de intervalo
+  duration: number; // minutos por consulta
+  bufferTime: number; // minutos de intervalo
   slots: TimeSlot[];
 }
 
@@ -44,7 +47,7 @@ export interface CreateAppointmentInput {
   patientId: string;
   professionalId: string;
   appointmentDate: string; // "YYYY-MM-DD"
-  startTime: string;       // "HH:MM"
+  startTime: string; // "HH:MM"
   type: AppointmentType;
   channel?: AppointmentChannel;
   notes?: string;

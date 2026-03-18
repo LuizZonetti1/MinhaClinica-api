@@ -3,16 +3,18 @@ import type { CreateAppointmentInput } from "../types/appointment";
 import type { AppointmentChannel, AppointmentType, DayOfWeek } from "../types/enums";
 
 export class AppointmentRepository {
-  /** Etapa 1 — Busca pacientes da clínica por nome ou CPF */
+  /** Etapa 1 — Busca pacientes da clínica por nome ou CPF (inclui pendentes de ativação) */
   async searchPatients(q: string, clinicId: string) {
     return prisma.patient.findMany({
       where: {
         AND: [
           {
-            OR: [
-              { clinicId },
-              { appointments: { some: { clinicId } } },
-            ],
+            OR: [{ clinicId }, { appointments: { some: { clinicId } } }],
+          },
+          {
+            user: {
+              status: { in: ["ACTIVE", "PENDING_ACTIVATION", "EMAIL_VERIFIED"] },
+            },
           },
           {
             OR: [
@@ -26,7 +28,7 @@ export class AppointmentRepository {
         id: true,
         cpf: true,
         user: {
-          select: { id: true, name: true, phone: true },
+          select: { id: true, name: true, phone: true, avatarUrl: true, status: true },
         },
       },
       orderBy: { user: { name: "asc" } },
@@ -44,7 +46,7 @@ export class AppointmentRepository {
         bufferTime: true,
         calendarColor: true,
         user: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, avatarUrl: true },
         },
         specialties: {
           where: { isPrimary: true },
@@ -143,10 +145,7 @@ export class AppointmentRepository {
         clinicId,
         appointmentDate: { gte: startOfDay, lte: endOfDay },
         status: { notIn: ["CANCELLED", "NO_SHOW"] },
-        AND: [
-          { startTime: { lt: endTime } },
-          { endTime: { gt: startTime } },
-        ],
+        AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }],
       },
     });
     return count > 0;

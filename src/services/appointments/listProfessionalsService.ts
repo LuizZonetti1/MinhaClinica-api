@@ -15,6 +15,7 @@ export class ListProfessionalsService {
       defaultAppointmentDuration: p.defaultAppointmentDuration,
       bufferTime: p.bufferTime,
       calendarColor: p.calendarColor,
+      avatarUrl: p.user.avatarUrl,
     }));
   }
 }

@@ -94,10 +94,9 @@ export class CreateAppointmentService {
     );
 
     if (conflict) {
-      throw Object.assign(
-        new Error("Este horário já está ocupado. Por favor, escolha outro."),
-        { statusCode: 409 },
-      );
+      throw Object.assign(new Error("Este horário já está ocupado. Por favor, escolha outro."), {
+        statusCode: 409,
+      });
     }
 
     // Converter appointmentDate para Date (meia-noite local)

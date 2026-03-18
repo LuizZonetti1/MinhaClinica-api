@@ -8,10 +8,7 @@ import { UserRole } from "../types/enums";
 const router = Router();
 const controller = new AppointmentController();
 
-const receptionAccess = [
-  authMiddleware,
-  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
-];
+const receptionAccess = [authMiddleware, checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST)];
 
 /**
  * GET /api/appointments/patients/search?q=
