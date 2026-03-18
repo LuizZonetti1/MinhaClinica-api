@@ -1,11 +1,11 @@
-import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
 import { prisma } from "../../database/prisma";
 import { ClinicRepository } from "../../repository/clinicRepository";
 import { PatientRepository } from "../../repository/patientRepository";
 import { UserRepository } from "../../repository/userRepository";
-import type { ReceptionRegisterPatientInput } from "../../types/patient";
 import { UserRole, UserStatus } from "../../types/enums";
+import type { ReceptionRegisterPatientInput } from "../../types/patient";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
 import { createEmailProvider, EmailService } from "../email/emailService";
 
@@ -29,9 +29,7 @@ function generateRandomPassword(length = 12): string {
     return all[crypto.randomInt(all.length)];
   });
 
-  return [...mandatory, ...rest]
-    .sort(() => crypto.randomInt(3) - 1)
-    .join("");
+  return [...mandatory, ...rest].sort(() => crypto.randomInt(3) - 1).join("");
 }
 
 /**

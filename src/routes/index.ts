@@ -1,4 +1,5 @@
 import { Router } from "express";
+import appointmentRoutes from "./appointment.routes";
 import authRoutes from "./auth.routes";
 import clinicRoutes from "./clinic.routes";
 import dashboardRoutes from "./dashboard.routes";
@@ -21,6 +22,7 @@ routes.use("/professionals", professionalRoutes);
 routes.use("/staff", staffRoutes);
 routes.use("/reception", receptionRoutes);
 routes.use("/patients", patientRoutes);
+routes.use("/appointments", appointmentRoutes);
 routes.use("/dashboard", dashboardRoutes);
 routes.use("/reports", reportRoutes);
 routes.use("/transactions", transactionRoutes);

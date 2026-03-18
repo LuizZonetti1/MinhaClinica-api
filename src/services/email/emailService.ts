@@ -302,7 +302,7 @@ export class EmailService {
         </div>
         <div class="content">
             <h2>Olá, ${name}!</h2>
-            <p>Sua conta foi criada pela equipe de recepção da:</p>
+            <p>Sua conta foi criada pela equipe da:</p>
             <div class="clinic-box">${clinicName}</div>
             <p>Abaixo estão suas credenciais de acesso ao portal do paciente:</p>
             <div class="credentials">

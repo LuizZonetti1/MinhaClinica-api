@@ -26,6 +26,15 @@ export const Gender = {
 
 export type Gender = (typeof Gender)[keyof typeof Gender];
 
+export const AppointmentType = {
+  CONSULTATION: "CONSULTATION",
+  RETURN: "RETURN",
+  EXAM: "EXAM",
+  EMERGENCY: "EMERGENCY",
+} as const;
+
+export type AppointmentType = (typeof AppointmentType)[keyof typeof AppointmentType];
+
 export const AppointmentStatus = {
   SCHEDULED: "SCHEDULED",
   CONFIRMED: "CONFIRMED",
