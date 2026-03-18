@@ -13,7 +13,7 @@ export class AppointmentRepository {
           },
           {
             user: {
-              status: { in: ["ACTIVE", "PENDING_ACTIVATION", "EMAIL_VERIFIED"] },
+              status: { in: ["ACTIVE", "PENDING_ACTIVATION"] },
             },
           },
           {
