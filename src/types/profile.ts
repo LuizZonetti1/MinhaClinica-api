@@ -38,6 +38,27 @@ export interface UserProfileResponse {
   stats: ProfileStats;
 }
 
+// ── Perfil da Recepção ───────────────────────────────────────────────────────
+
+export interface ReceptionProfessionalInfo {
+  role: string; // ex: "Recepcionista"
+  ramal: string | null; // ramal telefônico (não existe no DB ainda)
+  admittedAt: string; // ISO date string — data de cadastro na clínica
+  shift: string | null; // turno de trabalho (não existe no DB ainda)
+}
+
+export interface ReceptionAccessInfo {
+  role: UserRole;
+  lastLoginAt: string | null;
+  sessionActive: boolean;
+}
+
+export interface ReceptionProfileResponse {
+  personal: ProfilePersonalInfo;
+  professional: ReceptionProfessionalInfo;
+  access: ReceptionAccessInfo;
+}
+
 // ── Entrada de atualização ───────────────────────────────────────────────────
 
 export interface UpdateProfileInput {

@@ -7,6 +7,7 @@ import { UserRepository } from "../../repository/userRepository";
 import { UserRole } from "../../types/enums";
 import type {
   ChangePasswordInput,
+  ReceptionProfileResponse,
   UpdateProfileInput,
   UserProfileResponse,
 } from "../../types/profile";
@@ -100,6 +101,53 @@ export class GetProfileService {
         activeProfessionals,
         appointmentsThisMonth,
         monthlyRevenue,
+      },
+    };
+  }
+}
+
+// ── GET /api/reception/me ────────────────────────────────────────────────────
+
+export class GetReceptionProfileService {
+  private userRepository: UserRepository;
+
+  constructor() {
+    this.userRepository = new UserRepository();
+  }
+
+  async execute(userId: string): Promise<ReceptionProfileResponse> {
+    const user = await this.userRepository.findWithClinic(userId);
+
+    if (!user) {
+      throw new Error("Usuário não encontrado");
+    }
+
+    const clinic = user.clinic;
+
+    const address = clinic
+      ? `${clinic.street}, ${clinic.number}${clinic.complement ? ` - ${clinic.complement}` : ""} - ${clinic.city}/${clinic.state}`
+      : null;
+
+    return {
+      personal: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone ?? null,
+        address,
+        avatarUrl: user.avatarUrl ?? null,
+      },
+      professional: {
+        role: ROLE_LABELS[UserRole.RECEPTIONIST],
+        ramal: null,
+        admittedAt: dayjs(user.createdAt).tz(DEFAULT_TIMEZONE).toISOString(),
+        shift: null,
+      },
+      access: {
+        role: user.role as UserRole,
+        lastLoginAt: user.lastLoginAt
+          ? dayjs(user.lastLoginAt).tz(DEFAULT_TIMEZONE).toISOString()
+          : null,
+        sessionActive: true,
       },
     };
   }

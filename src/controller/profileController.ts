@@ -3,6 +3,7 @@ import { changePasswordSchema, updateProfileSchema } from "../schemas/profileSch
 import {
   ChangePasswordService,
   GetProfileService,
+  GetReceptionProfileService,
   UpdateProfileService,
 } from "../services/users/profileService";
 import { fileToUrl, uploadAvatar } from "../utils/uploadUtils";
@@ -17,6 +18,28 @@ export class ProfileController {
       const userId = req.userId as string;
 
       const service = new GetProfileService();
+      const data = await service.execute(userId);
+
+      res.status(200).json({ data });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      if (err.message === "Usuário não encontrado") {
+        res.status(404).json({ message: err.message });
+        return;
+      }
+      res.status(500).json({ message: err.message || "Erro ao buscar perfil" });
+    }
+  }
+
+  /**
+   * GET /api/reception/me
+   * Retorna o perfil da recepcionista autenticada
+   */
+  async getReceptionMe(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId as string;
+
+      const service = new GetReceptionProfileService();
       const data = await service.execute(userId);
 
       res.status(200).json({ data });
