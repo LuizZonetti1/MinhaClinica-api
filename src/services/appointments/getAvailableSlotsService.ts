@@ -52,6 +52,10 @@ export class GetAvailableSlotsService {
     const endOfDay = dayjsDate.endOf("day").toDate();
 
     const dayOfWeek = JS_DAY_TO_ENUM[dayjsDate.day()];
+    const now = dayjs().tz(DEFAULT_TIMEZONE);
+    const isPastDate = dayjsDate.isBefore(now, "day");
+    const isToday = dayjsDate.isSame(now, "day");
+    const nowMinutes = now.hour() * 60 + now.minute();
 
     const { professional, workingHours, scheduleBlocks, appointments } =
       await this.repository.getProfessionalScheduleData(
@@ -116,11 +120,12 @@ export class GetAvailableSlotsService {
         lunchStart !== null && lunchEnd !== null && current < lunchEnd && slotEnd > lunchStart;
 
       const isBlocked = blockedRanges.some((b) => current < b.end && slotEnd > b.start);
+      const isPastTime = isPastDate || (isToday && current < nowMinutes);
 
       slots.push({
         startTime: minutesToTime(current),
         endTime: minutesToTime(slotEnd),
-        available: !inLunch && !isBlocked,
+        available: !inLunch && !isBlocked && !isPastTime,
       });
 
       current += step;

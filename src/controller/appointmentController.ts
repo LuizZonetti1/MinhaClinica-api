@@ -7,7 +7,7 @@ import { SearchPatientsService } from "../services/appointments/searchPatientsSe
 export class AppointmentController {
   /**
    * GET /api/appointments/patients/search?q=
-   * Busca pacientes da clínica por nome ou CPF (Etapa 1)
+   * Busca pacientes globais por nome ou CPF (Etapa 1)
    */
   async searchPatients(req: Request, res: Response): Promise<void> {
     try {

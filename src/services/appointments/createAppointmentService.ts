@@ -30,6 +30,12 @@ export class CreateAppointmentService {
     clinicId: string,
     createdBy: string,
   ): Promise<AppointmentCreatedResult> {
+    if (!/^\d{2}:\d{2}$/.test(input.startTime)) {
+      throw Object.assign(new Error("Horario invalido. Use o formato HH:mm"), {
+        statusCode: 400,
+      });
+    }
+
     // Buscar dados do profissional
     const professional = await prisma.professional.findFirst({
       where: { id: input.professionalId, clinicId, isActive: true },
@@ -76,12 +82,32 @@ export class CreateAppointmentService {
     }
 
     const duration = professional.defaultAppointmentDuration;
-    const endTime = minutesToTime(timeToMinutes(input.startTime) + duration);
+    const startMinutes = timeToMinutes(input.startTime);
+
+    if (Number.isNaN(startMinutes) || startMinutes < 0 || startMinutes >= 24 * 60) {
+      throw Object.assign(new Error("Horario invalido. Use o formato HH:mm"), {
+        statusCode: 400,
+      });
+    }
+
+    const endTime = minutesToTime(startMinutes + duration);
 
     // Calcular intervalo do dia para verificação de conflito
     const dayjsDate = dayjs.tz(input.appointmentDate, DEFAULT_TIMEZONE);
     const startOfDay = dayjsDate.startOf("day").toDate();
     const endOfDay = dayjsDate.endOf("day").toDate();
+    const now = dayjs().tz(DEFAULT_TIMEZONE);
+    const appointmentStart = dayjsDate
+      .hour(Math.floor(startMinutes / 60))
+      .minute(startMinutes % 60)
+      .second(0)
+      .millisecond(0);
+
+    if (appointmentStart.isBefore(now)) {
+      throw Object.assign(new Error("Nao e permitido agendar em horario ja passado"), {
+        statusCode: 400,
+      });
+    }
 
     // Verificar conflito de horário
     const conflict = await this.repository.hasConflict(

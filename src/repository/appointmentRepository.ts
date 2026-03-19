@@ -3,25 +3,16 @@ import type { CreateAppointmentInput } from "../types/appointment";
 import type { AppointmentChannel, AppointmentType, DayOfWeek } from "../types/enums";
 
 export class AppointmentRepository {
-  /** Etapa 1 — Busca pacientes da clínica por nome ou CPF (inclui pendentes de ativação) */
-  async searchPatients(q: string, clinicId: string) {
+  /** Etapa 1 — Busca pacientes globais por nome ou CPF (inclui pendentes de ativação) */
+  async searchPatients(q: string, _clinicId: string) {
     return prisma.patient.findMany({
       where: {
-        AND: [
-          {
-            OR: [{ clinicId }, { appointments: { some: { clinicId } } }],
-          },
-          {
-            user: {
-              status: { in: ["ACTIVE", "PENDING_ACTIVATION"] },
-            },
-          },
-          {
-            OR: [
-              { user: { name: { contains: q, mode: "insensitive" } } },
-              { cpf: { contains: q } },
-            ],
-          },
+        user: {
+          status: { in: ["ACTIVE", "PENDING_ACTIVATION"] },
+        },
+        OR: [
+          { user: { name: { contains: q, mode: "insensitive" } } },
+          { cpf: { contains: q } },
         ],
       },
       select: {
