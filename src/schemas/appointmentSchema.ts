@@ -1,5 +1,23 @@
 import * as yup from "yup";
-import { AppointmentChannel, AppointmentType } from "../types/enums";
+import { AppointmentChannel, AppointmentStatus, AppointmentType } from "../types/enums";
+
+// Status permitidos para check-in via recepção
+const CHECKIN_ALLOWED_STATUSES = [
+  AppointmentStatus.SCHEDULED,
+  AppointmentStatus.CONFIRMED,
+  AppointmentStatus.WAITING,
+  AppointmentStatus.IN_PROGRESS,
+  AppointmentStatus.COMPLETED,
+  AppointmentStatus.NO_SHOW,
+  AppointmentStatus.CANCELLED,
+] as const;
+
+export const updateAppointmentStatusSchema = yup.object({
+  status: yup
+    .string()
+    .required("Status é obrigatório")
+    .oneOf(CHECKIN_ALLOWED_STATUSES, "Status inválido"),
+});
 
 export const createAppointmentSchema = yup.object({
   patientId: yup.string().required("Paciente é obrigatório"),

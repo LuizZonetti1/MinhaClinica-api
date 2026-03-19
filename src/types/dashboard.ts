@@ -14,8 +14,66 @@ export interface ReceptionDashboardSummary {
   pendingConfirmations: number;
 }
 
+export type ReceptionTodayAppointmentStatus =
+  | "WAITING"
+  | "CHECKED_IN"
+  | "IN_PROGRESS"
+  | "DONE"
+  | "CANCELLED";
+
+export interface ReceptionTodayAppointmentItem {
+  id: string;
+  time: string;
+  patientName: string;
+  doctorName: string;
+  appointmentType: string;
+  status: ReceptionTodayAppointmentStatus;
+}
+
+export interface ReceptionAppointmentsTodaySummary {
+  consultationsToday: number;
+  awaitingCheckin: number;
+  checkinsDone: number;
+  pendingConfirmations: number;
+}
+
+export interface ReceptionAppointmentsTodayResponse {
+  summary: ReceptionAppointmentsTodaySummary;
+  appointments: ReceptionTodayAppointmentItem[];
+}
+
 export interface MonthlyFinancials {
   income: number;
   expense: number;
   balance: number;
+}
+
+// Agenda dos Profissionais
+
+export type AgendaFreeSlot = {
+  time: string;
+  libre: true;
+};
+
+export type AgendaAppointmentSlot = {
+  time: string;
+  libre: false;
+  appointmentId: string;
+  patientName: string;
+  status: string;
+};
+
+export type AgendaSlot = AgendaFreeSlot | AgendaAppointmentSlot;
+
+export interface ProfessionalAgenda {
+  id: string;
+  name: string;
+  specialty: string | null;
+  avatarUrl: string | null;
+  slots: AgendaSlot[];
+}
+
+export interface AgendaResponse {
+  date: string;
+  professionals: ProfessionalAgenda[];
 }
