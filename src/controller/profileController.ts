@@ -1,9 +1,15 @@
 import type { Request, Response } from "express";
-import { changePasswordSchema, updateProfileSchema } from "../schemas/profileSchema";
+import {
+  changePasswordSchema,
+  updateProfessionalProfileSchema,
+  updateProfileSchema,
+} from "../schemas/profileSchema";
 import {
   ChangePasswordService,
+  GetProfessionalProfileService,
   GetProfileService,
   GetReceptionProfileService,
+  UpdateProfessionalProfileService,
   UpdateProfileService,
 } from "../services/users/profileService";
 import { fileToUrl, uploadAvatar } from "../utils/uploadUtils";
@@ -50,6 +56,66 @@ export class ProfileController {
         return;
       }
       res.status(500).json({ message: err.message || "Erro ao buscar perfil" });
+    }
+  }
+
+  /**
+   * GET /api/professionals/me/profile
+   * Retorna o perfil completo do profissional autenticado
+   */
+  async getProfessionalMe(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId as string;
+      const clinicId = req.clinicId as string;
+
+      const service = new GetProfessionalProfileService();
+      const data = await service.execute(userId, clinicId);
+
+      res.status(200).json({ data });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      if (err.message === "Profissional não encontrado") {
+        res.status(404).json({ message: err.message });
+        return;
+      }
+      res.status(500).json({ message: err.message || "Erro ao buscar perfil" });
+    }
+  }
+
+  /**
+   * PATCH /api/professionals/me/profile
+   * Atualiza dados do perfil do profissional autenticado
+   */
+  async patchProfessionalMe(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId as string;
+      const clinicId = req.clinicId as string;
+
+      const validatedData = await updateProfessionalProfileSchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
+
+      if (Object.keys(validatedData).length === 0) {
+        res.status(400).json({ message: "Nenhum dado enviado para atualização." });
+        return;
+      }
+
+      const service = new UpdateProfessionalProfileService();
+      await service.execute(userId, clinicId, validatedData);
+
+      res.status(200).json({ message: "Perfil atualizado com sucesso" });
+    } catch (error: unknown) {
+      const err = error as { name?: string; errors?: string[]; message?: string };
+      if (err.name === "ValidationError") {
+        res.status(400).json({ message: "Erro de validação", errors: err.errors });
+        return;
+      }
+      if (err.message === "Profissional não encontrado") {
+        res.status(404).json({ message: err.message });
+        return;
+      }
+      res.status(500).json({ message: err.message || "Erro ao atualizar perfil" });
     }
   }
 

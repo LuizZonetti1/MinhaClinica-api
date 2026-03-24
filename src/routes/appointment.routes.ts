@@ -46,4 +46,13 @@ router.post("/", ...receptionAccess, validate(createAppointmentSchema), (req, re
   controller.create(req, res),
 );
 
+/**
+ * GET /api/appointments/calendar
+ * Lista os agendamentos do profissional autenticado agrupados por dia (±6 meses)
+ * Retorna: { rangeStart, rangeEnd, days: [{ date, appointments: [{ id, startTime, endTime, type, status, patientName, professionalName, professionalId }] }] }
+ */
+router.get("/calendar", authMiddleware, checkRole(UserRole.PROFESSIONAL), (req, res) =>
+  controller.listByDay(req, res),
+);
+
 export default router;
