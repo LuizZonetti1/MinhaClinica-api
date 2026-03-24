@@ -77,3 +77,28 @@ export interface AgendaResponse {
   date: string;
   professionals: ProfessionalAgenda[];
 }
+
+// Dashboard do Profissional
+
+export interface ProfessionalDashboardSummary {
+  date: string;
+  consultasHoje: number;
+  confirmadas: number;
+  pacientesDoMes: number;
+}
+
+export interface ProfessionalAgendaItem {
+  id: string;
+  time: string; // startTime HH:MM
+  endTime: string; // endTime HH:MM
+  patientName: string;
+  patientAvatarUrl: string | null;
+  appointmentType: string;
+  status: string;
+  notes: string | null;
+}
+
+export interface ProfessionalAgendaResponse {
+  date: string;
+  appointments: ProfessionalAgendaItem[];
+}
