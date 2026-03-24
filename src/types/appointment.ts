@@ -68,3 +68,38 @@ export interface AppointmentCreatedResult {
   type: AppointmentType;
   notes: string | null;
 }
+
+// ── Listagem de consultas por dia (calendário) ────────────────────────────────
+
+export interface AppointmentCalendarItem {
+  id: string;
+  startTime: string;
+  endTime: string;
+  type: AppointmentType;
+  status: string;
+  patientId: string;
+  patientName: string;
+  patientAvatarUrl: string | null;
+  professionalName: string;
+  professionalId: string;
+}
+
+// ── Pacientes com consulta concluída (para comentários) ───────────────────────
+
+export interface CompletedPatientItem {
+  patientId: string;
+  name: string;
+  avatarUrl: string | null;
+  lastCompletedAt: string; // ISO date do appointmentDate mais recente
+}
+
+export interface AppointmentCalendarDay {
+  date: string; // "YYYY-MM-DD"
+  appointments: AppointmentCalendarItem[];
+}
+
+export interface AppointmentCalendarResult {
+  rangeStart: string; // "YYYY-MM-DD"
+  rangeEnd: string; // "YYYY-MM-DD"
+  days: AppointmentCalendarDay[];
+}
