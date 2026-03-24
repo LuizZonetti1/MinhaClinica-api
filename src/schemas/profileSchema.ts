@@ -1,6 +1,7 @@
 import * as yup from "yup";
 
 const phoneRegex = /^\d{10,11}$/;
+const timeRegex = /^\d{2}:\d{2}$/;
 
 /**
  * Schema para atualização do perfil do usuário autenticado
@@ -20,6 +21,75 @@ export const updateProfileSchema = yup.object({
     .optional(),
 
   avatarUrl: yup.string().url("URL do avatar inválida").optional().nullable(),
+});
+
+const workingHourSchema = yup.object({
+  dayOfWeek: yup
+    .string()
+    .oneOf(
+      ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"],
+      "Dia da semana inválido",
+    )
+    .required("Dia da semana é obrigatório"),
+  isWorking: yup.boolean().required("isWorking é obrigatório"),
+  startTime: yup
+    .string()
+    .matches(timeRegex, "Horário deve estar no formato HH:MM")
+    .when("isWorking", { is: true, then: (s) => s.required("Horário de início é obrigatório") }),
+  endTime: yup
+    .string()
+    .matches(timeRegex, "Horário deve estar no formato HH:MM")
+    .when("isWorking", { is: true, then: (s) => s.required("Horário de fim é obrigatório") }),
+  lunchBreakStart: yup
+    .string()
+    .matches(timeRegex, "Horário deve estar no formato HH:MM")
+    .optional()
+    .nullable(),
+  lunchBreakEnd: yup
+    .string()
+    .matches(timeRegex, "Horário deve estar no formato HH:MM")
+    .optional()
+    .nullable(),
+});
+
+/**
+ * Schema para atualização do perfil do profissional autenticado
+ * PATCH /api/professionals/me/profile
+ */
+export const updateProfessionalProfileSchema = yup.object({
+  name: yup
+    .string()
+    .min(3, "Nome deve ter no mínimo 3 caracteres")
+    .max(100, "Nome deve ter no máximo 100 caracteres")
+    .optional(),
+
+  phone: yup
+    .string()
+    .matches(phoneRegex, "Telefone deve ter 10 ou 11 dígitos")
+    .transform((v) => v?.replace(/\D/g, ""))
+    .optional()
+    .nullable(),
+
+  registrationNumber: yup.string().max(20, "Número de registro muito longo").optional(),
+
+  registrationState: yup.string().length(2, "Estado deve ter 2 caracteres").uppercase().optional(),
+
+  defaultAppointmentDuration: yup
+    .number()
+    .integer("Duração deve ser um número inteiro de minutos")
+    .min(5, "Duração mínima de 5 minutos")
+    .max(480, "Duração máxima de 480 minutos")
+    .optional(),
+
+  bio: yup.string().max(2000, "Biografia deve ter no máximo 2000 caracteres").optional().nullable(),
+
+  formations: yup
+    .string()
+    .max(2000, "Formações devem ter no máximo 2000 caracteres")
+    .optional()
+    .nullable(),
+
+  workingHours: yup.array(workingHourSchema).optional(),
 });
 
 /**

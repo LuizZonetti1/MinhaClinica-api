@@ -59,12 +59,82 @@ export interface ReceptionProfileResponse {
   access: ReceptionAccessInfo;
 }
 
+// ── Perfil do Profissional ───────────────────────────────────────────────────
+
+export interface ProfessionalWorkingHourItem {
+  dayOfWeek: string;
+  isWorking: boolean;
+  startTime: string;
+  endTime: string;
+  lunchBreakStart: string | null;
+  lunchBreakEnd: string | null;
+}
+
+export interface ProfessionalSpecialtyItem {
+  specialtyId: string;
+  name: string;
+  isPrimary: boolean;
+}
+
+export interface ProfessionalProfilePersonalInfo {
+  name: string;
+  email: string;
+  phone: string | null;
+  avatarUrl: string | null;
+}
+
+export interface ProfessionalProfileInfo {
+  professionalCouncil: string;
+  registrationNumber: string;
+  registrationState: string;
+  bio: string | null;
+  formations: string | null;
+  defaultAppointmentDuration: number;
+  bufferTime: number;
+  calendarColor: string;
+  isActive: boolean;
+  joinedAt: string; // ISO date — data em que o profissional foi cadastrado
+}
+
+export interface ProfessionalProfileStats {
+  totalPatientsAttended: number;
+  yearsAtClinic: number;
+  avgRating: number; // placeholder — ainda não implementado
+  punctualityPercent: number; // placeholder — ainda não implementado
+}
+
+export interface ProfessionalProfileResponse {
+  personal: ProfessionalProfilePersonalInfo;
+  professional: ProfessionalProfileInfo;
+  stats: ProfessionalProfileStats;
+  specialties: ProfessionalSpecialtyItem[];
+  workingHours: ProfessionalWorkingHourItem[];
+}
+
 // ── Entrada de atualização ───────────────────────────────────────────────────
 
 export interface UpdateProfileInput {
   name?: string;
   phone?: string;
   avatarUrl?: string | null;
+}
+
+export interface UpdateProfessionalProfileInput {
+  name?: string;
+  phone?: string | null;
+  registrationNumber?: string;
+  registrationState?: string;
+  defaultAppointmentDuration?: number;
+  bio?: string | null;
+  formations?: string | null;
+  workingHours?: Array<{
+    dayOfWeek: string;
+    isWorking: boolean;
+    startTime?: string;
+    endTime?: string;
+    lunchBreakStart?: string | null;
+    lunchBreakEnd?: string | null;
+  }>;
 }
 
 export interface ChangePasswordInput {
