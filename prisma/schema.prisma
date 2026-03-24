@@ -180,6 +180,7 @@ model Clinic {
   financialRecords FinancialRecord[]
   notifications    Notification[]
   auditLogs        AuditLog[]
+  patientComments  PatientComment[]
 
   @@index([cnpj])
   @@index([city, state]) // Índice para busca por localização
@@ -370,6 +371,9 @@ model Professional {
   // Formações acadêmicas
   formations String? @db.Text // Ex: "Medicina - USP (2015), Especialização em Cardiologia - UNIFESP (2018)"
 
+  // Sobre o profissional (exibido no perfil público)
+  bio String? @db.Text
+
   // Configuração de agenda
   defaultAppointmentDuration Int    @default(60) // minutos (padrão: 1 hora)
   bufferTime                 Int    @default(15) // minutos de intervalo entre consultas
@@ -382,12 +386,13 @@ model Professional {
   updatedAt DateTime @updatedAt
 
   // Relacionamentos
-  specialties    ProfessionalSpecialty[]
-  workingHours   ProfessionalWorkingHours[]
-  scheduleBlocks ProfessionalScheduleBlock[]
-  procedures     ProfessionalProcedure[]
-  appointments   Appointment[]
-  medicalRecords MedicalRecord[]
+  specialties      ProfessionalSpecialty[]
+  workingHours     ProfessionalWorkingHours[]
+  scheduleBlocks   ProfessionalScheduleBlock[]
+  procedures       ProfessionalProcedure[]
+  appointments     Appointment[]
+  medicalRecords   MedicalRecord[]
+  patientComments  PatientComment[]
 
   @@unique([clinicId, professionalCouncil, registrationNumber])
   @@map("professionals")
@@ -501,6 +506,7 @@ model Patient {
   appointments     Appointment[]
   medicalRecords   MedicalRecord[]
   financialRecords FinancialRecord[]
+  patientComments  PatientComment[]
 
   @@unique([cpf]) // CPF globalmente único
   @@map("patients")
@@ -794,4 +800,31 @@ model PasswordResetToken {
   @@index([email])
   @@index([token])
   @@map("password_reset_tokens")
+}
+
+// ========================================
+// COMENTÁRIOS DE PACIENTES
+// ========================================
+
+model PatientComment {
+  id             String       @id @default(uuid())
+  clinicId       String
+  clinic         Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  patientId      String
+  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Restrict)
+
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+
+  content        String       @db.Text
+
+  // Metadata
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdBy      String       // userId
+
+  @@index([clinicId, patientId])
+  @@index([professionalId])
+  @@map("patient_comments")
 }
