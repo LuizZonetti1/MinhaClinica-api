@@ -1,5 +1,4 @@
 import { prisma } from "../database/prisma";
-import type { CreateAppointmentInput } from "../types/appointment";
 import type { AppointmentChannel, AppointmentType, DayOfWeek } from "../types/enums";
 
 export class AppointmentRepository {
@@ -10,10 +9,7 @@ export class AppointmentRepository {
         user: {
           status: { in: ["ACTIVE", "PENDING_ACTIVATION"] },
         },
-        OR: [
-          { user: { name: { contains: q, mode: "insensitive" } } },
-          { cpf: { contains: q } },
-        ],
+        OR: [{ user: { name: { contains: q, mode: "insensitive" } } }, { cpf: { contains: q } }],
       },
       select: {
         id: true,
@@ -119,6 +115,61 @@ export class AppointmentRepository {
     createdBy: string;
   }) {
     return prisma.appointment.create({ data });
+  }
+
+  /** Calendário — Lista agendamentos de um profissional num intervalo de datas */
+  async listByDateRange(clinicId: string, professionalId: string, startDate: Date, endDate: Date) {
+    return prisma.appointment.findMany({
+      where: {
+        clinicId,
+        professionalId,
+        appointmentDate: { gte: startDate, lte: endDate },
+      },
+      select: {
+        id: true,
+        appointmentDate: true,
+        startTime: true,
+        endTime: true,
+        type: true,
+        status: true,
+        patientId: true,
+        patient: {
+          select: {
+            user: { select: { name: true, avatarUrl: true } },
+          },
+        },
+        professional: {
+          select: {
+            id: true,
+            user: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: [{ appointmentDate: "asc" }, { startTime: "asc" }],
+    });
+  }
+
+  /** Calendário — Lista pacientes distintos com pelo menos uma consulta COMPLETED */
+  async listCompletedPatients(clinicId: string, professionalId: string) {
+    const rows = await prisma.appointment.findMany({
+      where: { clinicId, professionalId, status: "COMPLETED" },
+      select: {
+        appointmentDate: true,
+        patientId: true,
+        patient: {
+          select: { user: { select: { name: true, avatarUrl: true } } },
+        },
+      },
+      orderBy: { appointmentDate: "desc" },
+    });
+
+    // Mantém somente o registro mais recente por paciente
+    const seen = new Map<string, (typeof rows)[number]>();
+    for (const row of rows) {
+      if (!seen.has(row.patientId)) seen.set(row.patientId, row);
+    }
+
+    return Array.from(seen.values());
   }
 
   /** Verifica conflito de horário antes de criar */

@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { CreateAppointmentService } from "../services/appointments/createAppointmentService";
 import { GetAvailableSlotsService } from "../services/appointments/getAvailableSlotsService";
+import { ListAppointmentsByDayService } from "../services/appointments/listAppointmentsByDayService";
+import { ListCompletedPatientsService } from "../services/appointments/listCompletedPatientsService";
 import { ListProfessionalsService } from "../services/appointments/listProfessionalsService";
 import { SearchPatientsService } from "../services/appointments/searchPatientsService";
 
@@ -115,6 +117,57 @@ export class AppointmentController {
         res.status(statusCode).json({ error: error.message });
       } else {
         res.status(500).json({ error: "Erro ao criar agendamento" });
+      }
+    }
+  }
+
+  /**
+   * GET /api/appointments/calendar
+   * Lista todos os agendamentos agrupados por dia (±6 meses a partir de hoje)
+   */
+  async listByDay(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId, clinicId } = req;
+      if (!userId || !clinicId) {
+        res.status(401).json({ error: "Não autenticado" });
+        return;
+      }
+
+      const service = new ListAppointmentsByDayService();
+      const result = await service.execute(userId, clinicId);
+      res.status(200).json(result);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(500).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Erro ao listar consultas" });
+      }
+    }
+  }
+
+  /**
+   * GET /api/professionals/me/patients/completed
+   * Lista pacientes distintos com pelo menos uma consulta COMPLETED com este profissional
+   * Retorna: [{ patientId, name, avatarUrl, lastCompletedAt }]
+   */
+  async listCompletedPatients(req: Request, res: Response): Promise<void> {
+    try {
+      const { userId, clinicId } = req;
+      if (!userId || !clinicId) {
+        res.status(401).json({ error: "Não autenticado" });
+        return;
+      }
+
+      const service = new ListCompletedPatientsService();
+      const result = await service.execute(userId, clinicId);
+      res.status(200).json(result);
+    } catch (error) {
+      if (error instanceof Error) {
+        const statusCode =
+          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 500;
+        res.status(statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Erro ao listar pacientes" });
       }
     }
   }
