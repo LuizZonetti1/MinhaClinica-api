@@ -8,8 +8,10 @@ import { UserRepository } from "../../repository/userRepository";
 import { AppointmentStatus, UserRole } from "../../types/enums";
 import type {
   ChangePasswordInput,
+  PatientProfileResponse,
   ProfessionalProfileResponse,
   ReceptionProfileResponse,
+  UpdatePatientProfileInput,
   UpdateProfessionalProfileInput,
   UpdateProfileInput,
   UserProfileResponse,
@@ -359,5 +361,93 @@ export class ChangePasswordService {
 
     const hashed = await bcrypt.hash(data.newPassword, 10);
     await this.userRepository.updatePassword(userId, hashed);
+  }
+}
+
+// ── GET /api/patients/me/profile ──────────────────────────────────────────────
+
+export class GetPatientProfileService {
+  async execute(userId: string): Promise<PatientProfileResponse> {
+    const patient = await prisma.patient.findFirst({
+      where: { userId },
+      include: { user: true },
+    });
+
+    if (!patient) {
+      throw Object.assign(new Error("Paciente não encontrado"), { statusCode: 404 });
+    }
+
+    const u = patient.user;
+
+    const addressFormatted = patient.street
+      ? `${patient.street}, ${patient.number}${patient.complement ? ` — ${patient.complement}` : ""} — ${patient.city}, ${patient.state}`
+      : null;
+
+    return {
+      personal: {
+        name: u.name,
+        email: u.email,
+        phone: u.phone ?? null,
+        cpf: patient.cpf,
+        dateOfBirth: dayjs(patient.dateOfBirth).tz(DEFAULT_TIMEZONE).format("YYYY-MM-DD"),
+        avatarUrl: u.avatarUrl ?? null,
+        street: patient.street ?? null,
+        number: patient.number ?? null,
+        complement: patient.complement ?? null,
+        neighborhood: patient.neighborhood ?? null,
+        city: patient.city ?? null,
+        state: patient.state ?? null,
+        zipCode: patient.zipCode ?? null,
+        addressFormatted,
+      },
+      medical: {
+        bloodType: patient.bloodType ?? null,
+        allergies: patient.allergies ?? null,
+        medications: patient.medications ?? null,
+        conditions: patient.conditions ?? null,
+        observations: patient.observations ?? null,
+        emergencyContactName: patient.emergencyContactName ?? null,
+        emergencyContactPhone: patient.emergencyContactPhone ?? null,
+      },
+    };
+  }
+}
+
+// ── PATCH /api/patients/me/profile ────────────────────────────────────────────
+
+export class UpdatePatientProfileService {
+  async execute(userId: string, data: UpdatePatientProfileInput): Promise<void> {
+    const patient = await prisma.patient.findFirst({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!patient) {
+      throw Object.assign(new Error("Paciente não encontrado"), { statusCode: 404 });
+    }
+
+    const userUpdate: Record<string, unknown> = {};
+    if (data.name !== undefined) userUpdate.name = data.name;
+    if (data.phone !== undefined) userUpdate.phone = data.phone;
+
+    const patientUpdate: Record<string, unknown> = {};
+    if (data.dateOfBirth !== undefined)
+      patientUpdate.dateOfBirth = dayjs.tz(data.dateOfBirth, DEFAULT_TIMEZONE).toDate();
+    if (data.street !== undefined) patientUpdate.street = data.street;
+    if (data.number !== undefined) patientUpdate.number = data.number;
+    if (data.complement !== undefined) patientUpdate.complement = data.complement;
+    if (data.neighborhood !== undefined) patientUpdate.neighborhood = data.neighborhood;
+    if (data.city !== undefined) patientUpdate.city = data.city;
+    if (data.state !== undefined) patientUpdate.state = data.state;
+    if (data.zipCode !== undefined) patientUpdate.zipCode = data.zipCode;
+
+    await prisma.$transaction(async (tx) => {
+      if (Object.keys(userUpdate).length > 0) {
+        await tx.user.update({ where: { id: userId }, data: userUpdate });
+      }
+      if (Object.keys(patientUpdate).length > 0) {
+        await tx.patient.update({ where: { id: patient.id }, data: patientUpdate });
+      }
+    });
   }
 }

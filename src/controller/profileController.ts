@@ -4,11 +4,14 @@ import {
   updateProfessionalProfileSchema,
   updateProfileSchema,
 } from "../schemas/profileSchema";
+import { updatePatientProfileSchema } from "../schemas/patientProfileSchema";
 import {
   ChangePasswordService,
+  GetPatientProfileService,
   GetProfessionalProfileService,
   GetProfileService,
   GetReceptionProfileService,
+  UpdatePatientProfileService,
   UpdateProfessionalProfileService,
   UpdateProfileService,
 } from "../services/users/profileService";
@@ -211,6 +214,58 @@ export class ProfileController {
         return;
       }
       res.status(400).json({ message: err.message || "Erro ao alterar senha" });
+    }
+  }
+
+  /**
+   * GET /api/patients/me/profile
+   * Retorna o perfil completo do paciente autenticado
+   */
+  async getPatientMe(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId as string;
+
+      const service = new GetPatientProfileService();
+      const data = await service.execute(userId);
+
+      res.status(200).json({ data });
+    } catch (error: unknown) {
+      const err = error as { message?: string; statusCode?: number };
+      const status = err.statusCode ?? 500;
+      res.status(status).json({ message: err.message || "Erro ao buscar perfil" });
+    }
+  }
+
+  /**
+   * PATCH /api/patients/me/profile
+   * Atualiza dados pessoais e de endereço do paciente autenticado
+   */
+  async patchPatientMe(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId as string;
+
+      const validatedData = await updatePatientProfileSchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
+
+      if (Object.keys(validatedData).length === 0) {
+        res.status(400).json({ message: "Nenhum dado enviado para atualização." });
+        return;
+      }
+
+      const service = new UpdatePatientProfileService();
+      await service.execute(userId, validatedData);
+
+      res.status(200).json({ message: "Perfil atualizado com sucesso" });
+    } catch (error: unknown) {
+      const err = error as { name?: string; errors?: string[]; message?: string; statusCode?: number };
+      if (err.name === "ValidationError") {
+        res.status(400).json({ message: "Erro de validação", errors: err.errors });
+        return;
+      }
+      const status = err.statusCode ?? 500;
+      res.status(status).json({ message: err.message || "Erro ao atualizar perfil" });
     }
   }
 }
