@@ -141,3 +141,52 @@ export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;
 }
+
+// ── Perfil do Paciente ───────────────────────────────────────────────────────
+
+export interface PatientProfilePersonalInfo {
+  name: string;
+  email: string;
+  phone: string | null;
+  cpf: string;
+  dateOfBirth: string; // "YYYY-MM-DD"
+  avatarUrl: string | null;
+  // Endereço
+  street: string | null;
+  number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  addressFormatted: string | null; // "Rua X, 123 — São Paulo, SP"
+}
+
+export interface PatientProfileMedicalInfo {
+  bloodType: string | null;
+  allergies: string | null;
+  medications: string | null;
+  conditions: string | null;
+  observations: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+}
+
+export interface PatientProfileResponse {
+  personal: PatientProfilePersonalInfo;
+  medical: PatientProfileMedicalInfo;
+}
+
+export interface UpdatePatientProfileInput {
+  name?: string;
+  phone?: string;
+  dateOfBirth?: string; // "YYYY-MM-DD"
+  // Endereço
+  street?: string;
+  number?: string;
+  complement?: string | null;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+}
