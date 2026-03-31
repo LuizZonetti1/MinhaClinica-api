@@ -1,5 +1,6 @@
 import { prisma } from "../database/prisma";
 import type { AppointmentStatus, DayOfWeek } from "../types/enums";
+import { CONSULTATION_EXCLUDED_STATUSES } from "../utils/appointmentStatusRules";
 
 export class ReceptionDashboardRepository {
   async countTodayByStatuses(
@@ -143,7 +144,7 @@ export class ReceptionDashboardRepository {
           where: {
             clinicId,
             appointmentDate: { gte: startOfDay, lte: endOfDay },
-            status: { notIn: ["CANCELLED", "NO_SHOW", "RESCHEDULED"] },
+            status: { notIn: [...CONSULTATION_EXCLUDED_STATUSES] },
           },
           select: {
             id: true,

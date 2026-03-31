@@ -1,7 +1,8 @@
 import { prisma } from "../database/prisma";
+import { AppointmentStatus } from "../types/enums";
+import { CONSULTATION_EXCLUDED_STATUSES } from "../utils/appointmentStatusRules";
 
 export class ProfessionalDashboardRepository {
-  /** Resolve userId → Professional (verificando clinicId por segurança) */
   async findProfessionalByUserId(userId: string, clinicId: string) {
     return prisma.professional.findFirst({
       where: { userId, clinicId },
@@ -9,32 +10,27 @@ export class ProfessionalDashboardRepository {
     });
   }
 
-  /**
-   * Total de agendamentos do dia — TODOS os status incluídos.
-   * Conta tudo que está na agenda (inclusive CANCELLED, NO_SHOW, RESCHEDULED)
-   * para ser consistente com a listagem da tabela "Agenda de Hoje".
-   */
+  // Same consultation rule used by admin/reception dashboards.
   async countTodayAppointments(professionalId: string, startOfDay: Date, endOfDay: Date) {
     return prisma.appointment.count({
       where: {
         professionalId,
         appointmentDate: { gte: startOfDay, lte: endOfDay },
+        status: { notIn: [...CONSULTATION_EXCLUDED_STATUSES] },
       },
     });
   }
 
-  /** Consultas confirmadas hoje */
   async countConfirmedToday(professionalId: string, startOfDay: Date, endOfDay: Date) {
     return prisma.appointment.count({
       where: {
         professionalId,
         appointmentDate: { gte: startOfDay, lte: endOfDay },
-        status: "CONFIRMED",
+        status: AppointmentStatus.CONFIRMED,
       },
     });
   }
 
-  /** Pacientes com consultas COMPLETED no mês (distintos) */
   async countCompletedPatientsThisMonth(
     professionalId: string,
     startOfMonth: Date,
@@ -44,7 +40,7 @@ export class ProfessionalDashboardRepository {
       where: {
         professionalId,
         appointmentDate: { gte: startOfMonth, lte: endOfMonth },
-        status: "COMPLETED",
+        status: AppointmentStatus.COMPLETED,
       },
       select: { patientId: true },
       distinct: ["patientId"],
@@ -53,11 +49,7 @@ export class ProfessionalDashboardRepository {
     return result.length;
   }
 
-  /**
-   * Lista agendamentos do profissional em um dia — TODOS os status incluídos.
-   * O front-end exibe a linha com a cor/badge correspondente ao status,
-   * inclusive CANCELLED e NO_SHOW, para o profissional ver o histórico completo do dia.
-   */
+  // Agenda keeps all statuses so the professional can see full daily history.
   async listAppointmentsByDate(professionalId: string, startOfDay: Date, endOfDay: Date) {
     return prisma.appointment.findMany({
       where: {
