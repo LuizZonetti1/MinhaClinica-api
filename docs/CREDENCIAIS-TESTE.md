@@ -6,6 +6,24 @@
 
 ---
 
+## 📍 Visão Geral das Clínicas (8 tenants)
+
+| # | Nome fantasia | Cidade / UF | Subdomínio | CNPJ |
+|---|---|---|---|---|
+| 1 | **Clínica Saúde Mais** | São Paulo / SP | `saudemais` | 12.345.678/0001-90 |
+| 2 | **OdontoPrime** | Rio de Janeiro / RJ | `odontoprime` | 98.765.432/0001-10 |
+| 3 | **Saúde Total Clínica Médica** | São Paulo / SP | `saudetotal` | 11.222.333/0001-44 |
+| 4 | **Clínica Saúde & Vida** | São Paulo / SP | `saudevida` | 22.333.444/0001-55 |
+| 5 | **Clínica Saúde Integrada** | Curitiba / PR | `saudeintegrada` | 33.444.555/0001-66 |
+| 6 | **OdontoVita** | Rio de Janeiro / RJ | `odontovita` | 44.555.666/0001-77 |
+| 7 | **Centro Médico Bem Estar** | Belo Horizonte / MG | `bemestarcm` | 55.666.777/0001-88 |
+| 8 | **VitaSaúde Clínica** | Curitiba / PR | `vitasaude` | 66.777.888/0001-99 |
+
+> **Palavras em comum:** `"Saúde"` (#1, #3, #4, #5, #8) · `"Odonto"` (#2, #6)  
+> **Cidades repetidas:** São Paulo (3 clínicas) · Rio de Janeiro (2) · Curitiba (2)
+
+---
+
 ## 🏥 Clínica 1 — Saúde Mais (São Paulo / SP)
 
 **Subdomínio:** `saudemais`
@@ -48,11 +66,9 @@
 
 ## 🏥 Clínica 2 — OdontoPrime (Rio de Janeiro / RJ)
 
-> Ambiente isolado para testes de **multi-tenant**. Os dados desta clínica não aparecem nas queries da Clínica 1.
+> Multi-tenant isolado. Dados não aparecem nas queries da Clínica 1.
 
-**Subdomínio:** `odontoprime`
-**CNPJ:** `98.765.432/0001-10`
-**E-mail institucional:** `contato@odontoprime.com.br`
+**Subdomínio:** `odontoprime` | **CNPJ:** `98.765.432/0001-10`
 
 ### 👤 Usuários Internos
 
@@ -68,9 +84,158 @@
 | Gustavo Ribeiro | `gustavo.ribeiro@email.com` | `Senha123!` |
 | Sofia Martins | `sofia.martins@email.com` | `Senha123!` |
 
+### 🩺 Especialidades / Procedimentos
+Implantodontia · Endodontia → Implante Dentário (R$ 2.800) · Tratamento de Canal (R$ 900)
+
 ---
 
-## 📅 Agendamentos — Clínica 1 (status variados para teste)
+## 🏥 Clínica 3 — Saúde Total Clínica Médica (São Paulo / SP)
+
+**Subdomínio:** `saudetotal` | **CNPJ:** `11.222.333/0001-44`
+
+### 👤 Usuários Internos
+
+| Perfil | Nome | E-mail | Senha |
+|---|---|---|---|
+| `ADMIN` | Dr. Carlos Drummond | `admin@saudetotal.com.br` | `Senha123!` |
+| `RECEPTIONIST` | Luana Borges | `recepcao@saudetotal.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dr. Paulo Vieira | `paulo.vieira@saudetotal.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dra. Renata Campos | `renata.campos@saudetotal.com.br` | `Senha123!` |
+
+### 🧑‍⚕️ Pacientes
+
+| Nome | E-mail | Senha | Observações |
+|---|---|---|---|
+| Carla Moura | `carla.moura@email.com` | `Senha123!` | — |
+| Thiago Xavier | `thiago.xavier@email.com` | `Senha123!` | — |
+| Patrícia Rocha | `patricia.rocha@email.com` | `Senha123!` | 3 consultas pediátricas |
+
+### 🩺 Especialidades / Procedimentos
+Clínica Geral (Dr. Paulo Vieira) · Pediatria (Dra. Renata Campos)
+
+---
+
+## 🏥 Clínica 4 — Clínica Saúde & Vida (São Paulo / SP)
+
+**Subdomínio:** `saudevida` | **CNPJ:** `22.333.444/0001-55`
+
+### 👤 Usuários Internos
+
+| Perfil | Nome | E-mail | Senha |
+|---|---|---|---|
+| `ADMIN` | Dra. Alice Nunes | `admin@saudevida.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dra. Alice Nunes | `alice.nunes@saudevida.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dr. Marcos Pereira | `marcos.pereira@saudevida.com.br` | `Senha123!` |
+
+### 🧑‍⚕️ Pacientes
+
+| Nome | E-mail | Senha | Observações |
+|---|---|---|---|
+| Lúcia Fonseca | `lucia.fonseca@email.com` | `Senha123!` | SOP diagnosticada |
+| Diego Santos | `diego.santos@email.com` | `Senha123!` | Alergia: Sulfas. 1 no-show |
+| Mariana Duarte | `mariana.duarte@email.com` | `Senha123!` | Hipotireoidismo |
+
+### 🩺 Especialidades / Procedimentos
+Ginecologia (Dra. Alice) · Endocrinologia (Dr. Marcos)
+
+---
+
+## 🏥 Clínica 5 — Clínica Saúde Integrada (Curitiba / PR)
+
+**Subdomínio:** `saudeintegrada` | **CNPJ:** `33.444.555/0001-66`
+
+### 👤 Usuários Internos
+
+| Perfil | Nome | E-mail | Senha |
+|---|---|---|---|
+| `ADMIN` | Dra. Elaine Braga | `admin@saudeintegrada.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dr. Rafael Moreira | `rafael.moreira@saudeintegrada.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dra. Natália Aquino | `natalia.aquino@saudeintegrada.com.br` | `Senha123!` |
+
+### 🧑‍⚕️ Pacientes
+
+| Nome | E-mail | Senha | Observações |
+|---|---|---|---|
+| Elisa Brunetti | `elisa.brunetti@email.com` | `Senha123!` | Ansiedade generalizada. 8 consultas |
+| Gabriel Nogueira | `gabriel.nogueira@email.com` | `Senha123!` | Fonoaudiologia infantil |
+| Ana Lima | `ana.lima.cwb@email.com` | `Senha123!` | Depressão moderada. 1 no-show |
+
+### 🩺 Especialidades / Procedimentos
+Psicologia (Dr. Rafael) · Fonoaudiologia (Dra. Natália)
+
+---
+
+## 🏥 Clínica 6 — OdontoVita (Rio de Janeiro / RJ)
+
+**Subdomínio:** `odontovita` | **CNPJ:** `44.555.666/0001-77`
+
+### 👤 Usuários Internos
+
+| Perfil | Nome | E-mail | Senha |
+|---|---|---|---|
+| `ADMIN` | Dr. Henrique Ramos | `admin@odontovita.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dra. Isabela Cunha | `isabela.cunha@odontovita.com.br` | `Senha123!` |
+
+### 🧑‍⚕️ Pacientes
+
+| Nome | E-mail | Senha | Observações |
+|---|---|---|---|
+| Henrique Carvalho | `henrique.carvalho@email.com` | `Senha123!` | Odontopediatria (11 anos) |
+| Vanessa Teixeira | `vanessa.teixeira@email.com` | `Senha123!` | Gengivite crônica |
+
+### 🩺 Especialidades / Procedimentos
+Odontopediatria · Periodontia → Consulta Odontopediátrica (R$ 250) · Raspagem e Alisamento (R$ 420)
+
+---
+
+## 🏥 Clínica 7 — Centro Médico Bem Estar (Belo Horizonte / MG)
+
+**Subdomínio:** `bemestarcm` | **CNPJ:** `55.666.777/0001-88`
+
+### 👤 Usuários Internos
+
+| Perfil | Nome | E-mail | Senha |
+|---|---|---|---|
+| `ADMIN` | Dr. Fábio Monteiro | `admin@bemestarcm.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dr. Fábio Monteiro | `fabio.monteiro@bemestarcm.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dra. Silvana Prado | `silvana.prado@bemestarcm.com.br` | `Senha123!` |
+
+### 🧑‍⚕️ Pacientes
+
+| Nome | E-mail | Senha | Observações |
+|---|---|---|---|
+| Wellington Brito | `wellington.brito@email.com` | `Senha123!` | Gonartrose bilateral |
+| Flávia Sousa | `flavia.sousa@email.com` | `Senha123!` | Enxaqueca crônica. 1 no-show |
+
+### 🩺 Especialidades / Procedimentos
+Ortopedia (Dr. Fábio) · Neurologia (Dra. Silvana)
+
+---
+
+## 🏥 Clínica 8 — VitaSaúde Clínica (Curitiba / PR)
+
+**Subdomínio:** `vitasaude` | **CNPJ:** `66.777.888/0001-99`
+
+### 👤 Usuários Internos
+
+| Perfil | Nome | E-mail | Senha |
+|---|---|---|---|
+| `ADMIN` | Dr. Igor Pinheiro | `admin@vitasaude.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dr. Igor Pinheiro | `igor.pinheiro@vitasaude.com.br` | `Senha123!` |
+| `PROFESSIONAL` | Dra. Camila Whitfield | `camila.whitfield@vitasaude.com.br` | `Senha123!` |
+
+### 🧑‍⚕️ Pacientes
+
+| Nome | E-mail | Senha | Observações |
+|---|---|---|---|
+| Igor Pinheiro Jr | `igorjr.pinheiro@email.com` | `Senha123!` | Medicina do esporte — pós-cirúrgico |
+| Camila Silva Porto | `camila.porto@email.com` | `Senha123!` | Artrite reumatoide |
+
+### 🩺 Especialidades / Procedimentos
+Medicina do Esporte (Dr. Igor) · Reumatologia (Dra. Camila)
+
+---
+
 
 | Status | Paciente | Profissional | Procedimento | Data |
 |---|---|---|---|---|
