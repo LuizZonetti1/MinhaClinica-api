@@ -4,6 +4,7 @@ import utc from "dayjs/plugin/utc";
 import { ReportRepository } from "../../repository/reportRepository";
 import { AppointmentStatus, TransactionType } from "../../types/enums";
 import type { ReportData, ReportPeriod } from "../../types/report";
+import { CONSULTATION_EXCLUDED_STATUSES } from "../../utils/appointmentStatusRules";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -67,10 +68,7 @@ export class ReportService {
     }
 
     // ── Summary ──────────────────────────────────────────────────────────────
-    const cancelledStatuses = new Set<AppointmentStatus>([
-      AppointmentStatus.CANCELLED,
-      AppointmentStatus.NO_SHOW,
-    ]);
+    const cancelledStatuses = new Set<AppointmentStatus>([...CONSULTATION_EXCLUDED_STATUSES]);
 
     const consultationsCount = appointments.filter(
       (a) => !cancelledStatuses.has(a.status as AppointmentStatus),
@@ -165,7 +163,6 @@ export class ReportService {
     ]);
     const pendingStatuses = new Set<AppointmentStatus>([
       AppointmentStatus.SCHEDULED,
-      AppointmentStatus.RESCHEDULED,
     ]);
 
     let confirmed = 0;
