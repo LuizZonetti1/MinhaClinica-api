@@ -48,6 +48,12 @@ export interface MonthlyFinancials {
   balance: number;
 }
 
+export interface DashboardHistoricalItem {
+  month: string;
+  consultations: number;
+  revenue: number;
+}
+
 // Agenda dos Profissionais
 
 export type AgendaFreeSlot = {

@@ -10,4 +10,8 @@ router.get("/", authMiddleware, checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST)
   dashboardController.getSummary(req, res),
 );
 
+router.get("/historical", authMiddleware, checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST), (req, res) =>
+  dashboardController.getHistorical(req, res),
+);
+
 export default router;
