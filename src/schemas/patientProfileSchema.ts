@@ -16,10 +16,7 @@ export const updatePatientProfileSchema = yup.object({
   complement: yup.string().optional().nullable(),
   neighborhood: yup.string().optional(),
   city: yup.string().optional(),
-  state: yup
-    .string()
-    .length(2, "Estado deve ter 2 caracteres (UF)")
-    .optional(),
+  state: yup.string().length(2, "Estado deve ter 2 caracteres (UF)").optional(),
   zipCode: yup
     .string()
     .matches(/^\d{8}$/, "CEP deve ter 8 dígitos (sem traço)")

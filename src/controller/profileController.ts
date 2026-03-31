@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
+import { updatePatientProfileSchema } from "../schemas/patientProfileSchema";
 import {
   changePasswordSchema,
   updateProfessionalProfileSchema,
   updateProfileSchema,
 } from "../schemas/profileSchema";
-import { updatePatientProfileSchema } from "../schemas/patientProfileSchema";
 import {
   ChangePasswordService,
   GetPatientProfileService,
@@ -259,7 +259,12 @@ export class ProfileController {
 
       res.status(200).json({ message: "Perfil atualizado com sucesso" });
     } catch (error: unknown) {
-      const err = error as { name?: string; errors?: string[]; message?: string; statusCode?: number };
+      const err = error as {
+        name?: string;
+        errors?: string[];
+        message?: string;
+        statusCode?: number;
+      };
       if (err.name === "ValidationError") {
         res.status(400).json({ message: "Erro de validação", errors: err.errors });
         return;

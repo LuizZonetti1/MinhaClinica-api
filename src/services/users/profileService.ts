@@ -21,6 +21,41 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+const ISO_DATE_ONLY_REGEX = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+const toUtcDateFromIsoDate = (value: string): Date => {
+  const match = value.match(ISO_DATE_ONLY_REGEX);
+  if (!match) {
+    throw Object.assign(new Error("Data de nascimento deve estar no formato YYYY-MM-DD"), {
+      statusCode: 400,
+    });
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    throw Object.assign(new Error("Data de nascimento inválida"), {
+      statusCode: 400,
+    });
+  }
+
+  return parsed;
+};
+
+const formatIsoDateFromDbDate = (value: Date): string => {
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(value.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 const ROLE_LABELS: Record<UserRole, string> = {
   [UserRole.ADMIN]: "Administrador",
@@ -69,7 +104,7 @@ export class GetProfileService {
             firstDayOfMonth,
             firstDayOfNextMonth,
           ),
-          this.dashboardRepository.getMonthlyIncome(clinic.id, firstDayOfMonth),
+          this.dashboardRepository.getMonthlyIncome(clinic.id, firstDayOfMonth, firstDayOfNextMonth),
         ]);
     }
 
@@ -389,7 +424,8 @@ export class GetPatientProfileService {
         email: u.email,
         phone: u.phone ?? null,
         cpf: patient.cpf,
-        dateOfBirth: dayjs(patient.dateOfBirth).tz(DEFAULT_TIMEZONE).format("YYYY-MM-DD"),
+        // dateOfBirth is @db.Date: keep the calendar day in UTC to avoid timezone shifts.
+        dateOfBirth: formatIsoDateFromDbDate(patient.dateOfBirth),
         avatarUrl: u.avatarUrl ?? null,
         street: patient.street ?? null,
         number: patient.number ?? null,
@@ -431,8 +467,10 @@ export class UpdatePatientProfileService {
     if (data.phone !== undefined) userUpdate.phone = data.phone;
 
     const patientUpdate: Record<string, unknown> = {};
-    if (data.dateOfBirth !== undefined)
-      patientUpdate.dateOfBirth = dayjs.tz(data.dateOfBirth, DEFAULT_TIMEZONE).toDate();
+    if (data.dateOfBirth !== undefined) {
+      // Persist date-only as UTC midnight so @db.Date round-trips without losing a day.
+      patientUpdate.dateOfBirth = toUtcDateFromIsoDate(data.dateOfBirth);
+    }
     if (data.street !== undefined) patientUpdate.street = data.street;
     if (data.number !== undefined) patientUpdate.number = data.number;
     if (data.complement !== undefined) patientUpdate.complement = data.complement;
