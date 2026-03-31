@@ -50,6 +50,7 @@ export interface PatientListItem {
   noShowCount: number;
   totalAppointments: number;
   appointmentsThisMonth: number;
+  lastVisit: Date | null;
   createdAt: Date;
 }
 
