@@ -50,16 +50,6 @@ export class GetProfessionalsAgendaService {
       throw Object.assign(new Error("Data inválida"), { statusCode: 400 });
     }
 
-    const today = dayjs().tz(DEFAULT_TIMEZONE).startOf("day");
-    const diffDays = parsed.startOf("day").diff(today, "day");
-
-    if (diffDays < -31 || diffDays > 31) {
-      throw Object.assign(
-        new Error("A data deve estar no intervalo de 1 mês antes ou depois do dia atual"),
-        { statusCode: 400 },
-      );
-    }
-
     return parsed;
   }
 
@@ -67,8 +57,10 @@ export class GetProfessionalsAgendaService {
     const day = dateStr ? this.validateDate(dateStr) : dayjs().tz(DEFAULT_TIMEZONE);
 
     const dateFormatted = day.format("YYYY-MM-DD");
-    const startOfDay = day.startOf("day").toDate();
-    const endOfDay = day.endOf("day").toDate();
+    // appointmentDate é @db.Date → armazenado como UTC midnight.
+    // Usar UTC puro para a comparação evita o shift de fuso (SP = UTC-3).
+    const startOfDay = dayjs.utc(dateFormatted).startOf("day").toDate();
+    const endOfDay = dayjs.utc(dateFormatted).endOf("day").toDate();
     const dayOfWeek = JS_DAY_TO_ENUM[day.day()];
 
     const professionals = await this.repository.listProfessionalsWithAgendaData(
