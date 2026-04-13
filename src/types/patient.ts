@@ -156,6 +156,22 @@ export interface PatientBookingInput {
   channel?: AppointmentChannel;
 }
 
+// ── Remarcação de agendamento (paciente) ─────────────────────────────────────
+
+export interface PatientRescheduleInput {
+  appointmentDate: string; // "YYYY-MM-DD"
+  startTime: string; // "HH:MM"
+  clinicId: string;
+  professionalId: string;
+}
+
+export interface PatientRescheduleResult {
+  id: string;
+  appointmentDate: string; // "YYYY-MM-DD"
+  startTime: string; // "HH:MM"
+  endTime: string; // "HH:MM"
+}
+
 export interface PatientAuditAddress {
   zipCode: string | null;
   street: string | null;

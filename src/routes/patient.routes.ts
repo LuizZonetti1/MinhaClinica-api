@@ -4,6 +4,7 @@ import { PatientDashboardController } from "../controller/patientDashboardContro
 import { ProfileController } from "../controller/profileController";
 import { authMiddleware, checkRole } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
+import { rescheduleAppointmentSchema } from "../schemas/appointmentSchema";
 import { receptionRegisterPatientSchema } from "../schemas/patientSchema";
 import { UserRole } from "../types/enums";
 
@@ -59,6 +60,7 @@ router.patch(
   "/me/appointments/:appointmentId",
   authMiddleware,
   checkRole(UserRole.PATIENT),
+  validate(rescheduleAppointmentSchema),
   (req, res) => patientDashboardController.rescheduleAppointment(req, res),
 );
 

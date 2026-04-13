@@ -2,6 +2,8 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
+import { PatientDashboardRepository } from "../../repository/patientDashboardRepository";
+import type { PatientRescheduleInput, PatientRescheduleResult } from "../../types/patient";
 import { AppointmentChannel, AppointmentStatus } from "../../types/enums";
 
 dayjs.extend(utc);
@@ -20,55 +22,20 @@ function minutesToTime(minutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-export interface RescheduleInput {
-  appointmentDate: string; // "YYYY-MM-DD"
-  startTime: string; // "HH:MM"
-  clinicId: string;
-  professionalId: string;
-}
-
-export interface RescheduleResult {
-  id: string;
-  appointmentDate: string;
-  startTime: string;
-  endTime: string;
-}
-
 export class RescheduleAppointmentService {
+  private repository = new PatientDashboardRepository();
+
   async execute(
     appointmentId: string,
     userId: string,
-    input: RescheduleInput,
-  ): Promise<RescheduleResult> {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.appointmentDate)) {
-      throw Object.assign(new Error("appointmentDate deve estar no formato YYYY-MM-DD"), {
-        statusCode: 400,
-      });
-    }
-
-    if (!/^\d{2}:\d{2}$/.test(input.startTime)) {
-      throw Object.assign(new Error("startTime deve estar no formato HH:mm"), {
-        statusCode: 400,
-      });
-    }
-
-    // Busca o agendamento original verificando posse pelo userId
-    const original = await prisma.appointment.findFirst({
-      where: {
-        id: appointmentId,
-        clinicId: input.clinicId,
-        patient: { userId },
-      },
-      select: {
-        id: true,
-        status: true,
-        type: true,
-        notes: true,
-        patientId: true,
-        channel: true,
-        procedureId: true,
-      },
-    });
+    input: PatientRescheduleInput,
+  ): Promise<PatientRescheduleResult> {
+    // Busca o agendamento original verificando posse pelo userId e clinicId
+    const original = await this.repository.findAppointmentForReschedule(
+      appointmentId,
+      userId,
+      input.clinicId,
+    );
 
     if (!original) {
       throw Object.assign(new Error("Agendamento não encontrado"), { statusCode: 404 });
@@ -95,9 +62,7 @@ export class RescheduleAppointmentService {
     }
 
     const startMinutes = timeToMinutes(input.startTime);
-    if (Number.isNaN(startMinutes) || startMinutes < 0 || startMinutes >= 24 * 60) {
-      throw Object.assign(new Error("startTime inválido"), { statusCode: 400 });
-    }
+    const endTime = minutesToTime(startMinutes + professional.defaultAppointmentDuration);
 
     // Valida que a nova data/hora é futura
     const newDatetime = dayjs
@@ -113,45 +78,35 @@ export class RescheduleAppointmentService {
       });
     }
 
-    const endTime = minutesToTime(startMinutes + professional.defaultAppointmentDuration);
-
-    // Verifica conflito no novo horário (excluindo o próprio agendamento)
-    const dayjsDate = dayjs.tz(input.appointmentDate, DEFAULT_TIMEZONE);
+    // appointmentDate é @db.Date → UTC midnight para comparação correta
     const startOfDay = dayjs.utc(input.appointmentDate).startOf("day").toDate();
     const endOfDay = dayjs.utc(input.appointmentDate).endOf("day").toDate();
 
-    const conflictCount = await prisma.appointment.count({
-      where: {
-        id: { not: appointmentId },
-        professionalId: input.professionalId,
-        clinicId: input.clinicId,
-        appointmentDate: { gte: startOfDay, lte: endOfDay },
-        status: {
-          notIn: [
-            AppointmentStatus.CANCELLED,
-            AppointmentStatus.NO_SHOW,
-            AppointmentStatus.RESCHEDULED,
-          ],
-        },
-        AND: [{ startTime: { lt: endTime } }, { endTime: { gt: input.startTime } }],
-      },
-    });
+    const hasConflict = await this.repository.hasConflictExcluding(
+      appointmentId,
+      input.professionalId,
+      input.clinicId,
+      startOfDay,
+      endOfDay,
+      input.startTime,
+      endTime,
+    );
 
-    if (conflictCount > 0) {
+    if (hasConflict) {
       throw Object.assign(
         new Error("Este horário já está ocupado. Por favor, escolha outro."),
         { statusCode: 409 },
       );
     }
 
-    // Cancela o original com status RESCHEDULED e cria o novo em transação
+    // Marca o original como RESCHEDULED e cria o novo em transação atômica
+    const appointmentDate = dayjs.tz(input.appointmentDate, DEFAULT_TIMEZONE).startOf("day").toDate();
+
     const newAppointment = await prisma.$transaction(async (tx) => {
       await tx.appointment.update({
         where: { id: appointmentId },
         data: { status: AppointmentStatus.RESCHEDULED },
       });
-
-      const appointmentDate = dayjsDate.startOf("day").toDate();
 
       return tx.appointment.create({
         data: {
@@ -174,9 +129,10 @@ export class RescheduleAppointmentService {
 
     return {
       id: newAppointment.id,
-      appointmentDate: dayjs(newAppointment.appointmentDate).format("YYYY-MM-DD"),
+      appointmentDate: dayjs.utc(newAppointment.appointmentDate).format("YYYY-MM-DD"),
       startTime: newAppointment.startTime,
       endTime: newAppointment.endTime,
     };
   }
 }
+

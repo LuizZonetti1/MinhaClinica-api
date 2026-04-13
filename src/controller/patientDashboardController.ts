@@ -3,6 +3,7 @@ import { ConfirmAppointmentService } from "../services/patients/confirmAppointme
 import { ListPatientAppointmentsService } from "../services/patients/listPatientAppointmentsService";
 import { PatientDashboardService } from "../services/patients/patientDashboardService";
 import { RescheduleAppointmentService } from "../services/patients/rescheduleAppointmentService";
+import type { PatientRescheduleInput } from "../types/patient";
 
 export class PatientDashboardController {
   async getDashboard(req: Request, res: Response): Promise<void> {
@@ -74,25 +75,10 @@ export class PatientDashboardController {
     try {
       const userId = req.userId as string;
       const { appointmentId } = req.params as { appointmentId: string };
-      const { appointmentDate, startTime, clinicId, professionalId } = req.body as {
-        appointmentDate?: string;
-        startTime?: string;
-        clinicId?: string;
-        professionalId?: string;
-      };
-
-      if (!appointmentDate || !startTime || !clinicId || !professionalId) {
-        res.status(400).json({ message: "appointmentDate, startTime, clinicId e professionalId são obrigatórios" });
-        return;
-      }
+      const input = req.body as PatientRescheduleInput;
 
       const service = new RescheduleAppointmentService();
-      const result = await service.execute(appointmentId, userId, {
-        appointmentDate,
-        startTime,
-        clinicId,
-        professionalId,
-      });
+      const result = await service.execute(appointmentId, userId, input);
 
       res.status(200).json({ data: result });
     } catch (error: unknown) {

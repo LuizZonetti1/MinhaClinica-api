@@ -114,4 +114,57 @@ export class PatientDashboardRepository {
       data: { status },
     });
   }
+
+  /** Busca agendamento por id verificando posse do paciente e clinicId */
+  async findAppointmentForReschedule(
+    appointmentId: string,
+    userId: string,
+    clinicId: string,
+  ) {
+    return prisma.appointment.findFirst({
+      where: {
+        id: appointmentId,
+        clinicId,
+        patient: { userId },
+      },
+      select: {
+        id: true,
+        status: true,
+        type: true,
+        notes: true,
+        patientId: true,
+        channel: true,
+        procedureId: true,
+      },
+    });
+  }
+
+  /** Verifica conflito de horário para remarcação (excluindo o próprio agendamento) */
+  async hasConflictExcluding(
+    excludeAppointmentId: string,
+    professionalId: string,
+    clinicId: string,
+    startOfDay: Date,
+    endOfDay: Date,
+    startTime: string,
+    endTime: string,
+  ): Promise<boolean> {
+    const count = await prisma.appointment.count({
+      where: {
+        id: { not: excludeAppointmentId },
+        professionalId,
+        clinicId,
+        appointmentDate: { gte: startOfDay, lte: endOfDay },
+        status: {
+          notIn: [
+            AppointmentStatus.CANCELLED,
+            AppointmentStatus.NO_SHOW,
+            AppointmentStatus.RESCHEDULED,
+          ],
+        },
+        AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }],
+      },
+    });
+    return count > 0;
+  }
 }
