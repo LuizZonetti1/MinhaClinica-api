@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { ConfirmAppointmentService } from "../services/patients/confirmAppointmentService";
 import { ListPatientAppointmentsService } from "../services/patients/listPatientAppointmentsService";
 import { PatientDashboardService } from "../services/patients/patientDashboardService";
+import { RescheduleAppointmentService } from "../services/patients/rescheduleAppointmentService";
 
 export class PatientDashboardController {
   async getDashboard(req: Request, res: Response): Promise<void> {
@@ -62,6 +63,42 @@ export class PatientDashboardController {
       const err = error as { message?: string; statusCode?: number };
       const status = err.statusCode ?? 500;
       res.status(status).json({ message: err.message || "Erro ao listar consultas" });
+    }
+  }
+
+  /**
+   * PATCH /api/patients/me/appointments/:appointmentId
+   * Remarcar agendamento (somente SCHEDULED ou CONFIRMED)
+   */
+  async rescheduleAppointment(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId as string;
+      const { appointmentId } = req.params as { appointmentId: string };
+      const { appointmentDate, startTime, clinicId, professionalId } = req.body as {
+        appointmentDate?: string;
+        startTime?: string;
+        clinicId?: string;
+        professionalId?: string;
+      };
+
+      if (!appointmentDate || !startTime || !clinicId || !professionalId) {
+        res.status(400).json({ message: "appointmentDate, startTime, clinicId e professionalId são obrigatórios" });
+        return;
+      }
+
+      const service = new RescheduleAppointmentService();
+      const result = await service.execute(appointmentId, userId, {
+        appointmentDate,
+        startTime,
+        clinicId,
+        professionalId,
+      });
+
+      res.status(200).json({ data: result });
+    } catch (error: unknown) {
+      const err = error as { message?: string; statusCode?: number };
+      const status = err.statusCode ?? 500;
+      res.status(status).json({ message: err.message || "Erro ao remarcar consulta" });
     }
   }
 }

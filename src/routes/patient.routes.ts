@@ -52,6 +52,17 @@ router.patch(
 );
 
 /**
+ * PROTEGIDO (PATIENT) — Remarcar agendamento
+ * PATCH /api/patients/me/appointments/:appointmentId
+ */
+router.patch(
+  "/me/appointments/:appointmentId",
+  authMiddleware,
+  checkRole(UserRole.PATIENT),
+  (req, res) => patientDashboardController.rescheduleAppointment(req, res),
+);
+
+/**
  * PROTEGIDO (ADMIN/RECEPTIONIST) — Listar pacientes da clínica
  * GET /api/patients
  */
