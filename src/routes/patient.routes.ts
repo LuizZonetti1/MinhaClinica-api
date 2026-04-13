@@ -71,6 +71,17 @@ router.get(
 );
 
 /**
+ * PROTEGIDO (ADMIN) — Detalhes completos do paciente (somente leitura)
+ * GET /api/patients/:id/details
+ */
+router.get(
+  "/:id/details",
+  authMiddleware,
+  checkRole(UserRole.ADMIN),
+  (req, res) => patientController.getDetails(req, res),
+);
+
+/**
  * PROTEGIDO (ADMIN/RECEPTIONIST) — Cadastro de paciente pela recepção
  * POST /api/patients/register-by-reception
  */

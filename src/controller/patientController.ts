@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import {
+  GetPatientDetailsService,
   GetPatientsService,
   GetPatientsSummaryService,
 } from "../services/patients/getPatientsService";
@@ -135,6 +136,43 @@ export class PatientController {
         res.status(400).json({ error: error.message });
       } else {
         res.status(500).json({ error: "Erro ao buscar resumo de pacientes" });
+      }
+    }
+  }
+
+  /**
+   * GET /api/patients/:id/details
+   * Detalhes completos do paciente para auditoria (somente leitura)
+   */
+  async getDetails(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId;
+      const paramPatientId = req.params.id;
+      const patientId = Array.isArray(paramPatientId) ? paramPatientId[0] : paramPatientId;
+
+      if (!clinicId) {
+        res.status(400).json({ error: "Clinica nao identificada no token" });
+        return;
+      }
+
+      if (!patientId?.trim()) {
+        res.status(400).json({ error: "Paciente nao identificado" });
+        return;
+      }
+
+      const service = new GetPatientDetailsService();
+      const details = await service.execute(clinicId, patientId);
+
+      res.status(200).json(details);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "Paciente nao encontrado") {
+          res.status(404).json({ error: error.message });
+          return;
+        }
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Erro ao buscar detalhes do paciente" });
       }
     }
   }
