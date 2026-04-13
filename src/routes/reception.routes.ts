@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ProfileController } from "../controller/profileController";
 import { ReceptionDashboardController } from "../controller/receptionDashboardController";
+import { ReceptionPatientsController } from "../controller/receptionPatientsController";
 import { StaffController } from "../controller/staffController";
 import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
@@ -11,6 +12,7 @@ import { UserRole } from "../types/enums";
 const router = Router();
 const staffController = new StaffController();
 const receptionDashboardController = new ReceptionDashboardController();
+const receptionPatientsController = new ReceptionPatientsController();
 const profileController = new ProfileController();
 
 /**
@@ -75,13 +77,35 @@ router.patch(
 /**
  * PROTEGIDO (ADMIN | RECEPTIONIST) — Agenda dos profissionais por data
  * GET /api/reception/agendas?date=YYYY-MM-DD
- * Padrão: hoje. Intervalo: ±1 mês do dia atual.
+ * Padrão: hoje. Aceita qualquer data (passado ou futuro).
  */
 router.get(
   "/agendas",
   authMiddleware,
   checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
   (req, res) => receptionDashboardController.getAgenda(req, res),
+);
+
+/**
+ * PROTEGIDO (ADMIN | RECEPTIONIST) — Lista todos os pacientes da clínica
+ * GET /api/reception/patients
+ */
+router.get(
+  "/patients",
+  authMiddleware,
+  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
+  (req, res) => receptionPatientsController.listPatients(req, res),
+);
+
+/**
+ * PROTEGIDO (ADMIN | RECEPTIONIST) — Lista todas as consultas de um paciente
+ * GET /api/reception/patients/:patientId/appointments
+ */
+router.get(
+  "/patients/:patientId/appointments",
+  authMiddleware,
+  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
+  (req, res) => receptionPatientsController.listPatientAppointments(req, res),
 );
 
 /**
