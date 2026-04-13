@@ -24,6 +24,7 @@ export interface FinancialData {
 export interface StatusDistributionItem {
   name: string;
   value: number;
+  color: string;
 }
 
 export interface RevenueTrendItem {

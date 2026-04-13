@@ -111,6 +111,20 @@ export interface PatientAppointmentListResult {
   appointments: PatientAppointmentListItem[];
 }
 
+// ── Consultas de paciente (visão da Recepção) ────────────────────────────────
+
+export interface ReceptionAppointmentItem {
+  id: string;
+  date: Date;
+  startTime: string;
+  endTime: string;
+  professionalName: string;
+  professionalSpecialty: string | null;
+  appointmentType: string;
+  status: string;
+  notes: string | null;
+}
+
 // ── Auto-agendamento do Paciente ─────────────────────────────────────────────
 
 export interface ClinicSearchItem {
@@ -140,4 +154,73 @@ export interface PatientBookingInput {
   type: AppointmentType;
   notes?: string;
   channel?: AppointmentChannel;
+}
+
+export interface PatientAuditAddress {
+  zipCode: string | null;
+  street: string | null;
+  number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+}
+
+export interface PatientAuditMedical {
+  bloodType: string | null;
+  allergies: string | null;
+  medications: string | null;
+  conditions: string | null;
+  observations: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+}
+
+export interface PatientAuditReportItem {
+  id: string;
+  appointmentId: string;
+  appointmentDate: Date;
+  startTime: string;
+  endTime: string;
+  appointmentType: AppointmentType;
+  appointmentStatus: string;
+  appointmentNotes: string | null;
+  professionalName: string;
+  professionalSpecialty: string | null;
+  chiefComplaint: string | null;
+  symptoms: string | null;
+  diagnosis: string | null;
+  treatment: string | null;
+  prescription: string | null;
+  observations: string | null;
+  attachments: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PatientAuditDetails {
+  patient: {
+    id: string;
+    userId: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    avatarUrl: string | null;
+    status: UserStatus;
+    isActive: boolean;
+    cpf: string;
+    rg: string | null;
+    dateOfBirth: Date;
+    gender: Gender;
+    alternativePhone: string | null;
+    noShowCount: number;
+    totalAppointments: number;
+    completedAppointments: number;
+    lastVisit: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    address: PatientAuditAddress;
+    medical: PatientAuditMedical;
+  };
+  reports: PatientAuditReportItem[];
 }
