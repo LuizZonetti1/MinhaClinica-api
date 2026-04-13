@@ -155,31 +155,21 @@ export class ReportService {
     });
 
     // ── statusDistribution ───────────────────────────────────────────────────
-    const confirmedStatuses = new Set<AppointmentStatus>([
-      AppointmentStatus.CONFIRMED,
-      AppointmentStatus.COMPLETED,
-      AppointmentStatus.IN_PROGRESS,
-      AppointmentStatus.WAITING,
-    ]);
-    const pendingStatuses = new Set<AppointmentStatus>([
-      AppointmentStatus.SCHEDULED,
-    ]);
-
-    let confirmed = 0;
-    let pending = 0;
-    let cancelled = 0;
+    let realizadas = 0;
+    let canceladas = 0;
+    let naoCompareceu = 0;
 
     for (const a of appointments) {
       const status = a.status as AppointmentStatus;
-      if (confirmedStatuses.has(status)) confirmed++;
-      else if (pendingStatuses.has(status)) pending++;
-      else if (cancelledStatuses.has(status)) cancelled++;
+      if (status === AppointmentStatus.COMPLETED) realizadas++;
+      else if (status === AppointmentStatus.CANCELLED) canceladas++;
+      else if (status === AppointmentStatus.NO_SHOW) naoCompareceu++;
     }
 
     const statusDistribution = [
-      { name: "Confirmados", value: confirmed },
-      { name: "Pendentes", value: pending },
-      { name: "Cancelados", value: cancelled },
+      { name: "Realizadas", value: realizadas, color: "#22C55E" },
+      { name: "Canceladas", value: canceladas, color: "#EF4444" },
+      { name: "Não Compareceu", value: naoCompareceu, color: "#EAB308" },
     ];
 
     // ── topProfessionals ─────────────────────────────────────────────────────
