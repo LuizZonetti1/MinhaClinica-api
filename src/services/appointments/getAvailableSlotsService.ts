@@ -9,8 +9,6 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const DEFAULT_TIMEZONE = "America/Sao_Paulo";
-const DEFAULT_WORK_START = "08:00";
-const DEFAULT_WORK_END = "18:00";
 
 // Dias da semana: Date.getDay() → DayOfWeek
 const JS_DAY_TO_ENUM: Record<number, DayOfWeek> = {
@@ -70,18 +68,23 @@ export class GetAvailableSlotsService {
       throw Object.assign(new Error("Profissional não encontrado"), { statusCode: 404 });
     }
 
+    // Profissional não trabalha nesse dia da semana → sem slots
+    if (!workingHours) {
+      return { date: dateStr, professionalId, duration: professional.defaultAppointmentDuration, bufferTime: professional.bufferTime, slots: [] };
+    }
+
     const duration = professional.defaultAppointmentDuration;
     const bufferTime = professional.bufferTime;
 
     // Definir range de trabalho
-    const workStart = timeToMinutes(workingHours?.startTime ?? DEFAULT_WORK_START);
-    const workEnd = timeToMinutes(workingHours?.endTime ?? DEFAULT_WORK_END);
+    const workStart = timeToMinutes(workingHours.startTime);
+    const workEnd = timeToMinutes(workingHours.endTime);
 
     // Lunch break (se configurado)
     const lunchStart =
-      workingHours?.lunchBreakStart != null ? timeToMinutes(workingHours.lunchBreakStart) : null;
+      workingHours.lunchBreakStart != null ? timeToMinutes(workingHours.lunchBreakStart) : null;
     const lunchEnd =
-      workingHours?.lunchBreakEnd != null ? timeToMinutes(workingHours.lunchBreakEnd) : null;
+      workingHours.lunchBreakEnd != null ? timeToMinutes(workingHours.lunchBreakEnd) : null;
 
     // Converter bloqueios de agenda para ranges de minutos do dia
     const blockedRanges: { start: number; end: number }[] = [];

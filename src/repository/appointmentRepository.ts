@@ -1,5 +1,11 @@
 import { prisma } from "../database/prisma";
-import type { AppointmentChannel, AppointmentType, DayOfWeek } from "../types/enums";
+import {
+  type AppointmentChannel,
+  AppointmentStatus,
+  type AppointmentType,
+  type DayOfWeek,
+} from "../types/enums";
+import { CONSULTATION_EXCLUDED_STATUSES } from "../utils/appointmentStatusRules";
 
 export class AppointmentRepository {
   /** Etapa 1 — Busca pacientes globais por nome ou CPF (inclui pendentes de ativação) */
@@ -90,7 +96,7 @@ export class AppointmentRepository {
           professionalId,
           clinicId,
           appointmentDate: { gte: startOfDay, lte: endOfDay },
-          status: { notIn: ["CANCELLED", "NO_SHOW"] },
+          status: { notIn: [...CONSULTATION_EXCLUDED_STATUSES] },
         },
         select: { startTime: true, endTime: true },
       }),
@@ -152,7 +158,7 @@ export class AppointmentRepository {
   /** Calendário — Lista pacientes distintos com pelo menos uma consulta COMPLETED */
   async listCompletedPatients(clinicId: string, professionalId: string) {
     const rows = await prisma.appointment.findMany({
-      where: { clinicId, professionalId, status: "COMPLETED" },
+      where: { clinicId, professionalId, status: AppointmentStatus.COMPLETED },
       select: {
         appointmentDate: true,
         patientId: true,
@@ -186,7 +192,7 @@ export class AppointmentRepository {
         professionalId,
         clinicId,
         appointmentDate: { gte: startOfDay, lte: endOfDay },
-        status: { notIn: ["CANCELLED", "NO_SHOW"] },
+        status: { notIn: [...CONSULTATION_EXCLUDED_STATUSES] },
         AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }],
       },
     });
