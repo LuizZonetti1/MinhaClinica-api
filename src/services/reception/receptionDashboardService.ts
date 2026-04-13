@@ -68,8 +68,11 @@ export class ReceptionDashboardService {
 
   async getSummary(clinicId: string): Promise<ReceptionDashboardSummary> {
     const now = dayjs().tz(DEFAULT_TIMEZONE);
-    const startOfDay = now.startOf("day").toDate();
-    const endOfDay = now.endOf("day").toDate();
+    const todayStr = now.format("YYYY-MM-DD");
+    // appointmentDate é @db.Date → armazenado como UTC midnight.
+    // Usar UTC puro evita o shift de fuso (SP = UTC-3).
+    const startOfDay = dayjs.utc(todayStr).startOf("day").toDate();
+    const endOfDay = dayjs.utc(todayStr).endOf("day").toDate();
 
     await this.autoMarkPendingCheckinAsNoShow(clinicId, now);
 
@@ -102,8 +105,11 @@ export class ReceptionDashboardService {
     date?: string,
   ): Promise<ReceptionAppointmentsTodayResponse> {
     const day = this.resolveDay(date);
-    const startOfDay = day.startOf("day").toDate();
-    const endOfDay = day.endOf("day").toDate();
+    const dateFormatted = day.format("YYYY-MM-DD");
+    // appointmentDate é @db.Date → armazenado como UTC midnight.
+    // Usar UTC puro evita o shift de fuso (SP = UTC-3).
+    const startOfDay = dayjs.utc(dateFormatted).startOf("day").toDate();
+    const endOfDay = dayjs.utc(dateFormatted).endOf("day").toDate();
     const now = dayjs().tz(DEFAULT_TIMEZONE);
 
     await this.autoMarkPendingCheckinAsNoShow(clinicId, now);
