@@ -18,6 +18,8 @@ export class ListPatientAppointmentsService {
 
     const appointments: PatientAppointmentListItem[] = rows.map((row) => ({
       id: row.id,
+      clinicId: row.clinicId,
+      professionalId: row.professionalId,
       // Usa UTC para preservar o dia do campo @db.Date sem deslocar timezone.
       appointmentDate: dayjs.utc(row.appointmentDate).format("YYYY-MM-DD"),
       startTime: row.startTime,

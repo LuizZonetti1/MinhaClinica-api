@@ -77,6 +77,8 @@ export class PatientDashboardRepository {
       },
       select: {
         id: true,
+        clinicId: true,
+        professionalId: true,
         appointmentDate: true,
         startTime: true,
         endTime: true,
@@ -116,11 +118,7 @@ export class PatientDashboardRepository {
   }
 
   /** Busca agendamento por id verificando posse do paciente e clinicId */
-  async findAppointmentForReschedule(
-    appointmentId: string,
-    userId: string,
-    clinicId: string,
-  ) {
+  async findAppointmentForReschedule(appointmentId: string, userId: string, clinicId: string) {
     return prisma.appointment.findFirst({
       where: {
         id: appointmentId,

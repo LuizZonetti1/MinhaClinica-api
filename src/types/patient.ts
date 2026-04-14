@@ -93,6 +93,8 @@ export interface PatientDashboardSummary {
 
 export interface PatientAppointmentListItem {
   id: string;
+  clinicId: string;
+  professionalId: string;
   appointmentDate: string; // "YYYY-MM-DD"
   startTime: string;
   endTime: string;
