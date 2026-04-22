@@ -41,12 +41,38 @@ export const AppointmentStatus = {
   WAITING: "WAITING",
   IN_PROGRESS: "IN_PROGRESS",
   COMPLETED: "COMPLETED",
+  COMPLETED_WITH_ADDENDUM: "COMPLETED_WITH_ADDENDUM",
   CANCELLED: "CANCELLED",
   NO_SHOW: "NO_SHOW",
   RESCHEDULED: "RESCHEDULED",
 } as const;
 
 export type AppointmentStatus = (typeof AppointmentStatus)[keyof typeof AppointmentStatus];
+
+export const DocumentType = {
+  CLINICAL_REPORT: "CLINICAL_REPORT",
+  EXAM: "EXAM",
+  CERTIFICATE: "CERTIFICATE",
+  DECLARATION: "DECLARATION",
+  PRESCRIPTION: "PRESCRIPTION",
+  CONTROLLED_PRESCRIPTION: "CONTROLLED_PRESCRIPTION",
+  REFERRAL: "REFERRAL",
+  REPORT: "REPORT",
+  CONSENT_FORM: "CONSENT_FORM",
+  TREATMENT_PLAN: "TREATMENT_PLAN",
+  BUDGET: "BUDGET",
+} as const;
+
+export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType];
+
+export const DocumentStatus = {
+  DRAFT: "DRAFT",
+  FINALIZED: "FINALIZED",
+  SENT: "SENT",
+  ADDENDUM: "ADDENDUM",
+} as const;
+
+export type DocumentStatus = (typeof DocumentStatus)[keyof typeof DocumentStatus];
 
 export const AppointmentChannel = {
   IN_PERSON: "IN_PERSON",
