@@ -41,9 +41,31 @@ enum AppointmentStatus {
   WAITING // Paciente aguardando atendimento
   IN_PROGRESS // Em atendimento
   COMPLETED // Atendido
+  COMPLETED_WITH_ADDENDUM // Concluída com adendo
   CANCELLED // Cancelado
   NO_SHOW // Paciente não compareceu
   RESCHEDULED // Reagendado
+}
+
+enum DocumentType {
+  CLINICAL_REPORT // Relatório clínico
+  EXAM // Exame
+  CERTIFICATE // Atestado
+  DECLARATION // Declaração
+  PRESCRIPTION // Receita
+  CONTROLLED_PRESCRIPTION // Receita de controle especial
+  REFERRAL // Encaminhamento
+  REPORT // Laudo
+  CONSENT_FORM // Termo de consentimento
+  TREATMENT_PLAN // Plano de tratamento
+  BUDGET // Orçamento
+}
+
+enum DocumentStatus {
+  DRAFT // Rascunho
+  FINALIZED // Finalizado
+  SENT // Enviado
+  ADDENDUM // Adendo
 }
 
 enum AppointmentChannel {
@@ -181,6 +203,8 @@ model Clinic {
   notifications    Notification[]
   auditLogs        AuditLog[]
   patientComments  PatientComment[]
+  documents        Document[]
+  documentCounters DocumentCounter[]
 
   @@index([cnpj])
   @@index([city, state]) // Índice para busca por localização
@@ -611,6 +635,10 @@ model Appointment {
   // Reagendamento
   rescheduledFrom String? // ID do agendamento original
 
+  // Conclusão
+  completedAt DateTime?
+  completedBy String? // userId que concluiu
+
   // Metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -620,6 +648,7 @@ model Appointment {
   medicalRecord   MedicalRecord?
   financialRecord FinancialRecord?
   notifications   Notification[]
+  documents       Document[]
 
   @@index([clinicId, appointmentDate, professionalId])
   @@index([clinicId, patientId])
@@ -827,4 +856,60 @@ model PatientComment {
   @@index([clinicId, patientId])
   @@index([professionalId])
   @@map("patient_comments")
+}
+
+// ========================================
+// DOCUMENTOS CLÍNICOS
+// ========================================
+
+model Document {
+  id       String @id @default(uuid())
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+
+  // Tipo e status
+  type   DocumentType
+  status DocumentStatus @default(DRAFT)
+
+  // Conteúdo
+  content        Json
+  documentNumber String @unique // DOC-2026-00001
+  version        Int    @default(1)
+
+  // Adendo — referência ao documento original
+  originalDocumentId String?
+  originalDocument   Document?  @relation("DocumentAddendum", fields: [originalDocumentId], references: [id], onDelete: Restrict)
+  addendums          Document[] @relation("DocumentAddendum")
+
+  // Integridade
+  integrityHash String? // SHA-256 do conteúdo ao enviar
+
+  // Rastreabilidade
+  createdBy String // userId
+  createdAt DateTime @default(now())
+  updatedBy String? // userId
+  updatedAt DateTime @updatedAt
+
+  // Soft delete
+  deletedAt DateTime?
+
+  @@index([appointmentId])
+  @@index([clinicId, createdAt])
+  @@index([originalDocumentId])
+  @@map("documents")
+}
+
+// Contador sequencial de documentos por clínica/ano
+model DocumentCounter {
+  id           String @id @default(uuid())
+  clinicId     String
+  clinic       Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  year         Int
+  lastSequence Int    @default(0)
+
+  @@unique([clinicId, year])
+  @@map("document_counters")
 }
