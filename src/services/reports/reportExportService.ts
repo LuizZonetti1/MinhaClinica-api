@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
-import { AppointmentStatus, TransactionType } from "../../types/enums";
+import { type AppointmentStatus, TransactionType } from "../../types/enums";
 import { CONSULTATION_EXCLUDED_STATUSES } from "../../utils/appointmentStatusRules";
 
 dayjs.extend(utc);
@@ -88,6 +88,7 @@ const APPOINTMENT_STATUS_LABEL: Record<AppointmentStatus, string> = {
   WAITING: "Aguardando",
   IN_PROGRESS: "Em atendimento",
   COMPLETED: "Concluida",
+  COMPLETED_WITH_ADDENDUM: "Concluida com adendo",
   CANCELLED: "Cancelada",
   NO_SHOW: "Nao compareceu",
   RESCHEDULED: "Reagendada",
@@ -114,12 +115,10 @@ const normalizeAscii = (value: string): string =>
     .replace(/[^\x20-\x7E]/g, "?");
 
 const escapePdfText = (value: string): string =>
-  normalizeAscii(value)
-    .replace(/\\/g, "\\\\")
-    .replace(/\(/g, "\\(")
-    .replace(/\)/g, "\\)");
+  normalizeAscii(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 
-const formatDateLabel = (value: Date): string => dayjs(value).tz(DEFAULT_TIMEZONE).format("DD/MM/YYYY");
+const formatDateLabel = (value: Date): string =>
+  dayjs(value).tz(DEFAULT_TIMEZONE).format("DD/MM/YYYY");
 
 const formatDateTimeLabel = (value: Date): string =>
   dayjs(value).tz(DEFAULT_TIMEZONE).format("DD/MM/YYYY HH:mm:ss");
@@ -145,7 +144,9 @@ const buildPdfBufferFromPages = (pages: PdfPage[]): Buffer => {
     body: "<< /Type /Catalog /Pages 2 0 R >>",
   });
 
-  const pageRefs = Array.from({ length: pageCount }, (_, index) => `${3 + index * 2} 0 R`).join(" ");
+  const pageRefs = Array.from({ length: pageCount }, (_, index) => `${3 + index * 2} 0 R`).join(
+    " ",
+  );
   objects.push({
     id: 2,
     body: `<< /Type /Pages /Kids [${pageRefs}] /Count ${pageCount} >>`,
@@ -401,19 +402,31 @@ class ProfessionalPdfBuilder {
       lineWidth: 1,
     });
 
-    this.drawText(page, `Periodo analisado: ${periodLabel}`, PAGE_MARGIN_X + 12, page.cursorTop + 12, {
-      font: "F2",
-      size: 10,
-      color: COLOR_TEXT,
-      width: PAGE_CONTENT_WIDTH - 24,
-    });
+    this.drawText(
+      page,
+      `Periodo analisado: ${periodLabel}`,
+      PAGE_MARGIN_X + 12,
+      page.cursorTop + 12,
+      {
+        font: "F2",
+        size: 10,
+        color: COLOR_TEXT,
+        width: PAGE_CONTENT_WIDTH - 24,
+      },
+    );
 
-    this.drawText(page, `Emitido em: ${generatedAtLabel}`, PAGE_MARGIN_X + 12, page.cursorTop + 26, {
-      font: "F1",
-      size: 9,
-      color: COLOR_MUTED,
-      width: PAGE_CONTENT_WIDTH - 24,
-    });
+    this.drawText(
+      page,
+      `Emitido em: ${generatedAtLabel}`,
+      PAGE_MARGIN_X + 12,
+      page.cursorTop + 26,
+      {
+        font: "F1",
+        size: 9,
+        color: COLOR_MUTED,
+        width: PAGE_CONTENT_WIDTH - 24,
+      },
+    );
 
     page.cursorTop += boxHeight + 14;
   }
@@ -633,13 +646,19 @@ class ProfessionalPdfBuilder {
         1,
       );
 
-      this.drawText(page, `Pagina ${index + 1} de ${totalPages}`, PAGE_MARGIN_X, PAGE_HEIGHT - PAGE_MARGIN_BOTTOM + 10, {
-        font: "F1",
-        size: 8,
-        color: COLOR_MUTED,
-        width: PAGE_CONTENT_WIDTH,
-        align: "right",
-      });
+      this.drawText(
+        page,
+        `Pagina ${index + 1} de ${totalPages}`,
+        PAGE_MARGIN_X,
+        PAGE_HEIGHT - PAGE_MARGIN_BOTTOM + 10,
+        {
+          font: "F1",
+          size: 8,
+          color: COLOR_MUTED,
+          width: PAGE_CONTENT_WIDTH,
+          align: "right",
+        },
+      );
     });
   }
 
@@ -677,7 +696,11 @@ export class ReportExportService {
     };
   }
 
-  async getExportData(clinicId: string, startDate: string, endDate: string): Promise<ReportExportData> {
+  async getExportData(
+    clinicId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<ReportExportData> {
     const { start, end } = this.parseDateRange(startDate, endDate);
 
     const [clinic, appointments, financialRecords] = await Promise.all([
@@ -816,7 +839,8 @@ export class ReportExportService {
     }));
 
     const financialRows = data.financialRecords.slice(0, MAX_LIST_ROWS).map((item) => {
-      const signedAmount = item.type === TransactionType.EXPENSE ? -Math.abs(item.amount) : Math.abs(item.amount);
+      const signedAmount =
+        item.type === TransactionType.EXPENSE ? -Math.abs(item.amount) : Math.abs(item.amount);
       return {
         date: formatDateLabel(item.referenceDate),
         type: TRANSACTION_TYPE_LABEL[item.type],

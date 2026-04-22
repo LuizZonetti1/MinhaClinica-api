@@ -3,8 +3,8 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
 import { PatientDashboardRepository } from "../../repository/patientDashboardRepository";
-import type { PatientRescheduleInput, PatientRescheduleResult } from "../../types/patient";
 import { AppointmentChannel, AppointmentStatus } from "../../types/enums";
+import type { PatientRescheduleInput, PatientRescheduleResult } from "../../types/patient";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -93,14 +93,16 @@ export class RescheduleAppointmentService {
     );
 
     if (hasConflict) {
-      throw Object.assign(
-        new Error("Este horário já está ocupado. Por favor, escolha outro."),
-        { statusCode: 409 },
-      );
+      throw Object.assign(new Error("Este horário já está ocupado. Por favor, escolha outro."), {
+        statusCode: 409,
+      });
     }
 
     // Marca o original como RESCHEDULED e cria o novo em transação atômica
-    const appointmentDate = dayjs.tz(input.appointmentDate, DEFAULT_TIMEZONE).startOf("day").toDate();
+    const appointmentDate = dayjs
+      .tz(input.appointmentDate, DEFAULT_TIMEZONE)
+      .startOf("day")
+      .toDate();
 
     const newAppointment = await prisma.$transaction(async (tx) => {
       await tx.appointment.update({
@@ -135,4 +137,3 @@ export class RescheduleAppointmentService {
     };
   }
 }
-
