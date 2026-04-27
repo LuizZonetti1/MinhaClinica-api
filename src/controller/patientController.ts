@@ -1,4 +1,5 @@
-import type { Request, Response } from "express";
+﻿import type { Request, Response } from "express";
+import { handleControllerError } from "../utils/controllerUtils";
 import {
   GetPatientDetailsService,
   GetPatientsService,
@@ -9,6 +10,7 @@ import {
   RegisterPatientService,
 } from "../services/patients/patientRegistrationService";
 import { ReceptionPatientRegistrationService } from "../services/patients/receptionPatientRegistrationService";
+
 
 export class PatientController {
   /**
@@ -75,13 +77,7 @@ export class PatientController {
       const result = await service.execute(req.body, clinicId);
       res.status(201).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao cadastrar paciente" });
-      }
+      handleControllerError(res, error, "Erro ao cadastrar paciente");
     }
   }
 

@@ -1,6 +1,8 @@
-import type { Request, Response } from "express";
+﻿import type { Request, Response } from "express";
+import { handleControllerError } from "../utils/controllerUtils";
 import { AuditLogRepository } from "../repository/auditLogRepository";
 import { VerifyIntegrityService } from "../services/documents/verifyIntegrityService";
+
 
 const auditLogRepository = new AuditLogRepository();
 
@@ -28,13 +30,7 @@ export class AuditController {
 
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar logs de auditoria" });
-      }
+      handleControllerError(res, error, "Erro ao listar logs de auditoria");
     }
   }
 
@@ -51,13 +47,7 @@ export class AuditController {
       const result = await service.execute(docId, clinicId);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao verificar integridade do documento" });
-      }
+      handleControllerError(res, error, "Erro ao verificar integridade do documento");
     }
   }
 }

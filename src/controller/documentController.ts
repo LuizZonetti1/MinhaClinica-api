@@ -1,4 +1,5 @@
-import type { Request, Response } from "express";
+﻿import type { Request, Response } from "express";
+import { handleControllerError } from "../utils/controllerUtils";
 import { ConcludeAppointmentService } from "../services/documents/concludeAppointmentService";
 import { CreateAddendumService } from "../services/documents/createAddendumService";
 import { CreateDocumentService } from "../services/documents/createDocumentService";
@@ -34,13 +35,7 @@ export class DocumentController {
       const result = await service.execute(appointmentId, req.body, context);
       res.status(201).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao criar documento" });
-      }
+      handleControllerError(res, error, "Erro ao criar documento");
     }
   }
 
@@ -58,13 +53,7 @@ export class DocumentController {
       const result = await service.execute(appointmentId, docId, req.body, context);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao atualizar documento" });
-      }
+      handleControllerError(res, error, "Erro ao atualizar documento");
     }
   }
 
@@ -82,13 +71,7 @@ export class DocumentController {
       const result = await service.execute(appointmentId, docId, context);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao finalizar documento" });
-      }
+      handleControllerError(res, error, "Erro ao finalizar documento");
     }
   }
 
@@ -105,13 +88,7 @@ export class DocumentController {
       const result = await service.execute(appointmentId, context);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao concluir consulta" });
-      }
+      handleControllerError(res, error, "Erro ao concluir consulta");
     }
   }
 
@@ -128,13 +105,7 @@ export class DocumentController {
       const result = await service.execute(appointmentId, req.body, context);
       res.status(201).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao criar adendo" });
-      }
+      handleControllerError(res, error, "Erro ao criar adendo");
     }
   }
 
@@ -152,13 +123,7 @@ export class DocumentController {
       const result = await service.execute(appointmentId, docId, context);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao excluir documento" });
-      }
+      handleControllerError(res, error, "Erro ao excluir documento");
     }
   }
 
@@ -178,13 +143,7 @@ export class DocumentController {
       });
       res.status(200).json({ documents: result });
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar documentos" });
-      }
+      handleControllerError(res, error, "Erro ao listar documentos");
     }
   }
 
@@ -205,13 +164,7 @@ export class DocumentController {
       });
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao visualizar documento" });
-      }
+      handleControllerError(res, error, "Erro ao visualizar documento");
     }
   }
 
@@ -232,13 +185,7 @@ export class DocumentController {
       });
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao imprimir documento" });
-      }
+      handleControllerError(res, error, "Erro ao imprimir documento");
     }
   }
 }

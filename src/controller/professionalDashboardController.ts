@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { handleControllerError } from "../utils/controllerUtils";
 import {
   ProfessionalAgendaService,
   ProfessionalDashboardService,
@@ -19,13 +20,7 @@ export class ProfessionalDashboardController {
 
       res.status(200).json(data);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 500;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao carregar dashboard do profissional" });
-      }
+      handleControllerError(res, error, "Erro ao carregar dashboard do profissional", 500);
     }
   }
 
@@ -45,13 +40,7 @@ export class ProfessionalDashboardController {
 
       res.status(200).json(data);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 500;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao carregar agenda do profissional" });
-      }
+      handleControllerError(res, error, "Erro ao carregar agenda do profissional", 500);
     }
   }
 }

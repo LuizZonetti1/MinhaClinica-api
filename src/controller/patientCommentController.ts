@@ -1,4 +1,5 @@
-import type { Request, Response } from "express";
+﻿import type { Request, Response } from "express";
+import { handleControllerError } from "../utils/controllerUtils";
 import {
   CreatePatientCommentService,
   DeletePatientCommentService,
@@ -49,13 +50,7 @@ export class PatientCommentController {
       const result = await service.execute(req.body, userId, clinicId);
       res.status(201).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao criar comentário" });
-      }
+      handleControllerError(res, error, "Erro ao criar comentário");
     }
   }
 
@@ -77,13 +72,7 @@ export class PatientCommentController {
       const result = await service.execute(commentId, req.body, userId, clinicId);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao editar comentário" });
-      }
+      handleControllerError(res, error, "Erro ao editar comentário");
     }
   }
 
@@ -105,13 +94,7 @@ export class PatientCommentController {
       await service.execute(commentId, userId, clinicId);
       res.status(204).send();
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao excluir comentário" });
-      }
+      handleControllerError(res, error, "Erro ao excluir comentário");
     }
   }
 }

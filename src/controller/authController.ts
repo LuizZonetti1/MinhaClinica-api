@@ -1,4 +1,5 @@
-import type { Request, Response } from "express";
+﻿import type { Request, Response } from "express";
+import { handleControllerError } from "../utils/controllerUtils";
 import { ActivateReceptionPatientService } from "../services/auth/activateReceptionPatientService";
 import { LoginService } from "../services/auth/loginService";
 import { ResendVerificationService } from "../services/auth/resendVerificationService";
@@ -8,6 +9,7 @@ import {
   RegisterPatientService,
 } from "../services/patients/patientRegistrationService";
 import { resolveVerifyRedirect } from "../utils/verifyRedirectUtils";
+
 
 export class AuthController {
   /**
@@ -37,13 +39,7 @@ export class AuthController {
       const result = await service.execute({ name, email });
       res.status(201).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao iniciar cadastro" });
-      }
+      handleControllerError(res, error, "Erro ao iniciar cadastro");
     }
   }
 
@@ -104,13 +100,7 @@ export class AuthController {
       const result = await service.execute(userId, req.body);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao completar cadastro" });
-      }
+      handleControllerError(res, error, "Erro ao completar cadastro");
     }
   }
 
@@ -138,13 +128,7 @@ export class AuthController {
       const result = await service.execute(token);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao ativar conta" });
-      }
+      handleControllerError(res, error, "Erro ao ativar conta");
     }
   }
 }

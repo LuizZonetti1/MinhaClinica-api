@@ -1,4 +1,5 @@
-import type { Request, Response } from "express";
+﻿import type { Request, Response } from "express";
+import { handleControllerError } from "../utils/controllerUtils";
 import { GetPatientsService } from "../services/patients/getPatientsService";
 import { ListReceptionPatientAppointmentsService } from "../services/reception/receptionPatientsService";
 
@@ -47,13 +48,7 @@ export class ReceptionPatientsController {
 
       res.status(200).json(data);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar consultas do paciente" });
-      }
+      handleControllerError(res, error, "Erro ao listar consultas do paciente");
     }
   }
 }

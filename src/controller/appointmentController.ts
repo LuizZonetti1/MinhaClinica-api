@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { handleControllerError } from "../utils/controllerUtils";
 import { CreateAppointmentService } from "../services/appointments/createAppointmentService";
 import { GetAppointmentByIdService } from "../services/appointments/getAppointmentByIdService";
 import { GetAvailableSlotsService } from "../services/appointments/getAvailableSlotsService";
@@ -27,13 +28,7 @@ export class AppointmentController {
       const result = await service.execute(q, clinicId);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao buscar pacientes" });
-      }
+      handleControllerError(res, error, "Erro ao buscar pacientes");
     }
   }
 
@@ -85,13 +80,7 @@ export class AppointmentController {
       const result = await service.execute(professionalId, clinicId, date);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao buscar horários disponíveis" });
-      }
+      handleControllerError(res, error, "Erro ao buscar horários disponíveis");
     }
   }
 
@@ -113,13 +102,7 @@ export class AppointmentController {
       const result = await service.execute(req.body, clinicId, createdBy);
       res.status(201).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao criar agendamento" });
-      }
+      handleControllerError(res, error, "Erro ao criar agendamento");
     }
   }
 
@@ -195,13 +178,7 @@ export class AppointmentController {
       });
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao carregar consulta" });
-      }
+      handleControllerError(res, error, "Erro ao carregar consulta");
     }
   }
 
@@ -230,13 +207,7 @@ export class AppointmentController {
       const result = await service.execute(appointmentId, status, userId, clinicId);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao atualizar status da consulta" });
-      }
+      handleControllerError(res, error, "Erro ao atualizar status da consulta");
     }
   }
 }
