@@ -29,8 +29,8 @@ export class DeleteDocumentService {
       );
     }
 
-    if (document.status !== DocumentStatus.DRAFT) {
-      throw Object.assign(new Error("Apenas documentos em rascunho podem ser excluídos"), {
+    if (document.status !== DocumentStatus.DRAFT && document.status !== DocumentStatus.FINALIZED) {
+      throw Object.assign(new Error("Apenas documentos em rascunho ou finalizados podem ser excluídos"), {
         statusCode: 403,
       });
     }
