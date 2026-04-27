@@ -65,6 +65,17 @@ router.patch(
 );
 
 /**
+ * PROTEGIDO (PATIENT) — Detalhes de uma consulta do paciente
+ * GET /api/patients/me/appointments/:id
+ */
+router.get(
+  "/me/appointments/:id",
+  authMiddleware,
+  checkRole(UserRole.PATIENT),
+  (req, res) => patientDashboardController.getAppointmentDetail(req, res),
+);
+
+/**
  * PROTEGIDO (ADMIN/RECEPTIONIST) — Listar pacientes da clínica
  * GET /api/patients
  */

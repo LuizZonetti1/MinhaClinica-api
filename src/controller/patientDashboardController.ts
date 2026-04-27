@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { ConfirmAppointmentService } from "../services/patients/confirmAppointmentService";
+import { GetPatientAppointmentDetailService } from "../services/patients/getPatientAppointmentDetailService";
 import { ListPatientAppointmentsService } from "../services/patients/listPatientAppointmentsService";
 import { PatientDashboardService } from "../services/patients/patientDashboardService";
 import { RescheduleAppointmentService } from "../services/patients/rescheduleAppointmentService";
@@ -85,6 +86,26 @@ export class PatientDashboardController {
       const err = error as { message?: string; statusCode?: number };
       const status = err.statusCode ?? 500;
       res.status(status).json({ message: err.message || "Erro ao remarcar consulta" });
+    }
+  }
+
+  /**
+   * GET /api/patients/me/appointments/:id
+   * Retorna detalhes de uma consulta do paciente (sem depender de clinicId)
+   */
+  async getAppointmentDetail(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId as string;
+      const { id } = req.params as { id: string };
+
+      const service = new GetPatientAppointmentDetailService();
+      const data = await service.execute(id, userId);
+
+      res.status(200).json({ data });
+    } catch (error: unknown) {
+      const err = error as { message?: string; statusCode?: number };
+      const status = err.statusCode ?? 500;
+      res.status(status).json({ error: err.message || "Erro ao carregar consulta" });
     }
   }
 }
