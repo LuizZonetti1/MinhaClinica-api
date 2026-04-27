@@ -1,9 +1,11 @@
 import type { Request, Response } from "express";
 import { CreateAppointmentService } from "../services/appointments/createAppointmentService";
+import { GetAppointmentByIdService } from "../services/appointments/getAppointmentByIdService";
 import { GetAvailableSlotsService } from "../services/appointments/getAvailableSlotsService";
 import { ListAppointmentsByDayService } from "../services/appointments/listAppointmentsByDayService";
 import { ListCompletedPatientsService } from "../services/appointments/listCompletedPatientsService";
 import { ListProfessionalsService } from "../services/appointments/listProfessionalsService";
+import { PatchAppointmentStatusService } from "../services/appointments/patchAppointmentStatusService";
 import { SearchPatientsService } from "../services/appointments/searchPatientsService";
 
 export class AppointmentController {
@@ -168,6 +170,72 @@ export class AppointmentController {
         res.status(statusCode).json({ error: error.message });
       } else {
         res.status(500).json({ error: "Erro ao listar pacientes" });
+      }
+    }
+  }
+
+  /**
+   * GET /api/appointments/:id
+   * Retorna a consulta completa com patient, professional e clinic aninhados.
+   * Necessário para o frontend carregar o contexto da tela de documentos.
+   */
+  async getById(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId;
+      if (!clinicId) {
+        res.status(401).json({ error: "Não autenticado" });
+        return;
+      }
+
+      const appointmentId = req.params.id as string;
+      const service = new GetAppointmentByIdService();
+      const result = await service.execute(appointmentId, clinicId, {
+        userId: req.userId,
+        userRole: req.userRole,
+      });
+      res.status(200).json(result);
+    } catch (error) {
+      if (error instanceof Error) {
+        const statusCode =
+          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
+        res.status(statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Erro ao carregar consulta" });
+      }
+    }
+  }
+
+  /**
+   * PATCH /api/appointments/:id/status
+   * Permite ao profissional autenticado fazer a transição WAITING → IN_PROGRESS.
+   * Qualquer outra transição retorna 400.
+   */
+  async patchStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId;
+      const userId = req.userId;
+      if (!clinicId || !userId) {
+        res.status(401).json({ error: "Não autenticado" });
+        return;
+      }
+
+      const appointmentId = req.params.id as string;
+      const { status } = req.body as { status?: string };
+      if (!status) {
+        res.status(400).json({ error: "Campo 'status' é obrigatório no body" });
+        return;
+      }
+
+      const service = new PatchAppointmentStatusService();
+      const result = await service.execute(appointmentId, status, userId, clinicId);
+      res.status(200).json(result);
+    } catch (error) {
+      if (error instanceof Error) {
+        const statusCode =
+          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 400;
+        res.status(statusCode).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Erro ao atualizar status da consulta" });
       }
     }
   }

@@ -55,4 +55,27 @@ router.get("/calendar", authMiddleware, checkRole(UserRole.PROFESSIONAL), (req, 
   controller.listByDay(req, res),
 );
 
+/**
+ * GET /api/appointments/:id
+ * Retorna consulta completa com patient, professional e clinic aninhados.
+ * Usado pelo frontend para carregar o contexto da tela de documentos.
+ */
+router.get(
+  "/:id",
+  authMiddleware,
+  checkRole(UserRole.PROFESSIONAL, UserRole.ADMIN, UserRole.RECEPTIONIST, UserRole.PATIENT),
+  (req, res) => controller.getById(req, res),
+);
+
+/**
+ * PATCH /api/appointments/:id/status
+ * Transição de status pelo profissional (ex: WAITING → IN_PROGRESS).
+ */
+router.patch(
+  "/:id/status",
+  authMiddleware,
+  checkRole(UserRole.PROFESSIONAL),
+  (req, res) => controller.patchStatus(req, res),
+);
+
 export default router;
