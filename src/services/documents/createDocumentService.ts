@@ -51,6 +51,7 @@ export class CreateDocumentService {
           type: input.type as any,
           status: "DRAFT",
           content: input.content as any,
+          internalNotes: input.internalNotes ?? null,
           documentNumber,
           version: 1,
           createdBy: context.userId,

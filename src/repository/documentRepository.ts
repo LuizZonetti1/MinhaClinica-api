@@ -13,6 +13,7 @@ export class DocumentRepository {
     version: number;
     originalDocumentId?: string | null;
     integrityHash?: string | null;
+    internalNotes?: string | null;
     createdBy: string;
   }) {
     return prisma.document.create({
@@ -26,6 +27,7 @@ export class DocumentRepository {
         version: data.version,
         originalDocumentId: data.originalDocumentId ?? null,
         integrityHash: data.integrityHash ?? null,
+        internalNotes: data.internalNotes ?? null,
         createdBy: data.createdBy,
       },
     });
@@ -102,6 +104,7 @@ export class DocumentRepository {
       status?: string;
       version?: number;
       integrityHash?: string | null;
+      internalNotes?: string | null;
       updatedBy: string;
     },
   ) {
@@ -112,6 +115,7 @@ export class DocumentRepository {
         ...(data.status !== undefined && { status: data.status as any }),
         ...(data.version !== undefined && { version: data.version }),
         ...(data.integrityHash !== undefined && { integrityHash: data.integrityHash }),
+        ...(data.internalNotes !== undefined && { internalNotes: data.internalNotes }),
         updatedBy: data.updatedBy,
       },
     });

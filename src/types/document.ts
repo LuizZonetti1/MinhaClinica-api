@@ -3,16 +3,19 @@ import type { DocumentStatus, DocumentType } from "./enums";
 export interface CreateDocumentInput {
   type: DocumentType;
   content: Record<string, unknown>;
+  internalNotes?: string | null;
 }
 
 export interface UpdateDocumentInput {
   content: Record<string, unknown>;
+  internalNotes?: string | null;
 }
 
 export interface CreateAddendumInput {
   type: DocumentType;
   content: Record<string, unknown>;
   originalDocumentId?: string | null;
+  internalNotes?: string | null;
 }
 
 export interface DocumentResponse {
@@ -22,6 +25,7 @@ export interface DocumentResponse {
   type: DocumentType;
   status: DocumentStatus;
   content: unknown;
+  internalNotes: string | null;
   documentNumber: string;
   version: number;
   originalDocumentId: string | null;

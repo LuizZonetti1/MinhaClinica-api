@@ -68,6 +68,7 @@ export class CreateAddendumService {
           type: input.type as any,
           status: "ADDENDUM",
           content: input.content as any,
+          internalNotes: input.internalNotes ?? null,
           documentNumber,
           version: 1,
           originalDocumentId: input.originalDocumentId ?? null,

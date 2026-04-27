@@ -61,6 +61,7 @@ export class UpdateDocumentService {
     // Snapshot do estado anterior
     const oldData = {
       content: document.content,
+      internalNotes: document.internalNotes,
       version: document.version,
       status: document.status,
     };
@@ -68,6 +69,7 @@ export class UpdateDocumentService {
     // Atualizar documento
     const updated = await documentRepository.update(docId, {
       content: input.content as any,
+      internalNotes: input.internalNotes,
       version: document.version + 1,
       updatedBy: context.userId,
     });

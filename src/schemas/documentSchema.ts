@@ -8,11 +8,13 @@ export const createDocumentSchema = yup.object({
     .string()
     .required("Tipo do documento é obrigatório")
     .oneOf(documentTypeValues, "Tipo de documento inválido"),
-  content: yup.object().required("Conteúdo do documento é obrigatório"),
+  content: yup.mixed().required("Conteúdo do documento é obrigatório"),
+  internalNotes: yup.string().nullable().optional(),
 });
 
 export const updateDocumentSchema = yup.object({
-  content: yup.object().required("Conteúdo do documento é obrigatório"),
+  content: yup.mixed().required("Conteúdo do documento é obrigatório"),
+  internalNotes: yup.string().nullable().optional(),
 });
 
 export const createAddendumSchema = yup.object({
@@ -20,10 +22,11 @@ export const createAddendumSchema = yup.object({
     .string()
     .required("Tipo do documento é obrigatório")
     .oneOf(documentTypeValues, "Tipo de documento inválido"),
-  content: yup.object().required("Conteúdo do documento é obrigatório"),
+  content: yup.mixed().required("Conteúdo do documento é obrigatório"),
   originalDocumentId: yup
     .string()
     .uuid("ID do documento original deve ser um UUID válido")
     .nullable()
     .optional(),
+  internalNotes: yup.string().nullable().optional(),
 });
