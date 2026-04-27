@@ -23,7 +23,8 @@ export class ViewDocumentService {
       throw Object.assign(new Error("Documento não pertence a esta consulta"), { statusCode: 404 });
     }
 
-    if (document.clinicId !== context.clinicId) {
+    // Paciente não possui clinicId no token — acesso validado por ownership abaixo
+    if (context.userRole !== UserRole.PATIENT && document.clinicId !== context.clinicId) {
       throw Object.assign(new Error("Acesso negado"), { statusCode: 403 });
     }
 
@@ -36,9 +37,16 @@ export class ViewDocumentService {
             userId: true,
             professionalCouncil: true,
             registrationNumber: true,
+            registrationState: true,
+            user: { select: { name: true } },
           },
         },
-        patient: { select: { userId: true } },
+        patient: {
+          select: {
+            userId: true,
+            user: { select: { name: true } },
+          },
+        },
         clinic: {
           select: {
             tradeName: true,
@@ -62,12 +70,15 @@ export class ViewDocumentService {
       throw Object.assign(new Error("Consulta não encontrada"), { statusCode: 404 });
     }
 
+    // Enriquecer contexto com clinicId da consulta (necessário para PATIENT sem clinicId no token)
+    const enrichedContext = { ...context, clinicId: context.clinicId ?? appointment.clinicId };
+
     const role = context.userRole;
 
     if (role === UserRole.PATIENT) {
       if (appointment.patient.userId !== context.userId) {
         await auditService.log({
-          context,
+          context: enrichedContext,
           action: "VIEW_DENIED",
           entity: "Document",
           entityId: docId,
@@ -82,7 +93,7 @@ export class ViewDocumentService {
     } else if (role === UserRole.PROFESSIONAL) {
       if (appointment.professional.userId !== context.userId) {
         await auditService.log({
-          context,
+          context: enrichedContext,
           action: "VIEW_DENIED",
           entity: "Document",
           entityId: docId,
@@ -99,16 +110,33 @@ export class ViewDocumentService {
 
     // Registrar visualização
     await auditService.log({
-      context,
+      context: enrichedContext,
       action: "VIEWED",
       entity: "Document",
       entityId: docId,
     });
 
+    const councilRegistration = [
+      appointment.professional.professionalCouncil,
+      appointment.professional.registrationNumber,
+      appointment.professional.registrationState,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
     return {
       ...document,
-      councilRegistration: `${appointment.professional.professionalCouncil} ${appointment.professional.registrationNumber}`,
+      councilRegistration,
       clinic: appointment.clinic,
+      appointmentContext: {
+        appointmentId: appointment.id,
+        patientName: appointment.patient.user.name,
+        professionalName: appointment.professional.user.name,
+        councilRegistration,
+        appointmentDate: appointment.appointmentDate,
+        startTime: appointment.startTime,
+        appointmentStatus: appointment.status,
+      },
     };
   }
 }

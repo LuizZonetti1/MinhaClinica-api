@@ -22,9 +22,13 @@ export class ListDocumentsService {
       throw Object.assign(new Error("Consulta não encontrada"), { statusCode: 404 });
     }
 
-    if (appointment.clinicId !== context.clinicId) {
+    // Paciente não possui clinicId no token — acesso validado por ownership abaixo
+    if (context.userRole !== UserRole.PATIENT && appointment.clinicId !== context.clinicId) {
       throw Object.assign(new Error("Acesso negado a esta consulta"), { statusCode: 403 });
     }
+
+    // Enriquecer contexto com clinicId da consulta (necessário para PATIENT sem clinicId no token)
+    const enrichedContext = { ...context, clinicId: context.clinicId ?? appointment.clinicId };
 
     // Validar permissões por papel
     const role = context.userRole;
@@ -33,7 +37,7 @@ export class ListDocumentsService {
       // Paciente só vê documentos da própria consulta
       if (appointment.patient.userId !== context.userId) {
         await auditService.log({
-          context,
+          context: enrichedContext,
           action: "ACCESS_DENIED",
           entity: "Document",
           entityId: appointmentId,
@@ -45,7 +49,7 @@ export class ListDocumentsService {
       // Profissional só vê documentos das próprias consultas
       if (appointment.professional.userId !== context.userId) {
         await auditService.log({
-          context,
+          context: enrichedContext,
           action: "ACCESS_DENIED",
           entity: "Document",
           entityId: appointmentId,

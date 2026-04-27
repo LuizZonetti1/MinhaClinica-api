@@ -165,7 +165,7 @@ export class DocumentController {
   async listDocuments(req: Request, res: Response): Promise<void> {
     try {
       const context = buildAuditContext(req);
-      if (!context.clinicId) {
+      if (!context.clinicId && req.userRole !== "PATIENT") {
         res.status(400).json({ error: "Clínica não identificada no token" });
         return;
       }
@@ -176,7 +176,7 @@ export class DocumentController {
         ...context,
         userRole: req.userRole!,
       });
-      res.status(200).json(result);
+      res.status(200).json({ documents: result });
     } catch (error) {
       if (error instanceof Error) {
         const statusCode =
@@ -191,7 +191,7 @@ export class DocumentController {
   async viewDocument(req: Request, res: Response): Promise<void> {
     try {
       const context = buildAuditContext(req);
-      if (!context.clinicId) {
+      if (!context.clinicId && req.userRole !== "PATIENT") {
         res.status(400).json({ error: "Clínica não identificada no token" });
         return;
       }
