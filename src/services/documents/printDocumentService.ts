@@ -27,9 +27,9 @@ export class PrintDocumentService {
       throw Object.assign(new Error("Acesso negado"), { statusCode: 403 });
     }
 
-    // Apenas SENT e ADDENDUM podem ser impressos
-    if (document.status !== DocumentStatus.SENT && document.status !== DocumentStatus.ADDENDUM) {
-      throw Object.assign(new Error("Apenas documentos enviados ou adendos podem ser impressos"), {
+    // DRAFT não pode ser impresso; FINALIZED, SENT e ADDENDUM podem
+    if (document.status === DocumentStatus.DRAFT) {
+      throw Object.assign(new Error("Rascunhos não podem ser impressos"), {
         statusCode: 403,
       });
     }
