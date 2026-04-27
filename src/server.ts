@@ -1,3 +1,4 @@
+// v3 — after rename_document_types migration
 import "dotenv/config";
 import app from "./app";
 

@@ -49,13 +49,13 @@ enum AppointmentStatus {
 
 enum DocumentType {
   CLINICAL_REPORT // Relatório clínico
-  EXAM // Exame
+  EXAM_REQUEST // Solicitação de exame
   CERTIFICATE // Atestado
-  DECLARATION // Declaração
+  ATTENDANCE_DECLARATION // Declaração de comparecimento
   PRESCRIPTION // Receita
   CONTROLLED_PRESCRIPTION // Receita de controle especial
   REFERRAL // Encaminhamento
-  REPORT // Laudo
+  MEDICAL_REPORT // Laudo
   CONSENT_FORM // Termo de consentimento
   TREATMENT_PLAN // Plano de tratamento
   BUDGET // Orçamento
@@ -132,9 +132,9 @@ enum NotificationStatus {
 
 enum AppointmentType {
   CONSULTATION // Consulta
-  RETURN       // Retorno
-  EXAM         // Exame
-  EMERGENCY    // Emergência
+  RETURN // Retorno
+  EXAM // Exame
+  EMERGENCY // Emergência
 }
 
 enum DayOfWeek {
@@ -329,7 +329,7 @@ model User {
   privacyAcceptedAt DateTime?
 
   // Verificação de Email
-  verificationToken   String?   // Token hasheado para verificação de email
+  verificationToken   String? // Token hasheado para verificação de email
   verificationExpires DateTime? // Data de expiração do token
 
   // Especialidade pendente (para profissionais em processo de convite)
@@ -344,8 +344,8 @@ model User {
   patient          Patient?
   createdAuditLogs AuditLog[]    @relation("AuditLogUser")
 
-  @@unique([email])                  // Email globalmente único
-  @@unique([clinicId, email])        // Email único por clínica (staff/admin)
+  @@unique([email]) // Email globalmente único
+  @@unique([clinicId, email]) // Email único por clínica (staff/admin)
   @@index([clinicId, role])
   @@map("users")
 }
@@ -410,13 +410,13 @@ model Professional {
   updatedAt DateTime @updatedAt
 
   // Relacionamentos
-  specialties      ProfessionalSpecialty[]
-  workingHours     ProfessionalWorkingHours[]
-  scheduleBlocks   ProfessionalScheduleBlock[]
-  procedures       ProfessionalProcedure[]
-  appointments     Appointment[]
-  medicalRecords   MedicalRecord[]
-  patientComments  PatientComment[]
+  specialties     ProfessionalSpecialty[]
+  workingHours    ProfessionalWorkingHours[]
+  scheduleBlocks  ProfessionalScheduleBlock[]
+  procedures      ProfessionalProcedure[]
+  appointments    Appointment[]
+  medicalRecords  MedicalRecord[]
+  patientComments PatientComment[]
 
   @@unique([clinicId, professionalCouncil, registrationNumber])
   @@map("professionals")
@@ -836,22 +836,22 @@ model PasswordResetToken {
 // ========================================
 
 model PatientComment {
-  id             String       @id @default(uuid())
-  clinicId       String
-  clinic         Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  id       String @id @default(uuid())
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 
-  patientId      String
-  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
 
   professionalId String
   professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Restrict)
 
-  content        String       @db.Text
+  content String @db.Text
 
   // Metadata
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  createdBy      String       // userId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String // userId
 
   @@index([clinicId, patientId])
   @@index([professionalId])
@@ -876,8 +876,9 @@ model Document {
 
   // Conteúdo
   content        Json
-  documentNumber String @unique // DOC-2026-00001
-  version        Int    @default(1)
+  internalNotes  String? // Observações internas — nunca aparecem no PDF
+  documentNumber String  @unique // DOC-2026-00001
+  version        Int     @default(1)
 
   // Adendo — referência ao documento original
   originalDocumentId String?
