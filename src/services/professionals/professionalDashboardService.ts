@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { ProfessionalDashboardRepository } from "../../repository/professionalDashboardRepository";
+import { AutoNoShowService } from "../appointments/autoNoShowService";
 import type {
   ProfessionalAgendaItem,
   ProfessionalAgendaResponse,
@@ -54,6 +55,7 @@ export class ProfessionalDashboardService {
 
 export class ProfessionalAgendaService {
   private repository = new ProfessionalDashboardRepository();
+  private autoNoShowService = new AutoNoShowService();
 
   private validateDate(dateStr: string): dayjs.Dayjs {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
@@ -93,8 +95,14 @@ export class ProfessionalAgendaService {
     }
 
     const day = dateStr ? this.validateDate(dateStr) : dayjs().tz(DEFAULT_TIMEZONE);
+    const now = dayjs().tz(DEFAULT_TIMEZONE);
     const startOfDay = day.startOf("day").toDate();
     const endOfDay = day.endOf("day").toDate();
+
+    // Marca como NO_SHOW consultas em aberto que já passaram da janela de 30 min
+    if (!day.startOf("day").isAfter(now.startOf("day"))) {
+      await this.autoNoShowService.markOverdueByClinic(clinicId, now);
+    }
 
     const raw = await this.repository.listAppointmentsByDate(professional.id, startOfDay, endOfDay);
 
