@@ -114,6 +114,17 @@ enum NotificationType {
   WELCOME
   BIRTHDAY
   NO_SHOW_WARNING
+  // Novos tipos
+  NEW_BOOKING             // Novo agendamento (para profissional/recepção)
+  CHECKIN_DONE            // Paciente fez check-in
+  PATIENT_WAITING         // Paciente aguardando
+  REGISTRATION_COMPLETE   // Cadastro concluído
+  ANNOUNCEMENT            // Comunicado geral da clínica
+  DIRECT_MESSAGE          // Mensagem direta
+  PAYMENT_CONFIRMED       // Pagamento confirmado
+  ACCOUNT_BLOCKED         // Conta bloqueada
+  REPORT_READY            // Relatório/documento disponível
+  APPOINTMENT_COMPLETED   // Consulta concluída
 }
 
 enum NotificationChannel {
@@ -340,9 +351,11 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relacionamentos
-  professional     Professional?
-  patient          Patient?
-  createdAuditLogs AuditLog[]    @relation("AuditLogUser")
+  professional              Professional?
+  patient                   Patient?
+  createdAuditLogs          AuditLog[]     @relation("AuditLogUser")
+  receivedNotifications     Notification[] @relation("NotificationRecipient")
+  sentNotifications         Notification[] @relation("NotificationSender")
 
   @@unique([email]) // Email globalmente único
   @@unique([clinicId, email]) // Email único por clínica (staff/admin)
@@ -749,9 +762,15 @@ model Notification {
   clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 
   // Destinatário
-  recipientEmail String
-  recipientPhone String?
-  recipientName  String
+  recipientEmail  String
+  recipientPhone  String?
+  recipientName   String
+  recipientUserId String?
+  recipientUser   User?   @relation("NotificationRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
+
+  // Remetente (quem disparou a notificação, null = sistema)
+  senderId String?
+  sender   User?  @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
 
   // Conteúdo
   type    NotificationType
@@ -769,11 +788,15 @@ model Notification {
   appointmentId String?
   appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 
+  // Dados extras livres (JSON)
+  metadata Json?
+
   // Metadata
   createdAt DateTime @default(now())
 
   @@index([clinicId, status])
   @@index([recipientEmail])
+  @@index([recipientUserId])
   @@map("notifications")
 }
 
