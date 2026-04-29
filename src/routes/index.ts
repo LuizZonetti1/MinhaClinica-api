@@ -5,6 +5,7 @@ import authRoutes from "./auth.routes";
 import clinicRoutes from "./clinic.routes";
 import dashboardRoutes from "./dashboard.routes";
 import documentRoutes from "./document.routes";
+import notificationRoutes from "./notification.routes";
 import patientRoutes from "./patient.routes";
 import patientBookingRoutes from "./patientBooking.routes";
 import professionalRoutes from "./professional.routes";
@@ -32,6 +33,7 @@ routes.use("/dashboard", dashboardRoutes);
 routes.use("/reports", reportRoutes);
 routes.use("/transactions", transactionRoutes);
 routes.use("/admin", adminRoutes);
+routes.use("/notifications", notificationRoutes);
 
 // Auxiliar de testes — REMOVER antes de produção
 
