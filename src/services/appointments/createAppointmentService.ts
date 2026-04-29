@@ -3,6 +3,7 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
 import { AppointmentRepository } from "../../repository/appointmentRepository";
+import { NotificationRepository } from "../../repository/notificationRepository";
 import type { AppointmentCreatedResult, CreateAppointmentInput } from "../../types/appointment";
 import { AppointmentChannel } from "../../types/enums";
 
@@ -42,7 +43,7 @@ export class CreateAppointmentService {
       select: {
         id: true,
         defaultAppointmentDuration: true,
-        user: { select: { name: true } },
+        user: { select: { id: true, name: true, email: true, phone: true } },
         specialties: {
           where: { isPrimary: true },
           select: { specialty: { select: { name: true } } },
@@ -63,7 +64,7 @@ export class CreateAppointmentService {
       select: {
         id: true,
         cpf: true,
-        user: { select: { name: true } },
+        user: { select: { id: true, name: true, email: true, phone: true } },
       },
     });
 
@@ -93,9 +94,11 @@ export class CreateAppointmentService {
     const endTime = minutesToTime(startMinutes + duration);
 
     // Calcular intervalo do dia para verificação de conflito
+    // appointmentDate é @db.Date → Prisma retorna UTC midnight.
+    // Usar UTC para garantir que o range bata com o valor armazenado.
     const dayjsDate = dayjs.tz(input.appointmentDate, DEFAULT_TIMEZONE);
-    const startOfDay = dayjsDate.startOf("day").toDate();
-    const endOfDay = dayjsDate.endOf("day").toDate();
+    const startOfDay = dayjs.utc(input.appointmentDate).startOf("day").toDate();
+    const endOfDay = dayjs.utc(input.appointmentDate).endOf("day").toDate();
     const now = dayjs().tz(DEFAULT_TIMEZONE);
     const appointmentStart = dayjsDate
       .hour(Math.floor(startMinutes / 60))
@@ -143,7 +146,7 @@ export class CreateAppointmentService {
       createdBy,
     });
 
-    return {
+    const result: AppointmentCreatedResult = {
       id: created.id,
       patientName: patient.user.name,
       patientCpf: patient.cpf,
@@ -159,5 +162,68 @@ export class CreateAppointmentService {
       type: created.type,
       notes: created.notes,
     };
+
+    // Notificar todos os perfis sobre o agendamento (fire-and-forget)
+    void (async () => {
+      try {
+        const notifRepo = new NotificationRepository();
+        const isOnline = input.channel === AppointmentChannel.ONLINE_PORTAL;
+        const channelLabel = isOnline
+          ? `pelo paciente ${patient.user.name} pelo portal online`
+          : "pela recepção";
+
+        // APPOINTMENT_CONFIRMATION → paciente
+        const pNotif = await notifRepo.create({
+          clinicId,
+          recipientEmail: patient.user.email,
+          recipientPhone: patient.user.phone ?? undefined,
+          recipientName: patient.user.name,
+          recipientUserId: patient.user.id,
+          type: "APPOINTMENT_CONFIRMATION",
+          channel: "IN_APP",
+          subject: "Agendamento confirmado",
+          message: `Seu agendamento foi confirmado para ${new Date(input.appointmentDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })} às ${input.startTime} com ${professional.user.name}.`,
+          appointmentId: created.id,
+        });
+        await notifRepo.markAsSent(pNotif.id);
+
+        // NEW_BOOKING → profissional
+        const profNotif = await notifRepo.create({
+          clinicId,
+          recipientEmail: professional.user.email,
+          recipientPhone: professional.user.phone ?? undefined,
+          recipientName: professional.user.name,
+          recipientUserId: professional.user.id,
+          type: "NEW_BOOKING",
+          channel: "IN_APP",
+          subject: "Novo agendamento",
+          message: `Novo agendamento registrado ${channelLabel} para ${input.appointmentDate} às ${input.startTime}.`,
+          appointmentId: created.id,
+        });
+        await notifRepo.markAsSent(profNotif.id);
+
+        // NEW_BOOKING → admin + recepcionistas
+        const staffUsers = await notifRepo.findActiveClinicUsers(clinicId, ["ADMIN", "RECEPTIONIST"]);
+        for (const staff of staffUsers) {
+          const sNotif = await notifRepo.create({
+            clinicId,
+            recipientEmail: staff.email,
+            recipientPhone: staff.phone ?? undefined,
+            recipientName: staff.name,
+            recipientUserId: staff.id,
+            type: "NEW_BOOKING",
+            channel: "IN_APP",
+            subject: "Novo agendamento",
+            message: `Novo agendamento registrado ${channelLabel} para ${patient.user.name} em ${input.appointmentDate} às ${input.startTime} com ${professional.user.name}.`,
+            appointmentId: created.id,
+          });
+          await notifRepo.markAsSent(sNotif.id);
+        }
+      } catch {
+        // fire-and-forget: não propaga erro
+      }
+    })();
+
+    return result;
   }
 }

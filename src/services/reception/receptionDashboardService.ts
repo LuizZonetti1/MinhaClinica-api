@@ -175,6 +175,101 @@ export class UpdateCheckinStatusService {
 
     const updated = await this.repository.updateAppointmentStatus(appointmentId, status);
 
+    // Notificações de check-in e conclusão (fire-and-forget)
+    if (status === "WAITING" || status === "COMPLETED") {
+      import("../../repository/notificationRepository")
+        .then(async ({ NotificationRepository }) => {
+          const { prisma } = await import("../../database/prisma");
+          const appt = await prisma.appointment.findUnique({
+            where: { id: appointmentId },
+            select: {
+              id: true,
+              startTime: true,
+              patient: {
+                select: {
+                  user: { select: { id: true, name: true, email: true, phone: true } },
+                },
+              },
+              professional: {
+                select: {
+                  user: { select: { id: true, name: true, email: true, phone: true } },
+                },
+              },
+            },
+          });
+          if (!appt?.patient?.user) return;
+          const patientUser = appt.patient.user;
+          const profUser = appt.professional?.user;
+          const notifRepo = new NotificationRepository();
+          const isCheckin = status === "WAITING";
+          const notifType = isCheckin ? "CHECKIN_DONE" : "APPOINTMENT_COMPLETED";
+          const subject = isCheckin ? "Check-in confirmado" : "Consulta concluída";
+
+          // → paciente
+          const pn = await notifRepo.create({
+            clinicId,
+            recipientEmail: patientUser.email,
+            recipientPhone: patientUser.phone ?? undefined,
+            recipientName: patientUser.name,
+            recipientUserId: patientUser.id,
+            type: notifType,
+            channel: "IN_APP",
+            subject,
+            message: isCheckin
+              ? "Seu check-in foi confirmado! Aguarde ser chamado."
+              : "Sua consulta foi concluída. Obrigado pela sua visita!",
+            appointmentId,
+          });
+          await notifRepo.markAsSent(pn.id);
+
+          // → profissional (PATIENT_WAITING ou APPOINTMENT_COMPLETED)
+          if (profUser) {
+            const profType = isCheckin ? "PATIENT_WAITING" : "APPOINTMENT_COMPLETED";
+            const profSubject = isCheckin ? "Paciente aguardando" : "Consulta concluída";
+            const profMsg = isCheckin
+              ? `O paciente ${patientUser.name} realizou o check-in e está aguardando.`
+              : `A consulta com ${patientUser.name} foi registrada como concluída.`;
+            const prf = await notifRepo.create({
+              clinicId,
+              recipientEmail: profUser.email,
+              recipientPhone: profUser.phone ?? undefined,
+              recipientName: profUser.name,
+              recipientUserId: profUser.id,
+              type: profType,
+              channel: "IN_APP",
+              subject: profSubject,
+              message: profMsg,
+              appointmentId,
+            });
+            await notifRepo.markAsSent(prf.id);
+          }
+
+          // → todos recepcionistas (PATIENT_WAITING ou APPOINTMENT_COMPLETED)
+          const staffUsers = await notifRepo.findActiveClinicUsers(clinicId, ["RECEPTIONIST"]);
+          const staffType = isCheckin ? "PATIENT_WAITING" : "APPOINTMENT_COMPLETED";
+          const staffSubject = isCheckin ? "Paciente aguardando" : "Consulta concluída";
+          const staffMsg = isCheckin
+            ? `Check-in de ${patientUser.name} confirmado. Paciente aguardando atendimento.`
+            : `Consulta de ${patientUser.name} concluída.`;
+          for (const staff of staffUsers) {
+            const sn = await notifRepo.create({
+              clinicId,
+              recipientEmail: staff.email,
+              recipientPhone: staff.phone ?? undefined,
+              recipientName: staff.name,
+              recipientUserId: staff.id,
+              type: staffType,
+              channel: "IN_APP",
+              subject: staffSubject,
+              message: staffMsg,
+              appointmentId,
+            });
+            await notifRepo.markAsSent(sn.id);
+          }
+        })
+        .catch(() => { });
+    }
+
     return { id: updated.id, status: updated.status };
   }
 }
