@@ -99,6 +99,15 @@ const TRANSACTION_TYPE_LABEL: Record<TransactionType, string> = {
   EXPENSE: "Saida",
 };
 
+const APPOINTMENT_TYPE_LABEL: Record<string, string> = {
+  CONSULTATION: "Consulta",
+  FIRST_CONSULTATION: "Primeira consulta",
+  RETURN: "Retorno",
+  ROUTINE: "Rotina",
+  EXAM: "Exame",
+  EMERGENCY: "Urgencia",
+};
+
 const PAYMENT_STATUS_LABEL: Record<string, string> = {
   PENDING: "Pendente",
   PAID: "Pago",
@@ -835,7 +844,7 @@ export class ReportExportService {
       patient: item.patientName,
       professional: item.professionalName,
       status: APPOINTMENT_STATUS_LABEL[item.status] ?? item.status,
-      type: item.type,
+      type: APPOINTMENT_TYPE_LABEL[item.type?.toUpperCase()] ?? item.type,
     }));
 
     const financialRows = data.financialRecords.slice(0, MAX_LIST_ROWS).map((item) => {
