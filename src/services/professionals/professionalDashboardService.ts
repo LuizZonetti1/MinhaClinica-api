@@ -33,10 +33,13 @@ export class ProfessionalDashboardService {
     }
 
     const now = dayjs().tz(DEFAULT_TIMEZONE);
-    const startOfDay = now.startOf("day").toDate();
-    const endOfDay = now.endOf("day").toDate();
-    const startOfMonth = now.startOf("month").toDate();
-    const endOfMonth = now.endOf("month").toDate();
+    const todayStr = now.format("YYYY-MM-DD");
+    // appointmentDate é @db.Date → Prisma retorna UTC midnight.
+    // Usar UTC para os ranges das queries.
+    const startOfDay = dayjs.utc(todayStr).startOf("day").toDate();
+    const endOfDay = dayjs.utc(todayStr).endOf("day").toDate();
+    const startOfMonth = dayjs.utc(now.format("YYYY-MM-01")).startOf("day").toDate();
+    const endOfMonth = dayjs.utc(now.format("YYYY-MM-") + now.daysInMonth()).endOf("day").toDate();
 
     const [consultasHoje, confirmadas, pacientesDoMes] = await Promise.all([
       this.repository.countTodayAppointments(professional.id, startOfDay, endOfDay),
@@ -96,8 +99,10 @@ export class ProfessionalAgendaService {
 
     const day = dateStr ? this.validateDate(dateStr) : dayjs().tz(DEFAULT_TIMEZONE);
     const now = dayjs().tz(DEFAULT_TIMEZONE);
-    const startOfDay = day.startOf("day").toDate();
-    const endOfDay = day.endOf("day").toDate();
+    const dateKey = day.format("YYYY-MM-DD");
+    // appointmentDate é @db.Date → Prisma retorna UTC midnight.
+    const startOfDay = dayjs.utc(dateKey).startOf("day").toDate();
+    const endOfDay = dayjs.utc(dateKey).endOf("day").toDate();
 
     // Marca como NO_SHOW consultas em aberto que já passaram da janela de 30 min
     if (!day.startOf("day").isAfter(now.startOf("day"))) {

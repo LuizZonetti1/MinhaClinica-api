@@ -39,7 +39,9 @@ export class ListAppointmentsByDayService {
     const dayMap = new Map<string, AppointmentCalendarDay>();
 
     for (const row of rows) {
-      const dateKey = dayjs(row.appointmentDate).tz(DEFAULT_TIMEZONE).format("YYYY-MM-DD");
+      // appointmentDate is @db.Date → Prisma returns UTC midnight.
+      // Use .utc() to extract the calendar date without timezone shift.
+      const dateKey = dayjs.utc(row.appointmentDate).format("YYYY-MM-DD");
 
       if (!dayMap.has(dateKey)) {
         dayMap.set(dateKey, { date: dateKey, appointments: [] });

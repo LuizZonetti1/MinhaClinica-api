@@ -44,10 +44,11 @@ export class GetAvailableSlotsService {
       throw Object.assign(new Error("Data deve estar no formato YYYY-MM-DD"), { statusCode: 400 });
     }
 
-    // Intervalo do dia no fuso local — para queries
+    // appointmentDate é @db.Date → Prisma retorna UTC midnight.
+    // Usar UTC para o range das queries e SP para lógica de dia da semana/hora.
     const dayjsDate = dayjs.tz(dateStr, DEFAULT_TIMEZONE);
-    const startOfDay = dayjsDate.startOf("day").toDate();
-    const endOfDay = dayjsDate.endOf("day").toDate();
+    const startOfDay = dayjs.utc(dateStr).startOf("day").toDate();
+    const endOfDay = dayjs.utc(dateStr).endOf("day").toDate();
 
     const dayOfWeek = JS_DAY_TO_ENUM[dayjsDate.day()];
     const now = dayjs().tz(DEFAULT_TIMEZONE);
