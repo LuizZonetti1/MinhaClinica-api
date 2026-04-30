@@ -16,6 +16,7 @@ import {
   UpdateProfileService,
 } from "../services/users/profileService";
 import { fileToUrl, uploadAvatar } from "../utils/uploadUtils";
+import { UpdateProfessionalProfileInput } from "../types/profile";
 
 export class ProfileController {
   /**
@@ -105,7 +106,7 @@ export class ProfileController {
       }
 
       const service = new UpdateProfessionalProfileService();
-      await service.execute(userId, clinicId, validatedData);
+      await service.execute(userId, clinicId, validatedData as UpdateProfessionalProfileInput);
 
       res.status(200).json({ message: "Perfil atualizado com sucesso" });
     } catch (error: unknown) {

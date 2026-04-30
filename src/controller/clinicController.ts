@@ -26,6 +26,7 @@ import { GetClinicService } from "../services/clinics/getClinicService";
 import { UpdateClinicService } from "../services/clinics/updateClinicService";
 import type { WorkingDaysPreset } from "../types/clinic";
 import { resolveVerifyRedirect } from "../utils/verifyRedirectUtils";
+import { CompleteClinicOwnerInput } from "../types/user";
 
 export class ClinicController {
   async updateClinic(req: Request, res: Response): Promise<void> {
@@ -173,7 +174,7 @@ export class ClinicController {
       });
 
       const service = new RegisterClinicService();
-      const result = await service.execute(validated);
+      const result = await service.execute(validated as any);
       res.status(201).json(result);
     } catch (error: any) {
       if (error.name === "ValidationError") {
@@ -241,7 +242,7 @@ export class ClinicController {
 
       const userId = req.userId as string;
       const service = new CompleteClinicOwnerService();
-      const result = await service.execute(userId, validated);
+      const result = await service.execute(userId, validated as CompleteClinicOwnerInput);
       res.status(200).json(result);
     } catch (error: any) {
       if (error.name === "ValidationError") {
