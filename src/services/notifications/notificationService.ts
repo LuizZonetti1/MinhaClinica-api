@@ -17,7 +17,7 @@ export class NotificationService {
     }
 
     /** Lista notificações do usuário logado e conta não lidas */
-    async listForUser(userId: string, clinicId: string): Promise<NotificationListResult> {
+    async listForUser(userId: string, clinicId: string | null): Promise<NotificationListResult> {
         const [notifications, unreadCount] = await Promise.all([
             repo.listForUser(userId, clinicId),
             repo.countUnread(userId, clinicId),
@@ -37,7 +37,7 @@ export class NotificationService {
     }
 
     /** Marca todas as notificações do usuário como lidas */
-    async markAllRead(userId: string, clinicId: string) {
+    async markAllRead(userId: string, clinicId: string | null) {
         await repo.markAllRead(userId, clinicId);
     }
 }

@@ -22,10 +22,10 @@ export class NotificationRepository {
         });
     }
 
-    async listForUser(userId: string, clinicId: string): Promise<NotificationItem[]> {
+    async listForUser(userId: string, clinicId: string | null): Promise<NotificationItem[]> {
         const rows = await prisma.notification.findMany({
             where: {
-                clinicId,
+                ...(clinicId ? { clinicId } : {}),
                 recipientUserId: userId,
             },
             orderBy: { createdAt: "desc" },
@@ -60,10 +60,10 @@ export class NotificationRepository {
         }));
     }
 
-    async countUnread(userId: string, clinicId: string): Promise<number> {
+    async countUnread(userId: string, clinicId: string | null): Promise<number> {
         return prisma.notification.count({
             where: {
-                clinicId,
+                ...(clinicId ? { clinicId } : {}),
                 recipientUserId: userId,
                 readAt: null,
                 status: { not: "FAILED" },
@@ -78,10 +78,10 @@ export class NotificationRepository {
         });
     }
 
-    async markAllRead(userId: string, clinicId: string) {
+    async markAllRead(userId: string, clinicId: string | null) {
         return prisma.notification.updateMany({
             where: {
-                clinicId,
+                ...(clinicId ? { clinicId } : {}),
                 recipientUserId: userId,
                 readAt: null,
             },

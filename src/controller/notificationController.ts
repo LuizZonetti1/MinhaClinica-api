@@ -13,7 +13,7 @@ export class NotificationController {
     async list(req: Request, res: Response): Promise<void> {
         try {
             const userId = req.userId!;
-            const clinicId = req.clinicId!;
+            const clinicId = req.clinicId ?? null;
 
             const service = new NotificationService();
             const data = await service.listForUser(userId, clinicId);
@@ -52,7 +52,7 @@ export class NotificationController {
     async markAllRead(req: Request, res: Response): Promise<void> {
         try {
             const userId = req.userId!;
-            const clinicId = req.clinicId!;
+            const clinicId = req.clinicId ?? null;
 
             const service = new NotificationService();
             await service.markAllRead(userId, clinicId);
