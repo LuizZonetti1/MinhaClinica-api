@@ -9,6 +9,7 @@ import {
   RegisterPatientService,
 } from "../services/patients/patientRegistrationService";
 import { resolveVerifyRedirect } from "../utils/verifyRedirectUtils";
+import { ForgotPasswordService, ResetPasswordService } from "../services/auth/passwordResetService";
 
 
 export class AuthController {
@@ -129,6 +130,39 @@ export class AuthController {
       res.status(200).json(result);
     } catch (error) {
       handleControllerError(res, error, "Erro ao ativar conta");
+    }
+  }
+
+  /**
+   * POST /api/auth/forgot-password
+   * Envia email com link de redefinição de senha.
+   * Resposta sempre genérica para evitar user enumeration.
+   */
+  async forgotPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+      const service = new ForgotPasswordService();
+      await service.execute(email);
+      res.status(200).json({
+        message: "Se o email estiver cadastrado, você receberá as instruções em breve.",
+      });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao processar solicitação");
+    }
+  }
+
+  /**
+   * POST /api/auth/reset-password
+   * Define a nova senha com base no token recebido por email.
+   */
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { token, password } = req.body;
+      const service = new ResetPasswordService();
+      await service.execute(token, password);
+      res.status(200).json({ message: "Senha redefinida com sucesso." });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao redefinir senha");
     }
   }
 }

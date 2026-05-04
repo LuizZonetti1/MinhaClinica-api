@@ -50,3 +50,31 @@ export const resendVerificationSchema = yup.object({
     .email("Email inválido")
     .transform((v) => v?.toLowerCase().trim()),
 });
+
+/**
+ * Schema para solicitar redefinição de senha
+ * POST /auth/forgot-password
+ */
+export const forgotPasswordSchema = yup.object({
+  email: yup
+    .string()
+    .required("Email é obrigatório")
+    .email("Email inválido")
+    .transform((v) => v?.toLowerCase().trim()),
+});
+
+/**
+ * Schema para confirmar a nova senha
+ * POST /auth/reset-password
+ */
+export const resetPasswordSchema = yup.object({
+  token: yup.string().required("Token é obrigatório"),
+  password: yup
+    .string()
+    .required("Nova senha é obrigatória")
+    .min(8, "A senha deve ter no mínimo 8 caracteres"),
+  confirmPassword: yup
+    .string()
+    .required("Confirmação de senha é obrigatória")
+    .oneOf([yup.ref("password")], "As senhas não coincidem"),
+});

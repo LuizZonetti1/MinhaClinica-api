@@ -9,6 +9,8 @@ import {
   registerStartSchema,
   resendVerificationSchema,
   verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "../schemas/authSchema";
 import { completePatientSchema } from "../schemas/patientSchema";
 
@@ -155,5 +157,21 @@ router.post("/activate-account", authLimiter, (req, res) =>
  * GET /api/auth/verify-email/:token
  */
 router.get("/verify-email/:token", (req, res) => authController.verifyEmailLink(req, res));
+
+/**
+ * PÚBLICO — Solicitar link de redefinição de senha
+ * POST /api/auth/forgot-password
+ */
+router.post("/forgot-password", emailLimiter, validate(forgotPasswordSchema), (req, res) =>
+  authController.forgotPassword(req, res),
+);
+
+/**
+ * PÚBLICO — Confirmar nova senha com o token recebido por email
+ * POST /api/auth/reset-password
+ */
+router.post("/reset-password", authLimiter, validate(resetPasswordSchema), (req, res) =>
+  authController.resetPassword(req, res),
+);
 
 export default router;
