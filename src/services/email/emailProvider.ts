@@ -32,18 +32,7 @@ export class ConsoleEmailProvider implements EmailProvider {
 
 /**
  * Provider de produção usando Brevo (https://brevo.com)
- * Usa HTTP API — funciona no Render Free (sem bloqueio de SMTP).
- * Gratuito: 300 emails/dia, 9.000/mês.
- * Não precisa de domínio próprio — basta verificar o email remetente.
- *
- * Como configurar:
- * 1. Crie conta em brevo.com
- * 2. Settings → Senders & IP → Senders → Add a sender → verifique o email
- * 3. Account → SMTP & API → API Keys → crie uma chave
- * 4. Adicione no .env (e nas env vars do Render):
- *      BREVO_API_KEY=xkeysib-xxxxxxxxxxxxxxxxxxxx
- *      EMAIL_FROM=Minha Clínica <minhaclinica.suporte@gmail.com>
- */
+**/
 export class BrevoEmailProvider implements EmailProvider {
     private client: BrevoSdk.BrevoClient;
     private from: string;
