@@ -51,6 +51,12 @@ router.patch(
   checkRole(UserRole.PATIENT),
   (req, res) => patientDashboardController.confirmAppointment(req, res),
 );
+router.patch(
+  "/me/appointments/:id/cancel",
+  authMiddleware,
+  checkRole(UserRole.PATIENT),
+  (req, res) => patientDashboardController.cancelAppointment(req, res),
+);
 
 /**
  * PROTEGIDO (PATIENT) — Remarcar agendamento

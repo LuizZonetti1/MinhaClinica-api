@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { CancelAppointmentService } from "../services/patients/cancelAppointmentService";
 import { ConfirmAppointmentService } from "../services/patients/confirmAppointmentService";
 import { GetPatientAppointmentDetailService } from "../services/patients/getPatientAppointmentDetailService";
 import { ListPatientAppointmentsService } from "../services/patients/listPatientAppointmentsService";
@@ -65,6 +66,26 @@ export class PatientDashboardController {
       const err = error as { message?: string; statusCode?: number };
       const status = err.statusCode ?? 500;
       res.status(status).json({ message: err.message || "Erro ao listar consultas" });
+    }
+  }
+
+  /**
+   * PATCH /api/patients/me/appointments/:id/cancel
+   * Cancela agendamento do paciente (somente SCHEDULED, CONFIRMED ou WAITING)
+   */
+  async cancelAppointment(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId as string;
+      const { id } = req.params as { id: string };
+
+      const service = new CancelAppointmentService();
+      const data = await service.execute(id, userId);
+
+      res.status(200).json({ data });
+    } catch (error: unknown) {
+      const err = error as { message?: string; statusCode?: number };
+      const status = err.statusCode ?? 500;
+      res.status(status).json({ message: err.message || "Erro ao cancelar consulta" });
     }
   }
 
