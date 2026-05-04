@@ -15,13 +15,13 @@ const SUCCESS_ROUTES: Record<string, string> = {
 
 /**
  * Mapa de rotas de erro por role
- * Redireciona para o início do fluxo de cadastro em caso de token inválido/expirado
+ * Redireciona para a página de verificação com query param de erro para exibir mensagem ao usuário
  */
 const ERROR_ROUTES: Record<string, string> = {
-  [UserRole.PATIENT]: "/cadastro",
-  [UserRole.ADMIN]: "/clinica/cadastro",
-  [UserRole.PROFESSIONAL]: "/profissional/cadastro",
-  [UserRole.RECEPTIONIST]: "/recepcao/cadastro",
+  [UserRole.PATIENT]: "/registro/verificar",
+  [UserRole.ADMIN]: "/clinica/registro/verificar",
+  [UserRole.PROFESSIONAL]: "/registro/verificar",
+  [UserRole.RECEPTIONIST]: "/registro/verificar",
 };
 
 /**

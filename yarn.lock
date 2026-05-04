@@ -287,6 +287,11 @@
   resolved "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.27.2.tgz"
   integrity sha512-sRdU18mcKf7F+YgheI/zGf5alZatMUTKj/jNS6l744f9u3WFu4v7twcUI9vu4mknF4Y9aDlblIie0IM+5xxaqQ==
 
+"@getbrevo/brevo@^5.0.4":
+  version "5.0.4"
+  resolved "https://registry.yarnpkg.com/@getbrevo/brevo/-/brevo-5.0.4.tgz#d7878219cbb1cc95b077cfa06c8083af322993a7"
+  integrity sha512-wN4mHE6O0Pb/d/Dh3E4MAm2zCHbLLUcFF8/wgwTeMPy9KzHBYLu7S/nsJbzd0AWL09MHn8vwue8ULL9YOzluOQ==
+
 "@hono/node-server@1.19.9":
   version "1.19.9"
   resolved "https://registry.npmjs.org/@hono/node-server/-/node-server-1.19.9.tgz"
