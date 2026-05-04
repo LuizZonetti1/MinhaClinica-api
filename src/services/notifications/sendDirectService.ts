@@ -1,5 +1,6 @@
 import { prisma } from "../../database/prisma";
 import { NotificationRepository } from "../../repository/notificationRepository";
+import { EmailService, createEmailProvider } from "../email/emailService";
 
 interface SendDirectInput {
     recipientUserId: string;
@@ -41,6 +42,21 @@ export class SendDirectService {
         });
 
         await notifRepo.markAsSent(n.id);
+        // Email de mensagem direta (fire-and-forget)
+        try {
+            const sender = await prisma.user.findUnique({
+                where: { id: input.senderId },
+                select: { name: true },
+            });
+            const emailSvc = new EmailService(createEmailProvider());
+            await emailSvc.sendDirectMessageEmail(
+                recipient.email,
+                recipient.name,
+                sender?.name ?? "Sistema",
+                input.subject,
+                input.message,
+            );
+        } catch {}
         return { id: n.id };
     }
 }

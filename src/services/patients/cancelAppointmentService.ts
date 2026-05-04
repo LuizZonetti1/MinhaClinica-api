@@ -1,6 +1,7 @@
 import { prisma } from "../../database/prisma";
 import { PatientDashboardRepository } from "../../repository/patientDashboardRepository";
 import { AppointmentStatus, CancellationReason } from "../../types/enums";
+import { EmailService, createEmailProvider } from "../email/emailService";
 
 export class CancelAppointmentService {
   private repository = new PatientDashboardRepository();
@@ -19,6 +20,14 @@ export class CancelAppointmentService {
       select: {
         id: true,
         status: true,
+        appointmentDate: true,
+        startTime: true,
+        professional: {
+          select: {
+            user: { select: { name: true } },
+          },
+        },
+        clinic: { select: { tradeName: true } },
       },
     });
 
@@ -52,6 +61,31 @@ export class CancelAppointmentService {
         status: true,
       },
     });
+
+    // Envia email de confirmação do cancelamento (fire-and-forget)
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      });
+      if (user) {
+        const emailSvc = new EmailService(createEmailProvider());
+        const appointmentDate = appointment.appointmentDate.toLocaleDateString("pt-BR");
+        const startTime = appointment.startTime.slice(0, 5); // "HH:MM"
+        const professionalName = appointment.professional.user.name;
+        const clinicName = appointment.clinic.tradeName;
+        await emailSvc.sendAppointmentCancellationEmail(
+          user.email,
+          user.name,
+          appointmentDate,
+          startTime,
+          professionalName,
+          clinicName,
+        );
+      }
+    } catch (err) {
+      console.error("[cancelAppointmentService] Falha ao enviar email de cancelamento:", err);
+    }
 
     return updated;
   }

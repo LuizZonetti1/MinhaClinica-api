@@ -6,6 +6,7 @@ import { AppointmentRepository } from "../../repository/appointmentRepository";
 import { NotificationRepository } from "../../repository/notificationRepository";
 import type { AppointmentCreatedResult, CreateAppointmentInput } from "../../types/appointment";
 import { AppointmentChannel } from "../../types/enums";
+import { EmailService, createEmailProvider } from "../email/emailService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -186,6 +187,19 @@ export class CreateAppointmentService {
           appointmentId: created.id,
         });
         await notifRepo.markAsSent(pNotif.id);
+        // Email de confirmação para o paciente (fire-and-forget)
+        try {
+          const pDateStr = new Date(input.appointmentDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+          const emailSvc = new EmailService(createEmailProvider());
+          await emailSvc.sendAppointmentConfirmationEmail(
+            patient.user.email,
+            patient.user.name,
+            pDateStr,
+            input.startTime,
+            professional.user.name,
+            clinic.tradeName,
+          );
+        } catch { }
 
         // NEW_BOOKING → profissional
         const profNotif = await notifRepo.create({

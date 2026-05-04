@@ -4,6 +4,7 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { NotificationRepository } from "../../repository/notificationRepository";
 import { prisma } from "../../database/prisma";
+import { EmailService, createEmailProvider } from "../email/emailService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -53,6 +54,11 @@ async function sendAppointmentReminders() {
             });
 
             await repo.markAsSent(notification.id);
+            // Email de lembrete (fire-and-forget)
+            try {
+                const emailSvc = new EmailService(createEmailProvider());
+                await emailSvc.sendAppointmentReminderEmail(user.email, user.name, dateStr, timeStr, professionalName, "amanhã");
+            } catch {}
         }
     }
 }
@@ -107,6 +113,13 @@ async function sendIntradayReminders() {
             });
 
             await repo.markAsSent(notification.id);
+            // Email de lembrete intraday (fire-and-forget)
+            try {
+                const emailSvc = new EmailService(createEmailProvider());
+                const apptDateStr = appt.appointmentDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+                const profName = appt.professional?.user?.name ?? "seu profissional";
+                await emailSvc.sendAppointmentReminderEmail(user.email, user.name, apptDateStr, appt.startTime, profName, label);
+            } catch {}
         }
     }
 }
