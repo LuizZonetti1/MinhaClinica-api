@@ -1,6 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
 import { AuthController } from "../controller/authController";
 import { tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
@@ -76,30 +75,10 @@ function flattenPatientBody(req: Request, _res: Response, next: NextFunction): v
 const router = Router();
 const authController = new AuthController();
 
-const isDev = process.env.NODE_ENV !== "production";
-
-// Rate limit geral para endpoints de auth (10 req/min por IP)
-const authLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: isDev ? 1000 : 10,
-  message: { error: "Muitas requisições. Tente novamente em 1 minuto." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Rate limit mais restritivo para envio de email (5 req/15min por IP)
-const emailLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: isDev ? 1000 : 5,
-  message: { error: "Limite de envio de emails atingido. Aguarde 15 minutos." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 /**
  * PÚBLICO — Login
  */
-router.post("/login", authLimiter, validate(loginSchema), (req, res) =>
+router.post("/login", validate(loginSchema), (req, res) =>
   authController.login(req, res),
 );
 
@@ -107,7 +86,7 @@ router.post("/login", authLimiter, validate(loginSchema), (req, res) =>
  * PÚBLICO — Etapa 1: Início do cadastro
  * POST /api/auth/register/start
  */
-router.post("/register/start", emailLimiter, validate(registerStartSchema), (req, res) =>
+router.post("/register/start", validate(registerStartSchema), (req, res) =>
   authController.registerStart(req, res),
 );
 
@@ -115,7 +94,7 @@ router.post("/register/start", emailLimiter, validate(registerStartSchema), (req
  * PÚBLICO — Etapa 2: Verificar token de email
  * POST /api/auth/register/verify
  */
-router.post("/register/verify", authLimiter, validate(verifyEmailSchema), (req, res) =>
+router.post("/register/verify", validate(verifyEmailSchema), (req, res) =>
   authController.registerVerify(req, res),
 );
 
@@ -125,7 +104,6 @@ router.post("/register/verify", authLimiter, validate(verifyEmailSchema), (req, 
  */
 router.post(
   "/register/resend-verification",
-  emailLimiter,
   validate(resendVerificationSchema),
   (req, res) => authController.resendVerification(req, res),
 );
@@ -137,7 +115,6 @@ router.post(
  */
 router.post(
   "/register/complete",
-  authLimiter,
   tempRegistrationAuth,
   flattenPatientBody,
   validate(completePatientSchema),
@@ -148,7 +125,7 @@ router.post(
  * PÚBLICO — Ativar conta de paciente cadastrado pela recepção
  * POST /api/auth/activate-account
  */
-router.post("/activate-account", authLimiter, (req, res) =>
+router.post("/activate-account", (req, res) =>
   authController.activateAccount(req, res),
 );
 
@@ -162,7 +139,7 @@ router.get("/verify-email/:token", (req, res) => authController.verifyEmailLink(
  * PÚBLICO — Solicitar link de redefinição de senha
  * POST /api/auth/forgot-password
  */
-router.post("/forgot-password", emailLimiter, validate(forgotPasswordSchema), (req, res) =>
+router.post("/forgot-password", validate(forgotPasswordSchema), (req, res) =>
   authController.forgotPassword(req, res),
 );
 
@@ -170,7 +147,7 @@ router.post("/forgot-password", emailLimiter, validate(forgotPasswordSchema), (r
  * PÚBLICO — Confirmar nova senha com o token recebido por email
  * POST /api/auth/reset-password
  */
-router.post("/reset-password", authLimiter, validate(resetPasswordSchema), (req, res) =>
+router.post("/reset-password", validate(resetPasswordSchema), (req, res) =>
   authController.resetPassword(req, res),
 );
 
