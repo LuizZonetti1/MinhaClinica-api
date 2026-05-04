@@ -56,11 +56,11 @@ export class RegisterPatientService {
             verificationExpires: verification.expiresAt,
           },
         });
-        await this.emailService.sendPatientVerificationEmail(
+        this.emailService.sendPatientVerificationEmail(
           existingUser.email,
           data.name,
           verification.token,
-        );
+        ).catch((err) => console.error("[registro] Falha ao reenviar email de verificação:", err));
         return {
           message: "Cadastro iniciado. Verifique seu email para continuar.",
           email: existingUser.email,
@@ -92,8 +92,10 @@ export class RegisterPatientService {
       },
     });
 
-    // Enviar email
-    await this.emailService.sendPatientVerificationEmail(data.email, data.name, verification.token);
+    // Enviar email (fire-and-forget — não bloqueia a resposta)
+    this.emailService
+      .sendPatientVerificationEmail(data.email, data.name, verification.token)
+      .catch((err) => console.error("[registro] Falha ao enviar email de verificação:", err));
 
     return {
       message: "Cadastro iniciado. Verifique seu email para continuar.",

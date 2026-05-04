@@ -40,7 +40,9 @@ export class ForgotPasswordService {
         });
 
         const emailSvc = new AuthEmailService(createEmailProvider());
-        await emailSvc.sendForgotPasswordEmail(user.email, user.name, rawToken);
+        emailSvc
+            .sendForgotPasswordEmail(user.email, user.name, rawToken)
+            .catch((err) => console.error("[forgot-password] Falha ao enviar email:", err));
     }
 }
 

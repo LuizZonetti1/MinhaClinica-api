@@ -39,8 +39,10 @@ export class ResendVerificationService {
       },
     });
 
-    // Reenviar email
-    await this.emailService.sendPatientVerificationEmail(user.email, user.name, verification.token);
+    // Reenviar email (fire-and-forget)
+    this.emailService
+      .sendPatientVerificationEmail(user.email, user.name, verification.token)
+      .catch((err) => console.error("[reenvio] Falha ao enviar email de verificação:", err));
 
     return {
       message: "Novo link de verificação enviado. Verifique sua caixa de entrada.",

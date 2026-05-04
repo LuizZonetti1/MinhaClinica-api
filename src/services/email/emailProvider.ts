@@ -99,6 +99,9 @@ export class MailtrapEmailProvider implements EmailProvider {
             host: "sandbox.smtp.mailtrap.io",
             port: 2525,
             auth: { user, pass },
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 15000,
         });
         this.from = process.env.EMAIL_FROM ?? "Minha Clínica <noreply@minhaclinica.dev>";
     }
@@ -145,6 +148,9 @@ export class GmailEmailProvider implements EmailProvider {
         this.transporter = nodemailer.createTransport({
             service: "gmail",
             auth: { user, pass },
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 15000,
         });
         this.from = `Minha Clínica <${user}>`;
     }
