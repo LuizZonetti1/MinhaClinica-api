@@ -343,6 +343,10 @@ model User {
   verificationToken   String? // Token hasheado para verificação de email
   verificationExpires DateTime? // Data de expiração do token
 
+  // Redefinição de Senha
+  passwordResetToken   String? // Token hasheado para redefinição de senha
+  passwordResetExpires DateTime? // Data de expiração do token (15 minutos)
+
   // Especialidade pendente (para profissionais em processo de convite)
   pendingSpecialtyId String?
 
