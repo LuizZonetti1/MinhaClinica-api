@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { Resend } from "resend";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 
 /**
  * Interface base para todos os provedores de email.
@@ -25,51 +25,6 @@ export class ConsoleEmailProvider implements EmailProvider {
         console.log("Assunto:", options.subject);
         console.log("Texto:", options.text);
         console.log("===================================\n");
-    }
-}
-
-/**
- * Provider de produção usando Resend (https://resend.com)
- * Requer: RESEND_API_KEY e EMAIL_FROM no .env
- *
- * Passos para configurar:
- * 1. Crie uma conta em resend.com (gratuito até 3.000 emails/mês)
- * 2. Vá em "API Keys" e crie uma nova chave
- * 3. Em "Domains", adicione e verifique seu domínio (ou use onboarding@resend.dev para testes)
- * 4. Adicione no .env:
- *      RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
- *      EMAIL_FROM=Minha Clínica <noreply@seudominio.com.br>
- */
-export class ResendEmailProvider implements EmailProvider {
-    private client: Resend;
-    private from: string;
-
-    constructor() {
-        const apiKey = process.env.RESEND_API_KEY;
-        if (!apiKey) {
-            throw new Error("RESEND_API_KEY não configurada nas variáveis de ambiente");
-        }
-        this.client = new Resend(apiKey);
-        this.from = process.env.EMAIL_FROM ?? "Minha Clínica <onboarding@resend.dev>";
-    }
-
-    async sendEmail(options: {
-        to: string;
-        subject: string;
-        html: string;
-        text?: string;
-    }): Promise<void> {
-        const { error } = await this.client.emails.send({
-            from: this.from,
-            to: options.to,
-            subject: options.subject,
-            html: options.html,
-            text: options.text,
-        });
-
-        if (error) {
-            throw new Error(`Falha ao enviar email via Resend: ${error.message}`);
-        }
     }
 }
 
@@ -145,13 +100,17 @@ export class GmailEmailProvider implements EmailProvider {
         if (!user || !pass) {
             throw new Error("GMAIL_USER e GMAIL_APP_PASSWORD não configurados no .env");
         }
-        this.transporter = nodemailer.createTransport({
-            service: "gmail",
+        const gmailOptions: SMTPTransport.Options & { family?: number } = {
+            host: "smtp.gmail.com",
+            port: 587,
+            secure: false, // STARTTLS
+            family: 4,     // força IPv4 — evita ENETUNREACH no Render (sem suporte a IPv6)
             auth: { user, pass },
             connectionTimeout: 10000,
             greetingTimeout: 10000,
             socketTimeout: 15000,
-        });
+        };
+        this.transporter = nodemailer.createTransport(gmailOptions);
         this.from = `Minha Clínica <${user}>`;
     }
 
