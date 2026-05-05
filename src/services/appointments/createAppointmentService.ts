@@ -187,6 +187,22 @@ export class CreateAppointmentService {
           appointmentId: created.id,
         });
         await notifRepo.markAsSent(pNotif.id);
+
+        // NEW_BOOKING → paciente (consulta marcada)
+        const pNewBookingNotif = await notifRepo.create({
+          clinicId,
+          recipientEmail: patient.user.email,
+          recipientPhone: patient.user.phone ?? undefined,
+          recipientName: patient.user.name,
+          recipientUserId: patient.user.id,
+          type: "NEW_BOOKING",
+          channel: "IN_APP",
+          subject: "Consulta marcada",
+          message: `Sua consulta foi marcada para ${new Date(input.appointmentDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })} às ${input.startTime} com ${professional.user.name}.`,
+          appointmentId: created.id,
+        });
+        await notifRepo.markAsSent(pNewBookingNotif.id);
+
         // Email de confirmação para o paciente (fire-and-forget)
         try {
           const pDateStr = new Date(input.appointmentDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
