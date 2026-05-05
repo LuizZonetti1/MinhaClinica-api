@@ -48,6 +48,7 @@ export class UploadAttachmentService {
             fileName: attachment.fileName,
             mimeType: attachment.mimeType,
             sizeBytes: attachment.sizeBytes,
+            caption: attachment.caption ?? null,
             uploadedAt: attachment.uploadedAt.toISOString(),
             url: `/uploads/documents/${attachment.storedName}`,
         };

@@ -943,6 +943,7 @@ model DocumentAttachment {
   storedName  String // Nome no disco (UUID + ext)
   mimeType    String
   sizeBytes   Int
+  caption     String? // Legenda/comentário opcional (ex: "antes", "depois")
 
   uploadedBy String   // userId
   uploadedAt DateTime @default(now())

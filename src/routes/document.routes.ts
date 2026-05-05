@@ -139,4 +139,16 @@ router.delete(
   (req, res) => controller.deleteAttachment(req, res),
 );
 
+/**
+ * PATCH /api/appointments/:id/documents/:docId/attachments/:attachmentId/caption
+ * Atualiza a legenda/comentário de um anexo
+ * Profissional, Admin e Recepção podem editar
+ */
+router.patch(
+  "/:id/documents/:docId/attachments/:attachmentId/caption",
+  authMiddleware,
+  checkRole(...staffAndProfessional),
+  (req, res) => controller.updateAttachmentCaption(req, res),
+);
+
 export default router;

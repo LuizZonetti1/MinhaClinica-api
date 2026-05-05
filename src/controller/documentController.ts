@@ -8,6 +8,7 @@ import { DeleteDocumentService } from "../services/documents/deleteDocumentServi
 import { FinalizeDocumentService } from "../services/documents/finalizeDocumentService";
 import { ListDocumentsService } from "../services/documents/listDocumentsService";
 import { PrintDocumentService } from "../services/documents/printDocumentService";
+import { UpdateAttachmentCaptionService } from "../services/documents/updateAttachmentCaptionService";
 import { UpdateDocumentService } from "../services/documents/updateDocumentService";
 import { UploadAttachmentService } from "../services/documents/uploadAttachmentService";
 import { ViewDocumentService } from "../services/documents/viewDocumentService";
@@ -242,6 +243,26 @@ export class DocumentController {
       res.status(200).json(result);
     } catch (error) {
       handleControllerError(res, error, "Erro ao remover anexo");
+    }
+  }
+
+  async updateAttachmentCaption(req: Request, res: Response): Promise<void> {
+    try {
+      const context = buildAuditContext(req);
+      if (!context.clinicId) {
+        res.status(400).json({ error: "Clínica não identificada no token" });
+        return;
+      }
+
+      const appointmentId = req.params.id as string;
+      const docId = req.params.docId as string;
+      const attachmentId = req.params.attachmentId as string;
+      const caption = typeof req.body?.caption === "string" ? req.body.caption.trim() || null : null;
+      const service = new UpdateAttachmentCaptionService();
+      const result = await service.execute(appointmentId, docId, attachmentId, caption, context);
+      res.status(200).json(result);
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao atualizar legenda do anexo");
     }
   }
 }

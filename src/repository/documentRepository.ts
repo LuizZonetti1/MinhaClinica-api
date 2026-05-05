@@ -45,6 +45,7 @@ export class DocumentRepository {
             storedName: true,
             mimeType: true,
             sizeBytes: true,
+            caption: true,
             uploadedAt: true,
           },
         },
