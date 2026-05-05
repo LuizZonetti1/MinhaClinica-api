@@ -5,4 +5,4 @@ src/generated/prisma
 dist
 
 # Uploads — manter apenas a estrutura de pastas (via .gitkeep)
-src/uploads/clinics/
+src/uploads/
