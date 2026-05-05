@@ -173,6 +173,10 @@ export class CreateAppointmentService {
           ? `pelo paciente ${patient.user.name} pelo portal online`
           : "pela recepção";
 
+        // Formata a data local sem conversão UTC (evita desvio de fuso horário)
+        const [apptYear, apptMonth, apptDay] = input.appointmentDate.split("-");
+        const apptDateLabel = `${apptDay}/${apptMonth}/${apptYear}`;
+
         // APPOINTMENT_CONFIRMATION → paciente
         const pNotif = await notifRepo.create({
           clinicId,
@@ -183,7 +187,7 @@ export class CreateAppointmentService {
           type: "APPOINTMENT_CONFIRMATION",
           channel: "IN_APP",
           subject: "Agendamento confirmado",
-          message: `Seu agendamento foi confirmado para ${new Date(input.appointmentDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })} às ${input.startTime} com ${professional.user.name}.`,
+          message: `Seu agendamento foi confirmado para ${apptDateLabel} às ${input.startTime} com ${professional.user.name}.`,
           appointmentId: created.id,
         });
         await notifRepo.markAsSent(pNotif.id);
@@ -198,14 +202,14 @@ export class CreateAppointmentService {
           type: "NEW_BOOKING",
           channel: "IN_APP",
           subject: "Consulta marcada",
-          message: `Sua consulta foi marcada para ${new Date(input.appointmentDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })} às ${input.startTime} com ${professional.user.name}.`,
+          message: `Sua consulta foi marcada para ${apptDateLabel} às ${input.startTime} com ${professional.user.name}.`,
           appointmentId: created.id,
         });
         await notifRepo.markAsSent(pNewBookingNotif.id);
 
         // Email de confirmação para o paciente (fire-and-forget)
         try {
-          const pDateStr = new Date(input.appointmentDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+          const pDateStr = apptDateLabel;
           const emailSvc = new EmailService(createEmailProvider());
           await emailSvc.sendAppointmentConfirmationEmail(
             patient.user.email,
