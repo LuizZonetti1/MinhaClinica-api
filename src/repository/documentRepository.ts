@@ -37,6 +37,17 @@ export class DocumentRepository {
     return prisma.document.findFirst({
       where: { id, deletedAt: null },
       include: {
+        attachments: {
+          orderBy: { uploadedAt: "asc" },
+          select: {
+            id: true,
+            fileName: true,
+            storedName: true,
+            mimeType: true,
+            sizeBytes: true,
+            uploadedAt: true,
+          },
+        },
         appointment: {
           select: {
             id: true,
