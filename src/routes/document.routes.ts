@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { DocumentController } from "../controller/documentController";
 import { authMiddleware, checkRole } from "../middlewares/auth";
+import { uploadDocumentAttachment } from "../middlewares/upload";
 import { validate } from "../middlewares/validation";
 import {
   createAddendumSchema,
@@ -111,6 +112,31 @@ router.get(
   authMiddleware,
   checkRole(...staffAndProfessional),
   (req, res) => controller.printDocument(req, res),
+);
+
+/**
+ * POST /api/appointments/:id/documents/:docId/attachments
+ * Faz upload de um arquivo e associa ao documento
+ * Profissional, Admin e Recepção podem anexar
+ */
+router.post(
+  "/:id/documents/:docId/attachments",
+  authMiddleware,
+  checkRole(...staffAndProfessional),
+  uploadDocumentAttachment,
+  (req, res) => controller.uploadAttachment(req, res),
+);
+
+/**
+ * DELETE /api/appointments/:id/documents/:docId/attachments/:attachmentId
+ * Remove um anexo do documento
+ * Profissional, Admin e Recepção podem remover
+ */
+router.delete(
+  "/:id/documents/:docId/attachments/:attachmentId",
+  authMiddleware,
+  checkRole(...staffAndProfessional),
+  (req, res) => controller.deleteAttachment(req, res),
 );
 
 export default router;

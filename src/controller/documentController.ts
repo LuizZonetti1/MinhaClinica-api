@@ -3,11 +3,13 @@ import { handleControllerError } from "../utils/controllerUtils";
 import { ConcludeAppointmentService } from "../services/documents/concludeAppointmentService";
 import { CreateAddendumService } from "../services/documents/createAddendumService";
 import { CreateDocumentService } from "../services/documents/createDocumentService";
+import { DeleteAttachmentService } from "../services/documents/deleteAttachmentService";
 import { DeleteDocumentService } from "../services/documents/deleteDocumentService";
 import { FinalizeDocumentService } from "../services/documents/finalizeDocumentService";
 import { ListDocumentsService } from "../services/documents/listDocumentsService";
 import { PrintDocumentService } from "../services/documents/printDocumentService";
 import { UpdateDocumentService } from "../services/documents/updateDocumentService";
+import { UploadAttachmentService } from "../services/documents/uploadAttachmentService";
 import { ViewDocumentService } from "../services/documents/viewDocumentService";
 import type { AuditContext } from "../types/document";
 
@@ -186,6 +188,60 @@ export class DocumentController {
       res.status(200).json(result);
     } catch (error) {
       handleControllerError(res, error, "Erro ao imprimir documento");
+    }
+  }
+
+  async uploadAttachment(req: Request, res: Response): Promise<void> {
+    try {
+      const context = buildAuditContext(req);
+      if (!context.clinicId) {
+        res.status(400).json({ error: "Clínica não identificada no token" });
+        return;
+      }
+
+      const file = req.file;
+      if (!file) {
+        res.status(400).json({ error: "Nenhum arquivo enviado." });
+        return;
+      }
+
+      const appointmentId = req.params.id as string;
+      const docId = req.params.docId as string;
+      const service = new UploadAttachmentService();
+      const result = await service.execute(
+        appointmentId,
+        docId,
+        {
+          originalName: file.originalname,
+          storedName: file.filename,
+          mimeType: file.mimetype,
+          sizeBytes: file.size,
+          documentId: docId,
+        },
+        context,
+      );
+      res.status(201).json(result);
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao fazer upload do anexo");
+    }
+  }
+
+  async deleteAttachment(req: Request, res: Response): Promise<void> {
+    try {
+      const context = buildAuditContext(req);
+      if (!context.clinicId) {
+        res.status(400).json({ error: "Clínica não identificada no token" });
+        return;
+      }
+
+      const appointmentId = req.params.id as string;
+      const docId = req.params.docId as string;
+      const attachmentId = req.params.attachmentId as string;
+      const service = new DeleteAttachmentService();
+      const result = await service.execute(appointmentId, docId, attachmentId, context);
+      res.status(200).json(result);
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao remover anexo");
     }
   }
 }
