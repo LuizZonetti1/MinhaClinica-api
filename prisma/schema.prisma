@@ -115,16 +115,16 @@ enum NotificationType {
   BIRTHDAY
   NO_SHOW_WARNING
   // Novos tipos
-  NEW_BOOKING             // Novo agendamento (para profissional/recepção)
-  CHECKIN_DONE            // Paciente fez check-in
-  PATIENT_WAITING         // Paciente aguardando
-  REGISTRATION_COMPLETE   // Cadastro concluído
-  ANNOUNCEMENT            // Comunicado geral da clínica
-  DIRECT_MESSAGE          // Mensagem direta
-  PAYMENT_CONFIRMED       // Pagamento confirmado
-  ACCOUNT_BLOCKED         // Conta bloqueada
-  REPORT_READY            // Relatório/documento disponível
-  APPOINTMENT_COMPLETED   // Consulta concluída
+  NEW_BOOKING // Novo agendamento (para profissional/recepção)
+  CHECKIN_DONE // Paciente fez check-in
+  PATIENT_WAITING // Paciente aguardando
+  REGISTRATION_COMPLETE // Cadastro concluído
+  ANNOUNCEMENT // Comunicado geral da clínica
+  DIRECT_MESSAGE // Mensagem direta
+  PAYMENT_CONFIRMED // Pagamento confirmado
+  ACCOUNT_BLOCKED // Conta bloqueada
+  REPORT_READY // Relatório/documento disponível
+  APPOINTMENT_COMPLETED // Consulta concluída
 }
 
 enum NotificationChannel {
@@ -355,11 +355,11 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relacionamentos
-  professional              Professional?
-  patient                   Patient?
-  createdAuditLogs          AuditLog[]     @relation("AuditLogUser")
-  receivedNotifications     Notification[] @relation("NotificationRecipient")
-  sentNotifications         Notification[] @relation("NotificationSender")
+  professional          Professional?
+  patient               Patient?
+  createdAuditLogs      AuditLog[]     @relation("AuditLogUser")
+  receivedNotifications Notification[] @relation("NotificationRecipient")
+  sentNotifications     Notification[] @relation("NotificationSender")
 
   @@unique([email]) // Email globalmente único
   @@unique([clinicId, email]) // Email único por clínica (staff/admin)
@@ -774,7 +774,7 @@ model Notification {
 
   // Remetente (quem disparou a notificação, null = sistema)
   senderId String?
-  sender   User?  @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
+  sender   User?   @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
 
   // Conteúdo
   type    NotificationType
@@ -939,13 +939,13 @@ model DocumentAttachment {
   documentId String
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  fileName    String // Nome original do arquivo
-  storedName  String // Nome no disco (UUID + ext)
-  mimeType    String
-  sizeBytes   Int
-  caption     String? // Legenda/comentário opcional (ex: "antes", "depois")
+  fileName   String // Nome original do arquivo
+  storedName String // Nome no disco (UUID + ext)
+  mimeType   String
+  sizeBytes  Int
+  caption    String? // Legenda/comentário opcional (ex: "antes", "depois")
 
-  uploadedBy String   // userId
+  uploadedBy String // userId
   uploadedAt DateTime @default(now())
 
   @@index([documentId])
