@@ -912,6 +912,9 @@ model Document {
   originalDocument   Document?  @relation("DocumentAddendum", fields: [originalDocumentId], references: [id], onDelete: Restrict)
   addendums          Document[] @relation("DocumentAddendum")
 
+  // Anexos
+  attachments DocumentAttachment[]
+
   // Integridade
   integrityHash String? // SHA-256 do conteúdo ao enviar
 
@@ -928,6 +931,24 @@ model Document {
   @@index([clinicId, createdAt])
   @@index([originalDocumentId])
   @@map("documents")
+}
+
+// Anexos de documentos clínicos
+model DocumentAttachment {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  fileName    String // Nome original do arquivo
+  storedName  String // Nome no disco (UUID + ext)
+  mimeType    String
+  sizeBytes   Int
+
+  uploadedBy String   // userId
+  uploadedAt DateTime @default(now())
+
+  @@index([documentId])
+  @@map("document_attachments")
 }
 
 // Contador sequencial de documentos por clínica/ano
