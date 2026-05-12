@@ -78,6 +78,25 @@ export class CreatePatientCommentService {
       throw Object.assign(new Error("Paciente não encontrado"), { statusCode: 404 });
     }
 
+    // Garante que o profissional tem histórico clínico com este paciente nesta clínica.
+    // Sem uma consulta concluída, não é permitido criar comentários clínicos.
+    const link = await prisma.appointment.findFirst({
+      where: {
+        patientId: patient.id,
+        professionalId: professional.id,
+        clinicId,
+        status: { in: ["COMPLETED", "COMPLETED_WITH_ADDENDUM"] },
+      },
+      select: { id: true },
+    });
+
+    if (!link) {
+      throw Object.assign(
+        new Error("Profissional não possui histórico clínico com este paciente."),
+        { statusCode: 403 },
+      );
+    }
+
     const row = await this.repository.create({
       clinicId,
       patientId: input.patientId,
