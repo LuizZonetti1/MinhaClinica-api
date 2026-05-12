@@ -1,8 +1,12 @@
+import fs from "node:fs";
+import path from "node:path";
 import { Router } from "express";
 import { DocumentController } from "../controller/documentController";
 import { authMiddleware, checkRole } from "../middlewares/auth";
 import { uploadDocumentAttachment } from "../middlewares/upload";
 import { validate } from "../middlewares/validation";
+import { prisma } from "../database/prisma";
+import { UPLOADS_DIR } from "../utils/uploadUtils";
 import {
   createAddendumSchema,
   createDocumentSchema,
@@ -149,6 +153,65 @@ router.patch(
   authMiddleware,
   checkRole(...staffAndProfessional),
   (req, res) => controller.updateAttachmentCaption(req, res),
+);
+
+/**
+ * GET /api/appointments/:id/documents/:docId/attachments/:attachmentId/file
+ * Serve o arquivo do anexo com verificação de autenticação e ownership.
+ * - Staff (ADMIN, RECEPTIONIST, PROFESSIONAL): acessa documentos da própria clínica
+ * - PATIENT: acessa apenas documentos das próprias consultas
+ */
+router.get(
+  "/:id/documents/:docId/attachments/:attachmentId/file",
+  authMiddleware,
+  checkRole(...allRoles),
+  async (req, res) => {
+    try {
+      const attachmentId = String(req.params.attachmentId);
+      const userId = req.userId as string;
+      const clinicId = req.clinicId as string | null;
+      const role = req.userRole as string;
+
+      const attachment = await prisma.documentAttachment.findUnique({
+        where: { id: attachmentId },
+        include: {
+          document: {
+            include: {
+              appointment: {
+                include: {
+                  patient: { select: { userId: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!attachment) {
+        return res.status(404).json({ message: "Arquivo não encontrado." });
+      }
+
+      const doc = attachment.document;
+      const isStaff = ["ADMIN", "RECEPTIONIST", "PROFESSIONAL"].includes(role);
+      const allowed = isStaff
+        ? doc.clinicId === clinicId
+        : doc.appointment.patient.userId === userId;
+
+      if (!allowed) {
+        return res.status(403).json({ message: "Acesso negado." });
+      }
+
+      const filePath = path.join(UPLOADS_DIR, "documents", attachment.storedName);
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "Arquivo não encontrado no servidor." });
+      }
+
+      res.sendFile(filePath);
+    } catch {
+      res.status(500).json({ message: "Erro ao servir arquivo." });
+    }
+  },
 );
 
 export default router;
