@@ -51,8 +51,8 @@ export const generateAuthToken = (
     name,
   };
 
-  // Token padrão expira em 7 dias
-  const expiresIn = options.expiresIn !== undefined ? options.expiresIn : "7d";
+  // Token padrão expira em 8 horas
+  const expiresIn = options.expiresIn !== undefined ? options.expiresIn : "8h";
 
   const signOptions: SignOptions = {
     expiresIn: expiresIn as SignOptions["expiresIn"],
