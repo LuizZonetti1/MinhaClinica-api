@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { AuthController } from "../controller/authController";
 import { tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
@@ -72,13 +73,31 @@ function flattenPatientBody(req: Request, _res: Response, next: NextFunction): v
   next();
 }
 
+// 10 tentativas por janela de 15 minutos
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { message: "Muitas tentativas. Tente novamente em 15 minutos." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// 5 envios por janela de 1 hora
+const emailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 300,
+  message: { message: "Limite de envios atingido. Tente novamente em 1 hora." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const router = Router();
 const authController = new AuthController();
 
 /**
  * PÚBLICO — Login
  */
-router.post("/login", validate(loginSchema), (req, res) =>
+router.post("/login", authLimiter, validate(loginSchema), (req, res) =>
   authController.login(req, res),
 );
 
@@ -104,6 +123,7 @@ router.post("/register/verify", validate(verifyEmailSchema), (req, res) =>
  */
 router.post(
   "/register/resend-verification",
+  emailLimiter,
   validate(resendVerificationSchema),
   (req, res) => authController.resendVerification(req, res),
 );
@@ -139,7 +159,7 @@ router.get("/verify-email/:token", (req, res) => authController.verifyEmailLink(
  * PÚBLICO — Solicitar link de redefinição de senha
  * POST /api/auth/forgot-password
  */
-router.post("/forgot-password", validate(forgotPasswordSchema), (req, res) =>
+router.post("/forgot-password", emailLimiter, validate(forgotPasswordSchema), (req, res) =>
   authController.forgotPassword(req, res),
 );
 
@@ -147,7 +167,7 @@ router.post("/forgot-password", validate(forgotPasswordSchema), (req, res) =>
  * PÚBLICO — Confirmar nova senha com o token recebido por email
  * POST /api/auth/reset-password
  */
-router.post("/reset-password", validate(resetPasswordSchema), (req, res) =>
+router.post("/reset-password", authLimiter, validate(resetPasswordSchema), (req, res) =>
   authController.resetPassword(req, res),
 );
 
