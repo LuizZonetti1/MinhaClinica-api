@@ -59,6 +59,7 @@ export class ReceptionDashboardService {
     if (status === AppointmentStatus.WAITING) return "CHECKED_IN";
     if (status === AppointmentStatus.IN_PROGRESS) return "IN_PROGRESS";
     if (status === AppointmentStatus.COMPLETED) return "DONE";
+    if (status === AppointmentStatus.COMPLETED_WITH_ADDENDUM) return "DONE";
     return "CANCELLED";
   }
 
