@@ -120,7 +120,10 @@ export class TransactionController {
       };
 
       const service = new UpdateTransactionService();
-      const record = await service.execute(id, clinicId, input);
+      const record = await service.execute(id, clinicId, input, {
+        userId: req.userId!,
+        userRoles: req.userRoles ?? (req.userRole ? [req.userRole] : []),
+      });
 
       res.status(200).json({ message: "Transação atualizada com sucesso", data: record });
     } catch (error: any) {
@@ -130,6 +133,10 @@ export class TransactionController {
       }
       if (error.message === "Transação não encontrada") {
         res.status(404).json({ error: error.message });
+        return;
+      }
+      if (error.message?.startsWith("Acesso negado")) {
+        res.status(403).json({ error: error.message });
         return;
       }
       if (error instanceof Error) {

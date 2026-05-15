@@ -1,14 +1,28 @@
+import { UserRole } from "../../types/enums";
 import { TransactionRepository } from "../../repository/transactionRepository";
 import type { UpdateTransactionInput } from "../../types/transaction";
 
 export class UpdateTransactionService {
   private repository = new TransactionRepository();
 
-  async execute(id: string, clinicId: string, input: UpdateTransactionInput) {
+  async execute(
+    id: string,
+    clinicId: string,
+    input: UpdateTransactionInput,
+    currentUser?: { userId: string; userRoles: UserRole[] },
+  ) {
     const existing = await this.repository.findByIdAndClinic(id, clinicId);
 
     if (!existing) {
       throw new Error("Transação não encontrada");
+    }
+
+    if (
+      currentUser &&
+      !currentUser.userRoles.includes(UserRole.ADMIN) &&
+      existing.createdBy !== currentUser.userId
+    ) {
+      throw new Error("Acesso negado: você não pode editar transações de outros usuários");
     }
 
     const updated = await this.repository.update(id, input);

@@ -67,6 +67,7 @@ export class ListTransactionsService {
       dueDate: r.dueDate,
       createdAt: r.createdAt,
       createdByName: userNameMap.get(r.createdBy) ?? "Desconhecido",
+      createdById: r.createdBy,
     }));
 
     const totalIncome = transactions

@@ -15,6 +15,7 @@ export interface TransactionListItem {
   dueDate: Date | null;
   createdAt: Date;
   createdByName: string;
+  createdById: string;
 }
 
 export interface TransactionListResponse {
