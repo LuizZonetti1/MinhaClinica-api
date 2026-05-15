@@ -50,7 +50,7 @@ export class UploadAttachmentService {
             sizeBytes: attachment.sizeBytes,
             caption: attachment.caption ?? null,
             uploadedAt: attachment.uploadedAt.toISOString(),
-            url: `/uploads/documents/${attachment.storedName}`,
+            url: `/appointments/${appointmentId}/documents/${docId}/attachments/${attachment.id}/file`,
         };
     }
 }

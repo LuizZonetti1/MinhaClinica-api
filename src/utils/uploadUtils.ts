@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import multer, { type StorageEngine } from "multer";
@@ -28,7 +29,7 @@ function createDiskStorage(type: "avatars" | "reports"): StorageEngine {
     },
     filename: (_req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase();
-      const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
+      const unique = `${Date.now()}-${crypto.randomUUID()}${ext}`;
       cb(null, unique);
     },
   });

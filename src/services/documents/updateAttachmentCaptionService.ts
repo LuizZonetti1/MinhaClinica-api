@@ -44,7 +44,7 @@ export class UpdateAttachmentCaptionService {
             sizeBytes: updated.sizeBytes,
             caption: updated.caption ?? null,
             uploadedAt: updated.uploadedAt.toISOString(),
-            url: `/uploads/documents/${updated.storedName}`,
+            url: `/appointments/${appointmentId}/documents/${docId}/attachments/${updated.id}/file`,
         };
     }
 }

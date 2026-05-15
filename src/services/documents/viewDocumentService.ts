@@ -128,7 +128,7 @@ export class ViewDocumentService {
       ...document,
       attachments: document.attachments.map((att) => ({
         ...att,
-        url: `${process.env.APP_URL ?? ""}/uploads/documents/${att.storedName}`,
+        url: `/appointments/${appointmentId}/documents/${docId}/attachments/${att.id}/file`,
       })),
       councilRegistration,
       clinic: appointment.clinic,
