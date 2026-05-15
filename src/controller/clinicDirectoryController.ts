@@ -4,15 +4,17 @@ import { ListClinicsService } from "../services/clinicDirectory/listClinicsServi
 
 export class ClinicDirectoryController {
     /**
-     * GET /api/clinic-directory?q=
-     * Lista clínicas ativas, podendo filtrar por nome fantasia, razão social ou cidade
+     * GET /api/clinic-directory?name=...&city=...&specialty=...
+     * Lista clínicas ativas, podendo filtrar por nome, cidade e especialidade
      */
     async listClinics(req: Request, res: Response): Promise<void> {
         try {
-            const q = String(req.query.q ?? "");
+            const name = String(req.query.name ?? "");
+            const city = String(req.query.city ?? "");
+            const specialty = String(req.query.specialty ?? "");
 
             const service = new ListClinicsService();
-            const data = await service.execute(q);
+            const data = await service.execute({ name, city, specialty });
 
             res.status(200).json({ data });
         } catch (error: unknown) {

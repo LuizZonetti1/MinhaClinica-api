@@ -1,10 +1,10 @@
 import { ClinicDirectoryRepository } from "../../repository/clinicDirectoryRepository";
-import type { ClinicDirectoryItem } from "../../types/clinicDirectory";
+import type { ClinicDirectoryItem, ClinicListFilters } from "../../types/clinicDirectory";
 
 export class ListClinicsService {
     private repository = new ClinicDirectoryRepository();
 
-    async execute(q?: string): Promise<ClinicDirectoryItem[]> {
-        return this.repository.listClinics(q);
+    async execute(filters: ClinicListFilters = {}): Promise<ClinicDirectoryItem[]> {
+        return this.repository.listClinics(filters);
     }
 }

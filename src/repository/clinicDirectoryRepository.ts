@@ -1,24 +1,50 @@
 import { prisma } from "../database/prisma";
 import type {
     ClinicDirectoryItem,
+    ClinicListFilters,
     ClinicProfessionalDirectoryItem,
 } from "../types/clinicDirectory";
 
+// Remove acentos e normaliza para lowercase — usado na comparação accent-insensitive
+const stripAccents = (s: string): string =>
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 export class ClinicDirectoryRepository {
-    async listClinics(q?: string): Promise<ClinicDirectoryItem[]> {
-        const term = q?.trim() ?? "";
+    async listClinics(filters: ClinicListFilters = {}): Promise<ClinicDirectoryItem[]> {
+        const name = filters.name?.trim() ?? "";
+        const city = filters.city?.trim() ?? "";
+        const specialty = filters.specialty?.trim() ?? "";
+
+        // Filtragem por especialidade é accent+case insensitive via comparação em Node.js,
+        // pois o PostgreSQL ILIKE não ignora acentos sem a extensão unaccent.
+        let specialtyClinicIds: string[] | null = null;
+        if (specialty) {
+            const query = stripAccents(specialty);
+            const rows = await prisma.specialty.findMany({
+                where: { isActive: true },
+                select: { clinicId: true, name: true },
+            });
+            const ids = rows
+                .filter((s) => stripAccents(s.name).includes(query))
+                .map((s) => s.clinicId)
+                .filter((id): id is string => id !== null);
+            specialtyClinicIds = [...new Set(ids)];
+        }
 
         const clinics = await prisma.clinic.findMany({
             where: {
                 isActive: true,
-                ...(term
+                ...(specialtyClinicIds !== null ? { id: { in: specialtyClinicIds } } : {}),
+                ...(name
                     ? {
                         OR: [
-                            { tradeName: { contains: term, mode: "insensitive" } },
-                            { legalName: { contains: term, mode: "insensitive" } },
-                            { city: { contains: term, mode: "insensitive" } },
+                            { tradeName: { contains: name, mode: "insensitive" } },
+                            { legalName: { contains: name, mode: "insensitive" } },
                         ],
                     }
+                    : {}),
+                ...(city
+                    ? { city: { contains: city, mode: "insensitive" } }
                     : {}),
             },
             select: {

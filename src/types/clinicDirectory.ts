@@ -1,3 +1,9 @@
+export interface ClinicListFilters {
+    name?: string;
+    city?: string;
+    specialty?: string;
+}
+
 export interface ClinicDirectoryItem {
     id: string;
     tradeName: string;
