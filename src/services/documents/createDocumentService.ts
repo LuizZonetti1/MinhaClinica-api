@@ -65,7 +65,15 @@ export class CreateDocumentService {
       action: "CREATED",
       entity: "Document",
       entityId: document.id,
-      newData: document,
+      newData: {
+        id: document.id,
+        type: document.type,
+        status: document.status,
+        clinicId: document.clinicId,
+        appointmentId: document.appointmentId,
+        documentNumber: document.documentNumber,
+        createdAt: document.createdAt,
+      },
     });
 
     return document;
