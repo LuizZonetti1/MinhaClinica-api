@@ -125,6 +125,7 @@ export interface UpdateProfessionalProfileInput {
   professionalCouncil?: string;
   registrationNumber?: string;
   registrationState?: string;
+  specialty?: string;
   defaultAppointmentDuration?: number;
   bio?: string | null;
   formations?: string | null;

@@ -311,6 +311,32 @@ export class UpdateProfessionalProfileService {
         await tx.professional.update({ where: { id: professional.id }, data: profUpdate });
       }
 
+      if (data.specialty !== undefined) {
+        const specialtyRecord = await tx.specialty.upsert({
+          where: { clinicId_name: { clinicId, name: data.specialty } },
+          update: {},
+          create: { clinicId, name: data.specialty },
+        });
+        await tx.professionalSpecialty.updateMany({
+          where: { professionalId: professional.id, isPrimary: true },
+          data: { isPrimary: false },
+        });
+        await tx.professionalSpecialty.upsert({
+          where: {
+            professionalId_specialtyId: {
+              professionalId: professional.id,
+              specialtyId: specialtyRecord.id,
+            },
+          },
+          update: { isPrimary: true },
+          create: {
+            professionalId: professional.id,
+            specialtyId: specialtyRecord.id,
+            isPrimary: true,
+          },
+        });
+      }
+
       if (data.workingHours && data.workingHours.length > 0) {
         for (const wh of data.workingHours) {
           await tx.professionalWorkingHours.upsert({
