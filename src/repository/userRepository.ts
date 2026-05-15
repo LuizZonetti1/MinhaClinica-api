@@ -70,6 +70,7 @@ export class UserRepository {
       data: {
         password: hashedPassword,
         mustChangePassword: false,
+        passwordChangedAt: new Date(),
       },
     });
   }

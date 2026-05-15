@@ -96,6 +96,7 @@ export class ResetPasswordService {
             data: {
                 password: hashedPassword,
                 mustChangePassword: false,
+                passwordChangedAt: new Date(),
                 passwordResetToken: null,
                 passwordResetExpires: null,
             },

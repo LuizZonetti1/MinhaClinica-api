@@ -17,7 +17,7 @@ export const generateVerificationToken = (length = 32): string => {
 export const generateNumericCode = (length = 6): string => {
   const min = 10 ** (length - 1);
   const max = 10 ** length - 1;
-  return Math.floor(Math.random() * (max - min + 1) + min).toString();
+  return crypto.randomInt(min, max + 1).toString();
 };
 
 /**

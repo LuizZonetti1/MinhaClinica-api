@@ -41,7 +41,7 @@ export const completeProfessionalSchema = yup.object({
   password: yup
     .string()
     .required("Senha é obrigatória")
-    .min(6, "Senha deve ter no mínimo 6 caracteres")
+    .min(8, "Senha deve ter no mínimo 8 caracteres")
     .max(50, "Senha deve ter no máximo 50 caracteres"),
 
   professionalCouncil: yup
