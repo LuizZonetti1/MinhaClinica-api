@@ -60,13 +60,13 @@ export async function resolveVerifyRedirect(req: Request, res: Response): Promis
     const result = await service.execute(String(token));
 
     const successPath = SUCCESS_ROUTES[result.role] ?? "/completar-cadastro";
+    // tempToken vai no hash (#) para não ser enviado ao servidor em logs/referrer
     const params = new URLSearchParams({
-      tempToken: result.tempToken,
       role: result.role,
       name: result.name,
       email: result.email,
     });
-    const redirectUrl = `${frontendUrl}${successPath}?${params.toString()}`;
+    const redirectUrl = `${frontendUrl}${successPath}?${params.toString()}#tempToken=${result.tempToken}`;
 
     if (isApi) {
       res.status(200).json({
