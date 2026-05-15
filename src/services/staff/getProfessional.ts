@@ -21,7 +21,10 @@ export class GetReceptionistsService {
       prisma.user.findMany({
         where: {
           clinicId,
-          role: UserRole.RECEPTIONIST,
+          OR: [
+            { role: UserRole.RECEPTIONIST },
+            { roles: { has: UserRole.RECEPTIONIST } },
+          ],
         },
         select: {
           id: true,

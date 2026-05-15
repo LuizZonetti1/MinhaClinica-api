@@ -15,6 +15,8 @@ import {
   UpdateProfessionalProfileService,
   UpdateProfileService,
 } from "../services/users/profileService";
+import { UpdateUserRolesService } from "../services/users/updateUserRolesService";
+import { UserRole } from "../types/enums";
 import { fileToUrl, uploadAvatar } from "../utils/uploadUtils";
 import { UpdateProfessionalProfileInput } from "../types/profile";
 
@@ -272,6 +274,34 @@ export class ProfileController {
       }
       const status = err.statusCode ?? 500;
       res.status(status).json({ message: err.message || "Erro ao atualizar perfil" });
+    }
+  }
+
+  /**
+   * PATCH /api/staff/me/roles
+   * Atualiza os papéis cumulativos do usuário autenticado
+   */
+  async updateRoles(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId as string;
+      const { roles } = req.body as { roles: UserRole[] };
+
+      if (!Array.isArray(roles) || roles.length === 0) {
+        res.status(400).json({ message: "O campo 'roles' deve ser um array não vazio." });
+        return;
+      }
+
+      const service = new UpdateUserRolesService();
+      const result = await service.execute(userId, roles);
+
+      res.status(200).json({ message: "Papéis atualizados com sucesso", ...result });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      if (err.message === "Usuário não encontrado") {
+        res.status(404).json({ message: err.message });
+        return;
+      }
+      res.status(400).json({ message: err.message || "Erro ao atualizar papéis" });
     }
   }
 }

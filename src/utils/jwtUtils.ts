@@ -6,7 +6,9 @@ export interface JwtPayload {
   userId: string;
   clinicId: string | null;
   role: UserRole;
+  roles: UserRole[];
   name: string;
+  iat?: number; // Emitido pelo JWT automaticamente; usado para validar revogacao por passwordChangedAt
 }
 
 // Payload do token temporário de cadastro
@@ -37,17 +39,19 @@ export const generateAuthToken = (
   role: UserRole,
   name: string,
   options: GenerateTokenOptions = {},
+  roles?: UserRole[],
 ): string => {
-  const secret = process.env.JWT_SECRET;
+  const secret = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET;
 
   if (!secret) {
-    throw new Error("JWT_SECRET não está configurado nas variáveis de ambiente");
+    throw new Error("JWT_ACCESS_SECRET n\u00e3o est\u00e1 configurado nas vari\u00e1veis de ambiente");
   }
 
   const payload: JwtPayload = {
     userId,
     clinicId: clinicId ?? null,
     role,
+    roles: roles && roles.length > 0 ? roles : [role],
     name,
   };
 
@@ -68,10 +72,10 @@ export const generateAuthToken = (
  * @returns Payload decodificado ou lança erro
  */
 export const verifyAuthToken = (token: string): JwtPayload => {
-  const secret = process.env.JWT_SECRET;
+  const secret = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET;
 
   if (!secret) {
-    throw new Error("JWT_SECRET não está configurado nas variáveis de ambiente");
+    throw new Error("JWT_ACCESS_SECRET n\u00e3o est\u00e1 configurado nas vari\u00e1veis de ambiente");
   }
 
   try {
@@ -126,8 +130,8 @@ export const generateTempRegistrationToken = (
   clinicId: string | null,
   role: UserRole,
 ): string => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_SECRET não está configurado");
+  const secret = process.env.JWT_TEMP_SECRET ?? process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_TEMP_SECRET n\u00e3o est\u00e1 configurado");
 
   const payload: TempRegistrationPayload = {
     userId,

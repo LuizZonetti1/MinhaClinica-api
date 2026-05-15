@@ -125,6 +125,7 @@ enum NotificationType {
   ACCOUNT_BLOCKED // Conta bloqueada
   REPORT_READY // Relatório/documento disponível
   APPOINTMENT_COMPLETED // Consulta concluída
+  SYSTEM_ALERT // Alerta do sistema (ex: perfil incompleto)
 }
 
 enum NotificationChannel {
@@ -324,6 +325,7 @@ model User {
   // Autenticação
   password String // Hash bcrypt
   role     UserRole
+  roles    UserRole[] // Todos os papéis ativos do usuário (multi-role)
   status   UserStatus @default(ACTIVE)
 
   // Controle de acesso
@@ -346,6 +348,7 @@ model User {
   // Redefinição de Senha
   passwordResetToken   String? // Token hasheado para redefinição de senha
   passwordResetExpires DateTime? // Data de expiração do token (15 minutos)
+  passwordChangedAt    DateTime? // Registra quando a senha foi alterada (para revogar tokens antigos)
 
   // Especialidade pendente (para profissionais em processo de convite)
   pendingSpecialtyId String?

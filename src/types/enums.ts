@@ -130,6 +130,7 @@ export const NotificationType = {
   WELCOME: "WELCOME",
   BIRTHDAY: "BIRTHDAY",
   NO_SHOW_WARNING: "NO_SHOW_WARNING",
+  SYSTEM_ALERT: "SYSTEM_ALERT",
 } as const;
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];

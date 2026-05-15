@@ -297,6 +297,7 @@ export class UpdateProfessionalProfileService {
     if (data.registrationNumber !== undefined)
       profUpdate.registrationNumber = data.registrationNumber;
     if (data.registrationState !== undefined) profUpdate.registrationState = data.registrationState;
+    if (data.professionalCouncil !== undefined) profUpdate.professionalCouncil = data.professionalCouncil;
     if (data.defaultAppointmentDuration !== undefined)
       profUpdate.defaultAppointmentDuration = data.defaultAppointmentDuration;
     if (data.bio !== undefined) profUpdate.bio = data.bio;

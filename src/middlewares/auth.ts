@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { prisma } from "../database/prisma";
 import type { UserRole } from "../types/enums";
 import { type JwtPayload, verifyTempRegistrationToken } from "../utils/jwtUtils";
 
@@ -10,6 +11,7 @@ declare global {
       userId?: string;
       clinicId?: string | null;
       userRole?: UserRole;
+      userRoles?: UserRole[];
       userName?: string;
     }
   }
@@ -44,19 +46,32 @@ export const authMiddleware = async (
       return;
     }
 
-    // Verifica se o JWT_SECRET está definido
-    const secret = process.env.JWT_SECRET;
+    // Verifica se o segredo do access token está definido
+    const secret = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET;
     if (!secret) {
-      throw new Error("JWT_SECRET não está configurado");
+      throw new Error("JWT_ACCESS_SECRET não está configurado");
     }
 
     // Verifica e decodifica o token
     const decoded = jwt.verify(token, secret) as JwtPayload;
 
+    // Verifica se a senha foi alterada após a emissão do token (revogação implícita)
+    if (decoded.iat) {
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { passwordChangedAt: true },
+      });
+      if (user?.passwordChangedAt && decoded.iat < user.passwordChangedAt.getTime() / 1000) {
+        res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+        return;
+      }
+    }
+
     // Adiciona as informações do usuário ao request
     req.userId = decoded.userId;
     req.clinicId = decoded.clinicId;
     req.userRole = decoded.role;
+    req.userRoles = decoded.roles ?? [decoded.role];
     req.userName = decoded.name;
 
     next();
@@ -84,7 +99,9 @@ export const checkRole = (...allowedRoles: UserRole[]) => {
       return;
     }
 
-    if (!allowedRoles.includes(req.userRole)) {
+    const userRoles = req.userRoles ?? [req.userRole];
+    const hasAccess = allowedRoles.some((r) => userRoles.includes(r));
+    if (!hasAccess) {
       res.status(403).json({ error: "Acesso negado" });
       return;
     }

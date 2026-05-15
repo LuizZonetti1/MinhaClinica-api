@@ -35,8 +35,8 @@ export class LoginService {
       throw new Error("Email ou senha incorretos");
     }
 
-    // Gerar token JWT
-    const token = generateAuthToken(user.id, user.clinicId, user.role, user.name);
+    // Gerar token JWT (inclui todos os roles ativos)
+    const token = generateAuthToken(user.id, user.clinicId, user.role, user.name, {}, user.roles);
 
     // Atualizar último login
     await prisma.user.update({
@@ -51,6 +51,7 @@ export class LoginService {
         name: user.name,
         email: user.email,
         role: user.role,
+        roles: user.roles.length > 0 ? user.roles : [user.role],
         clinicId: user.clinicId,
         clinicName: user.clinic?.tradeName ?? null,
       },

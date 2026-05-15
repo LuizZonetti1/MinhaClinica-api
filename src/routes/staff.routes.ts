@@ -39,6 +39,14 @@ router.patch("/me/password", authMiddleware, checkRole(UserRole.ADMIN), (req, re
 );
 
 /**
+ * PROTEGIDO — Atualizar papéis cumulativos do usuário autenticado
+ * PATCH /api/staff/me/roles
+ */
+router.patch("/me/roles", authMiddleware, (req, res) =>
+  profileController.updateRoles(req, res),
+);
+
+/**
  * PROTEGIDO (ADMIN) — Convidar staff
  * POST /api/staff/invite
  */
