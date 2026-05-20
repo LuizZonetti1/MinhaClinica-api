@@ -5,6 +5,7 @@ import { generateAuthToken, verifyTwoFactorPendingToken } from "../../utils/jwtU
 
 const OTP_EXPIRES_MINUTES = 10;
 const DEVICE_TRUSTED_DAYS = 7;
+const RESEND_COOLDOWN_SECONDS = 60;
 
 function hashOtp(otp: string): string {
     return crypto.createHash("sha256").update(otp).digest("hex");
@@ -37,6 +38,34 @@ export class SendOtpService {
         await emailSvc.send2FAOtpEmail(user.email, user.name, otp, OTP_EXPIRES_MINUTES);
 
         return { message: "Código enviado para seu email" };
+    }
+}
+
+// ── 1b. Reenviar OTP (aceita tempToken, aplica cooldown de 60s) ─────────────
+export class ResendOtpService {
+    async execute(pendingToken: string) {
+        const payload = verifyTwoFactorPendingToken(pendingToken);
+
+        const user = await prisma.user.findUnique({
+            where: { id: payload.userId },
+            select: { id: true, twoFactorEnabled: true, twoFactorOtpExpires: true },
+        });
+
+        if (!user) throw new Error("Usuário não encontrado");
+        if (!user.twoFactorEnabled) throw new Error("Autenticação em dois fatores não está ativa");
+
+        // Cooldown de 60s: bloqueia se o OTP atual foi enviado há menos de 60s
+        if (user.twoFactorOtpExpires) {
+            const secondsRemaining = (user.twoFactorOtpExpires.getTime() - Date.now()) / 1000;
+            const cooldownThreshold = OTP_EXPIRES_MINUTES * 60 - RESEND_COOLDOWN_SECONDS;
+            if (secondsRemaining > cooldownThreshold) {
+                const waitSeconds = Math.ceil(secondsRemaining - cooldownThreshold);
+                throw new Error(`Aguarde ${waitSeconds} segundos antes de reenviar o código.`);
+            }
+        }
+
+        const sendOtp = new SendOtpService();
+        return sendOtp.execute(payload.userId);
     }
 }
 
