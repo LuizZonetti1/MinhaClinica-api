@@ -350,6 +350,11 @@ model User {
   passwordResetExpires DateTime? // Data de expiração do token (15 minutos)
   passwordChangedAt    DateTime? // Registra quando a senha foi alterada (para revogar tokens antigos)
 
+  // Autenticação em dois fatores (via email OTP + dispositivo confiável)
+  twoFactorEnabled    Boolean   @default(false)
+  twoFactorOtp        String?   // Código OTP temporário (hash SHA-256)
+  twoFactorOtpExpires DateTime? // Expiração do OTP
+
   // Especialidade pendente (para profissionais em processo de convite)
   pendingSpecialtyId String?
 
@@ -360,6 +365,7 @@ model User {
   // Relacionamentos
   professional          Professional?
   patient               Patient?
+  trustedDevices        TrustedDevice[]
   createdAuditLogs      AuditLog[]     @relation("AuditLogUser")
   receivedNotifications Notification[] @relation("NotificationRecipient")
   sentNotifications     Notification[] @relation("NotificationSender")
@@ -368,6 +374,23 @@ model User {
   @@unique([clinicId, email]) // Email único por clínica (staff/admin)
   @@index([clinicId, role])
   @@map("users")
+}
+
+// ========================================
+// DISPOSITIVOS CONFIÁVEIS (2FA por email)
+// ========================================
+
+model TrustedDevice {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceToken String   @unique
+  userAgent   String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("trusted_devices")
 }
 
 // ========================================
