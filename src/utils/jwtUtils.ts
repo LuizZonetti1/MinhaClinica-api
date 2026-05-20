@@ -20,6 +20,16 @@ export interface TempRegistrationPayload {
   scope: "register_complete";
 }
 
+// Payload do token temporário de 2FA (emitido no login quando 2FA está ativo)
+export interface TwoFactorPendingPayload {
+  userId: string;
+  clinicId: string | null;
+  role: UserRole;
+  roles: UserRole[];
+  name: string;
+  type: "two_factor_pending";
+}
+
 // Opções para geração do token
 interface GenerateTokenOptions {
   expiresIn?: string | number; // Ex: "7d", "24h", "1h", 3600
@@ -160,6 +170,56 @@ export const verifyTempRegistrationToken = (token: string): TempRegistrationPayl
   }
 
   return decoded;
+};
+
+/**
+ * Gera um token temporário emitido quando o login requer validação 2FA.
+ * Expira em 5 minutos.
+ */
+export const generateTwoFactorPendingToken = (
+  userId: string,
+  clinicId: string | null | undefined,
+  role: UserRole,
+  name: string,
+  roles: UserRole[],
+): string => {
+  const secret = process.env.JWT_TEMP_SECRET ?? process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_TEMP_SECRET não está configurado");
+
+  const payload: TwoFactorPendingPayload = {
+    userId,
+    clinicId: clinicId ?? null,
+    role,
+    roles: roles.length > 0 ? roles : [role],
+    name,
+    type: "two_factor_pending",
+  };
+
+  return jwt.sign(payload, secret, { expiresIn: "5m", subject: userId });
+};
+
+/**
+ * Verifica e decodifica um token de 2FA pendente.
+ */
+export const verifyTwoFactorPendingToken = (token: string): TwoFactorPendingPayload => {
+  const secret = process.env.JWT_TEMP_SECRET ?? process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_TEMP_SECRET não está configurado");
+
+  try {
+    const decoded = jwt.verify(token, secret) as TwoFactorPendingPayload;
+    if (decoded.type !== "two_factor_pending") {
+      throw new Error("Token inválido para esta operação");
+    }
+    return decoded;
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new Error("Sessão expirada. Faça login novamente.");
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new Error("Token inválido");
+    }
+    throw error;
+  }
 };
 
 /**
