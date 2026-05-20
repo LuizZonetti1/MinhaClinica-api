@@ -392,4 +392,66 @@ export class AuthEmailService {
             text: `Olá ${name}, acesse o link para redefinir sua senha (válido por 15 minutos): ${resetUrl}`,
         });
     }
+
+    /**
+     * Envia código OTP de verificação em dois fatores por email
+     */
+    async send2FAOtpEmail(
+        email: string,
+        name: string,
+        otp: string,
+        expiresMinutes = 10,
+    ): Promise<void> {
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #3B82F6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+        .otp-box { background: #EFF6FF; border: 2px solid #3B82F6; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0; }
+        .otp-code { font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1D4ED8; font-family: monospace; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Verificação de Acesso — Minha Clínica</h1>
+        </div>
+        <div class="content">
+            <h2>Olá, ${name}!</h2>
+            <p>Detectamos um acesso de um dispositivo não reconhecido. Use o código abaixo para confirmar seu login:</p>
+            <div class="otp-box">
+                <div class="otp-code">${otp}</div>
+            </div>
+            <p style="margin-top: 8px; font-size: 14px; color: #666;">
+                ⏱️ Este código expira em <strong>${expiresMinutes} minutos</strong>.
+            </p>
+            <p style="margin-top: 16px; font-size: 14px; color: #666;">
+                Após confirmar, este dispositivo será lembrado por <strong>7 dias</strong>.
+            </p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+            <p style="font-size: 13px; color: #9CA3AF;">
+                Se você não tentou fazer login, sua senha pode ter sido comprometida. Recomendamos alterá-la imediatamente.
+            </p>
+        </div>
+        <div class="footer">
+            <p>Não compartilhe este código com ninguém — a equipe do Minha Clínica nunca solicita seu código.</p>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        await this.provider.sendEmail({
+            to: email,
+            subject: "Código de verificação — Minha Clínica",
+            html,
+            text: `Olá ${name}, seu código de verificação é: ${otp} (válido por ${expiresMinutes} minutos).`,
+        });
+    }
 }
