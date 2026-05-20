@@ -5,6 +5,7 @@ import {
     Disable2FAService,
     Get2FAStatusService,
     Enable2FAService,
+    ResendOtpService,
 } from "../services/auth/twoFactorService";
 
 export class TwoFactorController {
@@ -75,6 +76,25 @@ export class TwoFactorController {
             res.status(200).json(result);
         } catch (error) {
             handleControllerError(res, error, "Erro ao desativar 2FA");
+        }
+    }
+
+    /**
+     * POST /api/auth/2fa/resend
+     * Reenvia o OTP por email. Aceita tempToken no body (usuário ainda não tem token de acesso).
+     */
+    async resend(req: Request, res: Response): Promise<void> {
+        try {
+            const { tempToken } = req.body as { tempToken?: string };
+            if (!tempToken) {
+                res.status(400).json({ error: "tempToken é obrigatório" });
+                return;
+            }
+            const service = new ResendOtpService();
+            const result = await service.execute(tempToken);
+            res.status(200).json(result);
+        } catch (error) {
+            handleControllerError(res, error, "Erro ao reenviar código 2FA");
         }
     }
 }

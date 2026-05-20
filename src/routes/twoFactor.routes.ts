@@ -13,6 +13,13 @@ const twoFactorController = new TwoFactorController();
 router.post("/validate", (req, res) => twoFactorController.validate(req, res));
 
 /**
+ * PÚBLICO — Reenviar OTP de email durante o login
+ * POST /api/auth/2fa/resend
+ * Body: { tempToken }
+ */
+router.post("/resend", (req, res) => twoFactorController.resend(req, res));
+
+/**
  * PROTEGIDO — Consultar status do 2FA
  * GET /api/auth/2fa/status
  */
