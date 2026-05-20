@@ -1,7 +1,6 @@
 import * as BrevoSdk from "@getbrevo/brevo";
 import nodemailer from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
-import { Resend } from "resend";
 
 /**
  * Interface base para todos os provedores de email.
@@ -64,52 +63,6 @@ export class BrevoEmailProvider implements EmailProvider {
             htmlContent: options.html,
             textContent: options.text,
         });
-    }
-}
-
-/**
- * Provider de produção usando Resend (https://resend.com)
- * Usa HTTP API — funciona no Render Free (sem bloqueio de SMTP).
- * Gratuito até 3.000 emails/mês.
- *
- * Como configurar:
- * 1. Crie conta em resend.com
- * 2. Vá em "API Keys" → crie uma chave
- * 3. Em "Domains" → adicione seu domínio OU use o domínio padrão do Resend para testes
- * 4. Adicione no .env (e nas env vars do Render):
- *      RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
- *      EMAIL_FROM=Minha Clínica <onboarding@resend.dev>   ← domínio padrão para testes
- */
-export class ResendEmailProvider implements EmailProvider {
-    private client: Resend;
-    private from: string;
-
-    constructor() {
-        const apiKey = process.env.RESEND_API_KEY;
-        if (!apiKey) {
-            throw new Error("RESEND_API_KEY não configurada nas variáveis de ambiente");
-        }
-        this.client = new Resend(apiKey);
-        this.from = process.env.EMAIL_FROM ?? "Minha Clínica <onboarding@resend.dev>";
-    }
-
-    async sendEmail(options: {
-        to: string;
-        subject: string;
-        html: string;
-        text?: string;
-    }): Promise<void> {
-        const { error } = await this.client.emails.send({
-            from: this.from,
-            to: options.to,
-            subject: options.subject,
-            html: options.html,
-            text: options.text,
-        });
-
-        if (error) {
-            throw new Error(`Falha ao enviar email via Resend: ${error.message}`);
-        }
     }
 }
 
@@ -216,21 +169,24 @@ export class GmailEmailProvider implements EmailProvider {
 }
 
 /**
- * Retorna o provider correto baseado nas variáveis de ambiente:
+ * Retorna o provider correto baseado no ambiente:
  *
- * BREVO_API_KEY definido   → BrevoEmailProvider  (HTTP API — funciona no Render Free ✅, envia para qualquer email sem domínio)
- * RESEND_API_KEY definido  → ResendEmailProvider (HTTP API — funciona no Render Free ✅, exige domínio verificado para enviar a terceiros)
- * GMAIL_USER definido      → GmailEmailProvider  (SMTP    — NÃO funciona no Render Free ❌)
- * MAILTRAP_USER definido   → MailtrapEmailProvider (captura emails sem entregar — só para testes locais)
- * Nenhum                   → ConsoleEmailProvider (imprime no terminal — fallback de desenvolvimento)
+ * Produção  (NODE_ENV=production) → BrevoEmailProvider  (HTTP API, funciona no Render Free)
+ * Desenvolvimento                 → GmailEmailProvider   (SMTP Gmail, entrega real, ~500/dia)
+ * Fallback                        → ConsoleEmailProvider (imprime no terminal)
+ *
+ * Variáveis necessárias:
+ *   Produção : BREVO_API_KEY + EMAIL_FROM (remetente verificado no Brevo)
+ *   Dev      : GMAIL_USER + GMAIL_APP_PASSWORD
  */
 export function createEmailProvider(): EmailProvider {
-    if (process.env.BREVO_API_KEY) {
-        return new BrevoEmailProvider();
-    }
+    const isProduction = process.env.NODE_ENV === "production";
 
-    if (process.env.RESEND_API_KEY) {
-        return new ResendEmailProvider();
+    if (isProduction) {
+        if (process.env.BREVO_API_KEY) {
+            return new BrevoEmailProvider();
+        }
+        console.warn("[Email] AVISO: NODE_ENV=production mas BREVO_API_KEY não definida. Usando fallback.");
     }
 
     if (process.env.GMAIL_USER) {
