@@ -72,7 +72,7 @@ export const updateProfessionalProfileSchema = yup.object({
 
   professionalCouncil: yup.string().max(50, "Conselho profissional muito longo").optional(),
 
-  registrationNumber: yup.string().max(20, "Número de registro muito longo").optional(),
+  registrationNumber: yup.string().max(50, "Número de registro muito longo").optional(),
 
   registrationState: yup.string().length(2, "Estado deve ter 2 caracteres").uppercase().optional(),
 

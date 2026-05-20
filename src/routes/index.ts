@@ -14,6 +14,7 @@ import receptionRoutes from "./reception.routes";
 import reportRoutes from "./report.routes";
 import staffRoutes from "./staff.routes";
 import transactionRoutes from "./transaction.routes";
+import twoFactorRoutes from "./twoFactor.routes";
 
 const routes = Router();
 
@@ -22,6 +23,7 @@ routes.get("/health", (_req, res) => {
 });
 
 routes.use("/auth", authRoutes);
+routes.use("/auth/2fa", twoFactorRoutes);
 routes.use("/clinics", clinicRoutes);
 routes.use("/professionals", professionalRoutes);
 routes.use("/staff", staffRoutes);
