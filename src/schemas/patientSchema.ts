@@ -1,5 +1,6 @@
 import * as yup from "yup";
 import { Gender } from "../types/enums";
+import { validateCPF } from "../utils/validateCPF";
 
 const VALID_UF = [
   "AC",
@@ -68,10 +69,7 @@ export const receptionRegisterPatientSchema = yup.object({
   cpf: yup
     .string()
     .required("CPF é obrigatório")
-    .test("cpf-format", "CPF inválido", (v) => {
-      if (!v) return false;
-      return /^(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})$/.test(v);
-    }),
+    .test("cpf-valid", "CPF inválido", (v) => (v ? validateCPF(v) : false)),
 
   phone: yup
     .string()
@@ -184,11 +182,7 @@ export const completePatientSchema = yup.object({
   cpf: yup
     .string()
     .required("CPF é obrigatório")
-    // Aceita 000.000.000-00 ou 00000000000
-    .test("cpf-format", "CPF inválido", (v) => {
-      if (!v) return false;
-      return /^(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})$/.test(v);
-    }),
+    .test("cpf-valid", "CPF inválido", (v) => (v ? validateCPF(v) : false)),
 
   phone: yup
     .string()

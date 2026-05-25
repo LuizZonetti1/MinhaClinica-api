@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { validateCPF } from "../utils/validateCPF";
 
 /**
  * Schema para convidar profissional (Admin apenas)
@@ -31,7 +32,8 @@ export const completeProfessionalSchema = yup.object({
   cpf: yup
     .string()
     .required("CPF é obrigatório")
-    .matches(/^\d{11}$/, "CPF deve conter exatamente 11 dígitos"),
+    .matches(/^\d{11}$/, "CPF deve conter exatamente 11 dígitos")
+    .test("cpf-valid", "CPF inválido", (v) => (v ? validateCPF(v) : false)),
 
   phone: yup
     .string()

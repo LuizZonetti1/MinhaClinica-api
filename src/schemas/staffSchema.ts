@@ -1,5 +1,6 @@
 import * as yup from "yup";
 import { UserRole } from "../types/enums";
+import { validateCPF } from "../utils/validateCPF";
 
 const STAFF_ROLES = [UserRole.RECEPTIONIST, UserRole.ADMIN];
 
@@ -33,7 +34,8 @@ export const completeStaffSchema = yup.object({
   cpf: yup
     .string()
     .required("CPF é obrigatório")
-    .matches(/^\d{11}$/, "CPF deve conter exatamente 11 dígitos"),
+    .matches(/^\d{11}$/, "CPF deve conter exatamente 11 dígitos")
+    .test("cpf-valid", "CPF inválido", (v) => (v ? validateCPF(v) : false)),
 
   phone: yup
     .string()

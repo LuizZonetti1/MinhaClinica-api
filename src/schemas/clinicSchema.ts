@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { validateCPF } from "../utils/validateCPF";
 
 // Regex para validações
 const cnpjRegex = /^\d{14}$/;
@@ -132,8 +133,9 @@ export const clinicRegisterCompleteSchema = yup.object({
   cpf: yup
     .string()
     .required("CPF é obrigatório")
+    .transform((v) => v?.replace(/\D/g, ""))
     .matches(/^\d{11}$/, "CPF deve conter exatamente 11 dígitos")
-    .transform((v) => v?.replace(/\D/g, "")),
+    .test("cpf-valid", "CPF inválido", (v) => (v ? validateCPF(v) : false)),
 
   phone: yup
     .string()
