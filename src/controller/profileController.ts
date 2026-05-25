@@ -17,7 +17,8 @@ import {
 } from "../services/users/profileService";
 import { UpdateUserRolesService } from "../services/users/updateUserRolesService";
 import { UserRole } from "../types/enums";
-import { fileToUrl, uploadAvatar } from "../utils/uploadUtils";
+import { uploadProfile } from "../config/multer";
+import { deleteFromCloudinary, extractPublicId } from "../utils/cloudinaryHelper";
 import { UpdateProfessionalProfileInput } from "../types/profile";
 
 export class ProfileController {
@@ -132,14 +133,14 @@ export class ProfileController {
    * Campos: name (texto), phone (texto), avatar (arquivo de imagem)
    */
   async updateMe(req: Request, res: Response): Promise<void> {
-    // Processa upload (arquivo opcional — multer não rejeita se não vier)
+    // Processa upload via Cloudinary (arquivo opcional)
     const uploadError = await new Promise<Error | null>((resolve) => {
-      uploadAvatar(req, res, (err) => resolve(err instanceof Error ? err : null));
+      uploadProfile(req, res, (err) => resolve(err instanceof Error ? err : null));
     });
 
     if (uploadError) {
       if ((uploadError as NodeJS.ErrnoException).code === "LIMIT_FILE_SIZE") {
-        res.status(400).json({ message: "Arquivo muito grande. Máximo: 5 MB." });
+        res.status(400).json({ message: "Arquivo muito grande. Máximo: 2 MB." });
       } else {
         res.status(400).json({ message: uploadError.message || "Erro no upload do arquivo." });
       }
@@ -159,9 +160,16 @@ export class ProfileController {
       if (validatedData.name !== undefined) updateData.name = validatedData.name;
       if (validatedData.phone !== undefined) updateData.phone = validatedData.phone;
 
-      // Se veio arquivo, gera URL e adiciona ao update
+      // Se veio arquivo, deleta o avatar antigo e salva a nova URL pública
       if (req.file) {
-        updateData.avatarUrl = fileToUrl(req, req.file.filename, "avatars");
+        const profileService = new GetProfileService();
+        const existing = await profileService.execute(userId);
+        if (existing?.personal?.avatarUrl) {
+          const oldPublicId = extractPublicId(existing.personal.avatarUrl);
+          if (oldPublicId) await deleteFromCloudinary(oldPublicId);
+        }
+        // req.file.path = URL pública | req.file.filename = public_id
+        updateData.avatarUrl = req.file.path;
       }
 
       if (Object.keys(updateData).length === 0) {

@@ -1,10 +1,8 @@
 import "dotenv/config";
-import path from "node:path";
 import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 import routes from "./routes";
-import { UPLOADS_DIR } from "./utils/uploadUtils";
 
 const app = express();
 
@@ -18,11 +16,6 @@ app.use(
 );
 app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: true, limit: "100kb" }));
-
-// Serve apenas avatares e imagens de relatório publicamente.
-// Documentos clínicos são acessados exclusivamente via rota autenticada:
-// GET /api/appointments/:id/documents/:docId/attachments/:attachmentId/file
-app.use("/uploads/clinics", express.static(path.join(UPLOADS_DIR, "clinics")));
 
 app.use("/api", routes);
 
