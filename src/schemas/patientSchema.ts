@@ -1,6 +1,7 @@
 import * as yup from "yup";
 import { Gender } from "../types/enums";
 import { validateCPF } from "../utils/validateCPF";
+import { validateCep } from "../utils/validateCep";
 
 const VALID_UF = [
   "AC",
@@ -106,9 +107,11 @@ export const receptionRegisterPatientSchema = yup.object({
   zipCode: yup
     .string()
     .nullable()
-    .test("cep-format", "CEP inválido", (v) => {
+    .test("cep-valid", "CEP inválido", async (v) => {
       if (!v) return true;
-      return /^(\d{5}-\d{3}|\d{8})$/.test(v);
+      const digits = v.replace(/\D/g, "");
+      if (digits.length !== 8) return false;
+      return validateCep(digits);
     }),
 
   street: yup.string().nullable().max(200),
@@ -228,10 +231,12 @@ export const completePatientSchema = yup.object({
   zipCode: yup
     .string()
     .nullable()
-    // Aceita 00000-000 ou 00000000
-    .test("cep-format", "CEP inválido", (v) => {
+    // Aceita 00000-000 ou 00000000; em produção verifica existência via ViaCEP
+    .test("cep-valid", "CEP inválido", async (v) => {
       if (!v) return true;
-      return /^(\d{5}-\d{3}|\d{8})$/.test(v);
+      const digits = v.replace(/\D/g, "");
+      if (digits.length !== 8) return false;
+      return validateCep(digits);
     }),
 
   street: yup.string().nullable().max(200),

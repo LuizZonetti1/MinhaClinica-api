@@ -1,5 +1,6 @@
 import * as yup from "yup";
 import { validateCPF } from "../utils/validateCPF";
+import { validateCep } from "../utils/validateCep";
 
 // Regex para validações
 const cnpjRegex = /^\d{14}$/;
@@ -56,7 +57,8 @@ export const clinicRegisterStartSchema = yup.object({
     .required("CEP é obrigatório")
     .matches(cepRegex, "CEP deve conter exatamente 8 dígitos")
     .length(8, "CEP deve ter 8 dígitos")
-    .transform((v) => v?.replace(/\D/g, "")),
+    .transform((v) => v?.replace(/\D/g, ""))
+    .test("cep-exists", "CEP não encontrado", (v) => validateCep(v)),
 
   street: yup
     .string()
@@ -155,7 +157,12 @@ export const clinicUpdateSchema = yup.object({
   phone: yup.string().matches(phoneRegex).optional(),
   website: yup.string().url().optional(),
   logoUrl: yup.string().url().optional(),
-  zipCode: yup.string().matches(cepRegex).length(8).optional(),
+  zipCode: yup
+    .string()
+    .matches(cepRegex)
+    .length(8)
+    .test("cep-exists", "CEP não encontrado", (v) => validateCep(v))
+    .optional(),
   street: yup.string().min(3).max(200).optional(),
   number: yup.string().max(10).optional(),
   complement: yup.string().max(100).optional(),
@@ -197,6 +204,7 @@ export const clinicInfoUpdateSchema = yup.object({
     .matches(cepRegex, "CEP deve conter 8 dígitos")
     .length(8)
     .transform((v) => v?.replace(/\D/g, ""))
+    .test("cep-exists", "CEP não encontrado", (v) => validateCep(v))
     .optional(),
   street: yup.string().min(3).max(200).optional(),
   number: yup.string().max(10).optional(),
