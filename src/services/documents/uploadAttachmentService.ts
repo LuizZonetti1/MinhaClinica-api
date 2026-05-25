@@ -1,4 +1,3 @@
-import path from "node:path";
 import { prisma } from "../../database/prisma";
 import type { AuditContext } from "../../types/document";
 
@@ -50,7 +49,8 @@ export class UploadAttachmentService {
             sizeBytes: attachment.sizeBytes,
             caption: attachment.caption ?? null,
             uploadedAt: attachment.uploadedAt.toISOString(),
-            url: `/appointments/${appointmentId}/documents/${docId}/attachments/${attachment.id}/file`,
+            // storedName é a URL pública do Cloudinary
+            url: attachment.storedName,
         };
     }
 }

@@ -1,12 +1,9 @@
-import fs from "node:fs";
-import path from "node:path";
 import { Router } from "express";
 import { DocumentController } from "../controller/documentController";
 import { authMiddleware, checkRole } from "../middlewares/auth";
 import { uploadDocumentAttachment } from "../middlewares/upload";
 import { validate } from "../middlewares/validation";
 import { prisma } from "../database/prisma";
-import { UPLOADS_DIR } from "../utils/uploadUtils";
 import {
   createAddendumSchema,
   createDocumentSchema,
@@ -201,13 +198,14 @@ router.get(
         return res.status(403).json({ message: "Acesso negado." });
       }
 
-      const filePath = path.join(UPLOADS_DIR, "documents", attachment.storedName);
-
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: "Arquivo não encontrado no servidor." });
+      // storedName agora é a URL pública do Cloudinary
+      const cloudinaryUrl = attachment.storedName;
+      if (!cloudinaryUrl || !cloudinaryUrl.startsWith("http")) {
+        return res.status(404).json({ message: "Arquivo não encontrado." });
       }
 
-      res.sendFile(filePath);
+      // Redireciona para a URL pública do Cloudinary
+      res.redirect(302, cloudinaryUrl);
     } catch {
       res.status(500).json({ message: "Erro ao servir arquivo." });
     }

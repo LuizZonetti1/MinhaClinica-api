@@ -214,7 +214,8 @@ export class DocumentController {
         docId,
         {
           originalName: file.originalname,
-          storedName: file.filename,
+          // file.path = URL pública no Cloudinary; file.filename = public_id
+          storedName: file.path,
           mimeType: file.mimetype,
           sizeBytes: file.size,
           documentId: docId,
