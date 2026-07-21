@@ -6,11 +6,15 @@ import routes from "./routes";
 
 const app = express();
 
+// Em desenvolvimento aceita qualquer origem (SPA, Expo web, dispositivo físico
+// na rede local) para facilitar testes locais. Em produção, restringe ao FRONTEND_URL.
+const isDev = process.env.NODE_ENV !== "production";
+
 app.set("trust proxy", 1);
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: isDev ? true : process.env.FRONTEND_URL,
     credentials: true,
   }),
 );
