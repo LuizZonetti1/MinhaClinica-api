@@ -4,6 +4,7 @@ import utc from "dayjs/plugin/utc";
 import { ReceptionDashboardRepository } from "../../repository/receptionDashboardRepository";
 import type { AgendaResponse, AgendaSlot, ProfessionalAgenda } from "../../types/dashboard";
 import { DayOfWeek } from "../../types/enums";
+import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDuration";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -74,7 +75,11 @@ export class GetProfessionalsAgendaService {
       const wh = prof.workingHours[0] ?? null;
       const workStart = timeToMinutes(wh?.startTime ?? DEFAULT_WORK_START);
       const workEnd = timeToMinutes(wh?.endTime ?? DEFAULT_WORK_END);
-      const duration = prof.defaultAppointmentDuration;
+      // Sem seleção de procedimento nesta visão (grade multi-profissional) — resolve
+      // trivialmente para a duração padrão, mas via a mesma função das demais etapas.
+      const duration = resolveAppointmentDuration({
+        professionalDefaultDuration: prof.defaultAppointmentDuration,
+      });
       const buffer = prof.bufferTime;
       const step = duration + buffer;
 

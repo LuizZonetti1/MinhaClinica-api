@@ -22,10 +22,9 @@ export const updateAppointmentStatusSchema = yup.object({
 export const createAppointmentSchema = yup.object({
   patientId: yup.string().required("Paciente é obrigatório"),
   professionalId: yup.string().required("Profissional é obrigatório"),
-  type: yup
-    .string()
-    .oneOf(Object.values(AppointmentType), "Tipo de consulta inválido")
-    .required("Tipo de consulta é obrigatório"),
+  // Opcional: quando procedureId é enviado, o tipo é derivado de
+  // Procedure.defaultType no service. Sem procedureId, cai em CONSULTATION.
+  type: yup.string().oneOf(Object.values(AppointmentType), "Tipo de consulta inválido").optional(),
   appointmentDate: yup
     .string()
     .required("Data é obrigatória")

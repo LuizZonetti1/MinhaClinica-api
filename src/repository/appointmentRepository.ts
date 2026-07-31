@@ -61,48 +61,52 @@ export class AppointmentRepository {
     startOfDay: Date,
     endOfDay: Date,
   ) {
-    const [professional, workingHours, scheduleBlocks, appointments] = await Promise.all([
-      prisma.professional.findFirst({
-        where: { id: professionalId, clinicId },
-        select: {
-          id: true,
-          defaultAppointmentDuration: true,
-          bufferTime: true,
-        },
-      }),
-      prisma.professionalWorkingHours.findFirst({
-        where: { professionalId, dayOfWeek, isWorking: true },
-        select: {
-          startTime: true,
-          endTime: true,
-          lunchBreakStart: true,
-          lunchBreakEnd: true,
-        },
-      }),
-      prisma.professionalScheduleBlock.findMany({
-        where: {
-          professionalId,
-          startDateTime: { lte: endOfDay },
-          endDateTime: { gte: startOfDay },
-        },
-        select: {
-          startDateTime: true,
-          endDateTime: true,
-          isAllDay: true,
-        },
-      }),
-      prisma.appointment.findMany({
-        where: {
-          professionalId,
-          clinicId,
-          appointmentDate: { gte: startOfDay, lte: endOfDay },
-          status: { notIn: [...CONSULTATION_EXCLUDED_STATUSES] },
-        },
-        select: { startTime: true, endTime: true },
-      }),
-    ]);
+    const [professional, workingHours, scheduleBlocks, appointments, activeWorkingDaysCount] =
+      await Promise.all([
+        prisma.professional.findFirst({
+          where: { id: professionalId, clinicId },
+          select: {
+            id: true,
+            defaultAppointmentDuration: true,
+            bufferTime: true,
+          },
+        }),
+        prisma.professionalWorkingHours.findFirst({
+          where: { professionalId, dayOfWeek, isWorking: true },
+          select: {
+            startTime: true,
+            endTime: true,
+            lunchBreakStart: true,
+            lunchBreakEnd: true,
+          },
+        }),
+        prisma.professionalScheduleBlock.findMany({
+          where: {
+            professionalId,
+            startDateTime: { lte: endOfDay },
+            endDateTime: { gte: startOfDay },
+          },
+          select: {
+            startDateTime: true,
+            endDateTime: true,
+            isAllDay: true,
+          },
+        }),
+        prisma.appointment.findMany({
+          where: {
+            professionalId,
+            clinicId,
+            appointmentDate: { gte: startOfDay, lte: endOfDay },
+            status: { notIn: [...CONSULTATION_EXCLUDED_STATUSES] },
+          },
+          select: { startTime: true, endTime: true },
+        }),
+        prisma.professionalWorkingHours.count({
+          where: { professionalId, isWorking: true },
+        }),
+      ]);
 
-    return { professional, workingHours, scheduleBlocks, appointments };
+    return { professional, workingHours, scheduleBlocks, appointments, activeWorkingDaysCount };
   }
 
   /** Etapa 3 — Cria o agendamento */

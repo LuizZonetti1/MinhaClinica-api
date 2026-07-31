@@ -2,8 +2,14 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { AppointmentRepository } from "../../repository/appointmentRepository";
-import type { AvailableSlotsResult, TimeSlot } from "../../types/appointment";
+import { ProcedureRepository } from "../../repository/procedureRepository";
+import type {
+  AvailableSlotsResult,
+  SlotsUnavailableReason,
+  TimeSlot,
+} from "../../types/appointment";
 import { DayOfWeek } from "../../types/enums";
+import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDuration";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -34,11 +40,13 @@ function minutesToTime(minutes: number): string {
 
 export class GetAvailableSlotsService {
   private repository = new AppointmentRepository();
+  private procedureRepository = new ProcedureRepository();
 
   async execute(
     professionalId: string,
     clinicId: string,
     dateStr: string,
+    procedureId?: string,
   ): Promise<AvailableSlotsResult> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       throw Object.assign(new Error("Data deve estar no formato YYYY-MM-DD"), { statusCode: 400 });
@@ -56,7 +64,7 @@ export class GetAvailableSlotsService {
     const isToday = dayjsDate.isSame(now, "day");
     const nowMinutes = now.hour() * 60 + now.minute();
 
-    const { professional, workingHours, scheduleBlocks, appointments } =
+    const { professional, workingHours, scheduleBlocks, appointments, activeWorkingDaysCount } =
       await this.repository.getProfessionalScheduleData(
         professionalId,
         clinicId,
@@ -69,13 +77,33 @@ export class GetAvailableSlotsService {
       throw Object.assign(new Error("Profissional não encontrado"), { statusCode: 404 });
     }
 
-    // Profissional não trabalha nesse dia da semana → sem slots
-    if (!workingHours) {
-      return { date: dateStr, professionalId, duration: professional.defaultAppointmentDuration, bufferTime: professional.bufferTime, slots: [] };
-    }
+    // procedureId inválido para esta clínica/profissional é ignorado aqui (não é
+    // endpoint de mutação): cai no fallback de duração padrão do profissional,
+    // igual ao comportamento de antes de a Etapa 4 existir.
+    const procedureData = procedureId
+      ? await this.procedureRepository.findDurationInputs(procedureId, professionalId, clinicId)
+      : null;
 
-    const duration = professional.defaultAppointmentDuration;
+    const duration = resolveAppointmentDuration({
+      professionalDefaultDuration: professional.defaultAppointmentDuration,
+      procedureDefaultDuration: procedureData?.defaultDuration,
+      customDuration: procedureData?.professionals[0]?.customDuration,
+    });
     const bufferTime = professional.bufferTime;
+
+    // Profissional não trabalha nesse dia da semana (ou nunca configurou horários) → sem slots
+    if (!workingHours) {
+      const reason: SlotsUnavailableReason =
+        activeWorkingDaysCount === 0 ? "NO_WORKING_HOURS" : "DAY_OFF";
+      return {
+        date: dateStr,
+        professionalId,
+        duration,
+        bufferTime,
+        slots: [],
+        reason,
+      };
+    }
 
     // Definir range de trabalho
     const workStart = timeToMinutes(workingHours.startTime);
@@ -135,12 +163,23 @@ export class GetAvailableSlotsService {
       current += step;
     }
 
+    const isDateBlocked = scheduleBlocks.some((block) => block.isAllDay);
+    let reason: SlotsUnavailableReason | undefined;
+    if (isDateBlocked) {
+      reason = "DATE_BLOCKED";
+    } else if (isPastDate) {
+      reason = "PAST_DATE";
+    } else if (slots.length > 0 && !slots.some((slot) => slot.available)) {
+      reason = "FULLY_BOOKED";
+    }
+
     return {
       date: dateStr,
       professionalId,
       duration,
       bufferTime,
       slots,
+      reason,
     };
   }
 }

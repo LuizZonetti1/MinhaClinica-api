@@ -29,8 +29,10 @@ router.get("/professionals", ...receptionAccess, (req, res) =>
 );
 
 /**
- * GET /api/appointments/professionals/:id/slots?date=YYYY-MM-DD
- * Retorna todos os slots do dia com flag de disponibilidade
+ * GET /api/appointments/professionals/:id/slots?date=YYYY-MM-DD&procedureId=
+ * Retorna todos os slots do dia com flag de disponibilidade.
+ * procedureId (opcional) resolve a duração pelo procedimento em vez do padrão
+ * do profissional — ver resolveAppointmentDuration().
  * Etapa 2 do fluxo "Marcar Consulta"
  */
 router.get("/professionals/:id/slots", ...receptionAccess, (req, res) =>
@@ -71,11 +73,8 @@ router.get(
  * PATCH /api/appointments/:id/status
  * Transição de status pelo profissional (ex: WAITING → IN_PROGRESS).
  */
-router.patch(
-  "/:id/status",
-  authMiddleware,
-  checkRole(UserRole.PROFESSIONAL),
-  (req, res) => controller.patchStatus(req, res),
+router.patch("/:id/status", authMiddleware, checkRole(UserRole.PROFESSIONAL), (req, res) =>
+  controller.patchStatus(req, res),
 );
 
 export default router;

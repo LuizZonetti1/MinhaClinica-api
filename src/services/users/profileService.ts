@@ -104,7 +104,11 @@ export class GetProfileService {
             firstDayOfMonth,
             firstDayOfNextMonth,
           ),
-          this.dashboardRepository.getMonthlyIncome(clinic.id, firstDayOfMonth, firstDayOfNextMonth),
+          this.dashboardRepository.getMonthlyIncome(
+            clinic.id,
+            firstDayOfMonth,
+            firstDayOfNextMonth,
+          ),
         ]);
     }
 
@@ -297,9 +301,11 @@ export class UpdateProfessionalProfileService {
     if (data.registrationNumber !== undefined)
       profUpdate.registrationNumber = data.registrationNumber;
     if (data.registrationState !== undefined) profUpdate.registrationState = data.registrationState;
-    if (data.professionalCouncil !== undefined) profUpdate.professionalCouncil = data.professionalCouncil;
+    if (data.professionalCouncil !== undefined)
+      profUpdate.professionalCouncil = data.professionalCouncil;
     if (data.defaultAppointmentDuration !== undefined)
       profUpdate.defaultAppointmentDuration = data.defaultAppointmentDuration;
+    if (data.bufferTime !== undefined) profUpdate.bufferTime = data.bufferTime;
     if (data.bio !== undefined) profUpdate.bio = data.bio;
     if (data.formations !== undefined) profUpdate.formations = data.formations;
 

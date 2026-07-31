@@ -1,5 +1,4 @@
 import type { Request, Response } from "express";
-import { handleControllerError } from "../utils/controllerUtils";
 import { CreateAppointmentService } from "../services/appointments/createAppointmentService";
 import { GetAppointmentByIdService } from "../services/appointments/getAppointmentByIdService";
 import { GetAvailableSlotsService } from "../services/appointments/getAvailableSlotsService";
@@ -8,6 +7,7 @@ import { ListCompletedPatientsService } from "../services/appointments/listCompl
 import { ListProfessionalsService } from "../services/appointments/listProfessionalsService";
 import { PatchAppointmentStatusService } from "../services/appointments/patchAppointmentStatusService";
 import { SearchPatientsService } from "../services/appointments/searchPatientsService";
+import { handleControllerError } from "../utils/controllerUtils";
 
 export class AppointmentController {
   /**
@@ -70,6 +70,7 @@ export class AppointmentController {
 
       const professionalId = req.params.id as string;
       const date = String(req.query.date ?? "");
+      const procedureId = req.query.procedureId ? String(req.query.procedureId) : undefined;
 
       if (!date) {
         res.status(400).json({ error: "Parâmetro 'date' é obrigatório (YYYY-MM-DD)" });
@@ -77,7 +78,7 @@ export class AppointmentController {
       }
 
       const service = new GetAvailableSlotsService();
-      const result = await service.execute(professionalId, clinicId, date);
+      const result = await service.execute(professionalId, clinicId, date, procedureId);
       res.status(200).json(result);
     } catch (error) {
       handleControllerError(res, error, "Erro ao buscar horários disponíveis");

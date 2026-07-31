@@ -3,8 +3,10 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
 import { PatientDashboardRepository } from "../../repository/patientDashboardRepository";
+import { ProcedureRepository } from "../../repository/procedureRepository";
 import { AppointmentChannel, AppointmentStatus } from "../../types/enums";
 import type { PatientRescheduleInput, PatientRescheduleResult } from "../../types/patient";
+import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDuration";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -24,6 +26,7 @@ function minutesToTime(minutes: number): string {
 
 export class RescheduleAppointmentService {
   private repository = new PatientDashboardRepository();
+  private procedureRepository = new ProcedureRepository();
 
   async execute(
     appointmentId: string,
@@ -61,8 +64,24 @@ export class RescheduleAppointmentService {
       });
     }
 
+    // Preserva a duração do procedimento original (se houver) também no reagendamento,
+    // inclusive quando o novo profissional tem customDuration próprio para ele.
+    const procedureData = original.procedureId
+      ? await this.procedureRepository.findDurationInputs(
+          original.procedureId,
+          input.professionalId,
+          input.clinicId,
+        )
+      : null;
+
+    const duration = resolveAppointmentDuration({
+      professionalDefaultDuration: professional.defaultAppointmentDuration,
+      procedureDefaultDuration: procedureData?.defaultDuration,
+      customDuration: procedureData?.professionals[0]?.customDuration,
+    });
+
     const startMinutes = timeToMinutes(input.startTime);
-    const endTime = minutesToTime(startMinutes + professional.defaultAppointmentDuration);
+    const endTime = minutesToTime(startMinutes + duration);
 
     // Valida que a nova data/hora é futura
     const newDatetime = dayjs
@@ -119,7 +138,7 @@ export class RescheduleAppointmentService {
           appointmentDate,
           startTime: input.startTime,
           endTime,
-          duration: professional.defaultAppointmentDuration,
+          duration,
           type: original.type,
           channel: (original.channel as AppointmentChannel) ?? AppointmentChannel.IN_PERSON,
           notes: original.notes ?? undefined,

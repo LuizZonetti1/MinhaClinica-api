@@ -33,12 +33,20 @@ export interface TimeSlot {
   available: boolean; // false = já tem agendamento nesse horário
 }
 
+export type SlotsUnavailableReason =
+  | "NO_WORKING_HOURS" // profissional nunca configurou horários
+  | "DAY_OFF" // não atende neste dia da semana
+  | "DATE_BLOCKED" // bloqueio de agenda cobrindo o dia
+  | "FULLY_BOOKED" // todos os slots ocupados
+  | "PAST_DATE"; // data já passou
+
 export interface AvailableSlotsResult {
   date: string; // "YYYY-MM-DD"
   professionalId: string;
   duration: number; // minutos por consulta
   bufferTime: number; // minutos de intervalo
   slots: TimeSlot[];
+  reason?: SlotsUnavailableReason;
 }
 
 // ── Criação do agendamento (Etapa 3) ──────────────────────────────────────────
@@ -48,7 +56,9 @@ export interface CreateAppointmentInput {
   professionalId: string;
   appointmentDate: string; // "YYYY-MM-DD"
   startTime: string; // "HH:MM"
-  type: AppointmentType;
+  // Opcional quando procedureId é enviado: nesse caso o tipo vem de
+  // Procedure.defaultType. Sem procedureId, cai em CONSULTATION se omitido.
+  type?: AppointmentType;
   channel?: AppointmentChannel;
   notes?: string;
   procedureId?: string;

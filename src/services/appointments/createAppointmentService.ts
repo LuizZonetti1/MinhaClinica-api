@@ -4,9 +4,11 @@ import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
 import { AppointmentRepository } from "../../repository/appointmentRepository";
 import { NotificationRepository } from "../../repository/notificationRepository";
+import { ProcedureRepository } from "../../repository/procedureRepository";
 import type { AppointmentCreatedResult, CreateAppointmentInput } from "../../types/appointment";
-import { AppointmentChannel } from "../../types/enums";
-import { EmailService, createEmailProvider } from "../email/emailService";
+import { AppointmentChannel, AppointmentType } from "../../types/enums";
+import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDuration";
+import { createEmailProvider, EmailService } from "../email/emailService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -26,6 +28,7 @@ function minutesToTime(minutes: number): string {
 
 export class CreateAppointmentService {
   private repository = new AppointmentRepository();
+  private procedureRepository = new ProcedureRepository();
 
   async execute(
     input: CreateAppointmentInput,
@@ -83,7 +86,38 @@ export class CreateAppointmentService {
       throw Object.assign(new Error("Clínica não encontrada"), { statusCode: 404 });
     }
 
-    const duration = professional.defaultAppointmentDuration;
+    // Resolver duração e tipo a partir do procedimento (se informado)
+    let duration = professional.defaultAppointmentDuration;
+    let type: AppointmentType = input.type ?? AppointmentType.CONSULTATION;
+
+    if (input.procedureId) {
+      const procedureData = await this.procedureRepository.findDurationInputs(
+        input.procedureId,
+        input.professionalId,
+        clinicId,
+      );
+
+      if (!procedureData) {
+        throw Object.assign(new Error("Procedimento não encontrado nesta clínica"), {
+          statusCode: 400,
+        });
+      }
+
+      if (procedureData.professionals.length === 0) {
+        throw Object.assign(
+          new Error("Este procedimento não está vinculado ao profissional selecionado"),
+          { statusCode: 400 },
+        );
+      }
+
+      duration = resolveAppointmentDuration({
+        professionalDefaultDuration: professional.defaultAppointmentDuration,
+        procedureDefaultDuration: procedureData.defaultDuration,
+        customDuration: procedureData.professionals[0]?.customDuration,
+      });
+      type = procedureData.defaultType;
+    }
+
     const startMinutes = timeToMinutes(input.startTime);
 
     if (Number.isNaN(startMinutes) || startMinutes < 0 || startMinutes >= 24 * 60) {
@@ -141,7 +175,7 @@ export class CreateAppointmentService {
       startTime: input.startTime,
       endTime,
       duration,
-      type: input.type,
+      type,
       channel: input.channel ?? AppointmentChannel.IN_PERSON,
       notes: input.notes,
       createdBy,
@@ -219,7 +253,7 @@ export class CreateAppointmentService {
             professional.user.name,
             clinic.tradeName,
           );
-        } catch { }
+        } catch {}
 
         // NEW_BOOKING → profissional
         const profNotif = await notifRepo.create({
@@ -237,7 +271,10 @@ export class CreateAppointmentService {
         await notifRepo.markAsSent(profNotif.id);
 
         // NEW_BOOKING → admin + recepcionistas
-        const staffUsers = await notifRepo.findActiveClinicUsers(clinicId, ["ADMIN", "RECEPTIONIST"]);
+        const staffUsers = await notifRepo.findActiveClinicUsers(clinicId, [
+          "ADMIN",
+          "RECEPTIONIST",
+        ]);
         for (const staff of staffUsers) {
           const sNotif = await notifRepo.create({
             clinicId,

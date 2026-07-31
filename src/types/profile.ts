@@ -127,6 +127,7 @@ export interface UpdateProfessionalProfileInput {
   registrationState?: string;
   specialty?: string;
   defaultAppointmentDuration?: number;
+  bufferTime?: number;
   bio?: string | null;
   formations?: string | null;
   workingHours?: Array<{

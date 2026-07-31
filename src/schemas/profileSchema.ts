@@ -89,6 +89,13 @@ export const updateProfessionalProfileSchema = yup.object({
     .max(480, "Duração máxima de 480 minutos")
     .optional(),
 
+  bufferTime: yup
+    .number()
+    .integer("Intervalo deve ser um número inteiro de minutos")
+    .min(0, "Intervalo mínimo de 0 minutos")
+    .max(120, "Intervalo máximo de 120 minutos")
+    .optional(),
+
   bio: yup.string().max(2000, "Biografia deve ter no máximo 2000 caracteres").optional().nullable(),
 
   formations: yup

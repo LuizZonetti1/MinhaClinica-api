@@ -53,6 +53,25 @@ export class ProcedureRepository {
     return prisma.procedure.findMany({ where: { id: { in: ids }, clinicId } });
   }
 
+  /**
+   * Dados para resolveAppointmentDuration(): duração e tipo padrão do procedimento
+   * (escopado à clínica) e o customDuration do vínculo com este profissional, se houver.
+   * Retorna null se o procedimento não existe nesta clínica.
+   */
+  async findDurationInputs(procedureId: string, professionalId: string, clinicId: string) {
+    return prisma.procedure.findFirst({
+      where: { id: procedureId, clinicId },
+      select: {
+        defaultDuration: true,
+        defaultType: true,
+        professionals: {
+          where: { professionalId },
+          select: { customDuration: true },
+        },
+      },
+    });
+  }
+
   async findActiveForProfessional(professionalId: string, clinicId: string) {
     return prisma.procedure.findMany({
       where: {
