@@ -610,7 +610,8 @@ model Procedure {
 
   // Configurações
   defaultDuration Int // Duração em minutos
-  defaultPrice    Decimal @db.Decimal(10, 2)
+  defaultPrice    Decimal         @db.Decimal(10, 2)
+  defaultType     AppointmentType @default(CONSULTATION)
 
   // Controle
   isActive           Boolean @default(true)

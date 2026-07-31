@@ -20,6 +20,7 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "db:seed": "tsx src/database/seed.ts",
+    "db:migrate-procedures": "tsx src/database/migrateDefaultProcedures.ts",
     "db:studio": "prisma studio",
     "erd": "prisma generate"
   },
