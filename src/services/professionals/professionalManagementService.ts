@@ -407,10 +407,25 @@ export class DeactivateProfessionalService {
       );
     }
 
-    // Deletar o usuário — o registro de Professional é removido em cascade
-    await prisma.user.delete({
-      where: { id: professional.user.id },
-    });
+    // Soft delete + anonimização: mantém o histórico de consultas/prontuários
+    // intacto (Appointment.professional usa onDelete: Restrict de propósito),
+    // mas apaga os dados pessoais do profissional.
+    await prisma.$transaction([
+      prisma.professional.update({
+        where: { id: professional.id },
+        data: { isActive: false, bio: null, formations: null },
+      }),
+      prisma.user.update({
+        where: { id: professional.user.id },
+        data: {
+          status: UserStatus.INACTIVE,
+          name: "Profissional removido",
+          email: `deleted-${professional.user.id}@removido.local`,
+          phone: null,
+          avatarUrl: null,
+        },
+      }),
+    ]);
 
     return {
       message: "Profissional removido com sucesso",
