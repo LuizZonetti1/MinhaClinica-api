@@ -272,8 +272,17 @@ export class DeactivateReceptionService {
       );
     }
 
-    await prisma.user.delete({
+    // Soft delete + anonimização: preserva o histórico de agendamentos criados
+    // por este usuário, mas apaga os dados pessoais da recepcionista.
+    await prisma.user.update({
       where: { id: receptionist.id },
+      data: {
+        status: UserStatus.INACTIVE,
+        name: "Recepcionista removido",
+        email: `deleted-${receptionist.id}@removido.local`,
+        phone: null,
+        avatarUrl: null,
+      },
     });
 
     return {
