@@ -20,6 +20,13 @@ export const createProcedureSchema = yup.object({
     .optional(),
 });
 
+export const setMyProceduresSchema = yup.object({
+  procedureIds: yup
+    .array()
+    .of(yup.string().required())
+    .required("Lista de procedimentos é obrigatória"),
+});
+
 export const updateProcedureSchema = yup.object({
   name: yup
     .string()

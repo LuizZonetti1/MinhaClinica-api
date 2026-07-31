@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { AppointmentController } from "../controller/appointmentController";
 import { PatientCommentController } from "../controller/patientCommentController";
+import { ProcedureController } from "../controller/procedureController";
 import { ProfessionalController } from "../controller/professionalController";
 import { ProfessionalDashboardController } from "../controller/professionalDashboardController";
 import { ProfileController } from "../controller/profileController";
@@ -10,6 +11,7 @@ import {
   createPatientCommentSchema,
   updatePatientCommentSchema,
 } from "../schemas/patientCommentSchema";
+import { setMyProceduresSchema } from "../schemas/procedureSchema";
 import {
   completeProfessionalSchema,
   inviteProfessionalSchema,
@@ -23,6 +25,7 @@ const professionalDashboardController = new ProfessionalDashboardController();
 const patientCommentController = new PatientCommentController();
 const appointmentController = new AppointmentController();
 const profileController = new ProfileController();
+const procedureController = new ProcedureController();
 
 const professionalAuth = [authMiddleware, checkRole(UserRole.PROFESSIONAL)];
 
@@ -95,6 +98,19 @@ router.delete("/me/comments/:id", ...professionalAuth, (req, res) =>
 );
 
 /**
+ * PROTEGIDO (PROFESSIONAL) — Procedimentos que o profissional atende
+ * GET /api/professionals/me/procedures — catálogo ativo da clínica, com flag "selected"
+ * PUT /api/professionals/me/procedures — substitui o conjunto inteiro de vínculos
+ *   { procedureIds: string[] }
+ */
+router.get("/me/procedures", ...professionalAuth, (req, res) =>
+  procedureController.listMine(req, res),
+);
+router.put("/me/procedures", ...professionalAuth, validate(setMyProceduresSchema), (req, res) =>
+  procedureController.setMine(req, res),
+);
+
+/**
  * PROTEGIDO (ADMIN/RECEPTIONIST) — Listar profissionais
  * GET /api/professionals
  */
@@ -140,6 +156,18 @@ router.post("/complete", tempRegistrationAuth, validate(completeProfessionalSche
  */
 router.get("/:id", authMiddleware, checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST), (req, res) =>
   professionalController.getById(req, res),
+);
+
+/**
+ * PROTEGIDO (ADMIN/RECEPTIONIST) — Procedimentos ativos que o profissional atende
+ * GET /api/professionals/:id/procedures
+ * Alimenta o dropdown da tela de agendamento.
+ */
+router.get(
+  "/:id/procedures",
+  authMiddleware,
+  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
+  (req, res) => procedureController.listForProfessional(req, res),
 );
 
 /**
