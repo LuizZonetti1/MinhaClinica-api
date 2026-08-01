@@ -9,21 +9,6 @@ generator client {
   output   = "../generated/prisma"
 }
 
-// DER simplificado: apenas tabelas e relacionamentos (documentação/TCC)
-generator erdMacro {
-  provider    = "prisma-erd-generator"
-  output      = "../docs/erd/erd-macro.svg"
-  tableOnly   = true
-  ignoreEnums = true
-}
-
-// DER completo: todos os atributos das tabelas
-generator erdFull {
-  provider    = "prisma-erd-generator"
-  output      = "../docs/erd/erd-completo.svg"
-  ignoreEnums = true
-}
-
 datasource db {
   provider = "postgresql"
 }
