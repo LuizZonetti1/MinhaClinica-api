@@ -76,7 +76,8 @@ function flattenPatientBody(req: Request, _res: Response, next: NextFunction): v
 // 10 tentativas por janela de 15 minutos
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 10,
+  skipSuccessfulRequests: true,
   message: { message: "Muitas tentativas. Tente novamente em 15 minutos." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -85,8 +86,18 @@ const authLimiter = rateLimit({
 // 5 envios por janela de 1 hora
 const emailLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 300,
+  max: 5,
   message: { message: "Limite de envios atingido. Tente novamente em 1 hora." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rotas que recebem token na requisição (verificação/ativação).
+// Protege contra varredura de tokens e contra enumeração.
+const tokenLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { message: "Muitas tentativas. Tente novamente em alguns minutos." },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -105,7 +116,7 @@ router.post("/login", authLimiter, validate(loginSchema), (req, res) =>
  * PÚBLICO — Etapa 1: Início do cadastro
  * POST /api/auth/register/start
  */
-router.post("/register/start", validate(registerStartSchema), (req, res) =>
+router.post("/register/start", authLimiter, validate(registerStartSchema), (req, res) =>
   authController.registerStart(req, res),
 );
 
@@ -113,7 +124,7 @@ router.post("/register/start", validate(registerStartSchema), (req, res) =>
  * PÚBLICO — Etapa 2: Verificar token de email
  * POST /api/auth/register/verify
  */
-router.post("/register/verify", validate(verifyEmailSchema), (req, res) =>
+router.post("/register/verify", tokenLimiter, validate(verifyEmailSchema), (req, res) =>
   authController.registerVerify(req, res),
 );
 
@@ -145,7 +156,7 @@ router.post(
  * PÚBLICO — Ativar conta de paciente cadastrado pela recepção
  * POST /api/auth/activate-account
  */
-router.post("/activate-account", (req, res) =>
+router.post("/activate-account", tokenLimiter, (req, res) =>
   authController.activateAccount(req, res),
 );
 

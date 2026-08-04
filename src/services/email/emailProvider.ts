@@ -15,6 +15,15 @@ export interface EmailProvider {
  * Use apenas localmente, nunca em produção.
  */
 export class ConsoleEmailProvider implements EmailProvider {
+    constructor() {
+        if (process.env.NODE_ENV === "production") {
+            throw new Error(
+                "ConsoleEmailProvider não pode ser usado com NODE_ENV=production. " +
+                "Configure BREVO_API_KEY.",
+            );
+        }
+    }
+
     async sendEmail(options: {
         to: string;
         subject: string;
@@ -183,10 +192,13 @@ export function createEmailProvider(): EmailProvider {
     const isProduction = process.env.NODE_ENV === "production";
 
     if (isProduction) {
-        if (process.env.BREVO_API_KEY) {
-            return new BrevoEmailProvider();
+        if (!process.env.BREVO_API_KEY) {
+            throw new Error(
+                "BREVO_API_KEY é obrigatória quando NODE_ENV=production. " +
+                "Sem ela nenhum e-mail transacional seria entregue.",
+            );
         }
-        console.warn("[Email] AVISO: NODE_ENV=production mas BREVO_API_KEY não definida. Usando fallback.");
+        return new BrevoEmailProvider();
     }
 
     if (process.env.GMAIL_USER) {
