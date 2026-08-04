@@ -1,8 +1,7 @@
 ﻿import type { Request, Response } from "express";
-import { handleControllerError } from "../utils/controllerUtils";
 import { AuditLogRepository } from "../repository/auditLogRepository";
 import { VerifyIntegrityService } from "../services/documents/verifyIntegrityService";
-
+import { handleControllerError } from "../utils/controllerUtils";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -54,11 +53,6 @@ export class AuditController {
 
       res.status(200).json(result);
     } catch (error) {
-      const err = error as { statusCode?: number; message?: string };
-      if (err.statusCode === 400) {
-        res.status(400).json({ error: err.message });
-        return;
-      }
       handleControllerError(res, error, "Erro ao listar logs de auditoria");
     }
   }

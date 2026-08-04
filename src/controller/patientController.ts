@@ -1,5 +1,4 @@
 ﻿import type { Request, Response } from "express";
-import { handleControllerError } from "../utils/controllerUtils";
 import {
   GetPatientDetailsService,
   GetPatientsService,
@@ -10,7 +9,7 @@ import {
   RegisterPatientService,
 } from "../services/patients/patientRegistrationService";
 import { ReceptionPatientRegistrationService } from "../services/patients/receptionPatientRegistrationService";
-
+import { handleControllerError } from "../utils/controllerUtils";
 
 export class PatientController {
   /**
@@ -26,11 +25,7 @@ export class PatientController {
 
       res.status(201).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao realizar cadastro" });
-      }
+      handleControllerError(res, error, "Erro ao realizar cadastro");
     }
   }
 
@@ -52,11 +47,14 @@ export class PatientController {
 
       res.status(200).json(result);
     } catch (error) {
+      // CompletePatientService lança Error puro (sem statusCode) para várias
+      // regras de negócio ("CPF inválido", "Tipo de usuário inválido", etc)
+      // — sempre foi 400, preserva o status.
       if (error instanceof Error) {
         res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao completar cadastro" });
+        return;
       }
+      handleControllerError(res, error, "Erro ao completar cadastro");
     }
   }
 
@@ -102,11 +100,7 @@ export class PatientController {
         items: patients,
       });
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar pacientes" });
-      }
+      handleControllerError(res, error, "Erro ao listar pacientes");
     }
   }
 
@@ -128,11 +122,7 @@ export class PatientController {
 
       res.status(200).json(summary);
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao buscar resumo de pacientes" });
-      }
+      handleControllerError(res, error, "Erro ao buscar resumo de pacientes");
     }
   }
 
@@ -161,15 +151,17 @@ export class PatientController {
 
       res.status(200).json(details);
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.message === "Paciente nao encontrado") {
-          res.status(404).json({ error: error.message });
-          return;
-        }
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao buscar detalhes do paciente" });
+      // GetPatientDetailsService lança Error puro (sem statusCode) para paciente
+      // não encontrado — sempre foi 404, preserva o status.
+      if (error instanceof Error && error.message === "Paciente nao encontrado") {
+        res.status(404).json({ error: error.message });
+        return;
       }
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao buscar detalhes do paciente");
     }
   }
 }

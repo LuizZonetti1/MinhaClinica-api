@@ -1,7 +1,7 @@
 ﻿import type { Request, Response } from "express";
-import { handleControllerError } from "../utils/controllerUtils";
 import { GetPatientsService } from "../services/patients/getPatientsService";
 import { ListReceptionPatientAppointmentsService } from "../services/reception/receptionPatientsService";
+import { handleControllerError } from "../utils/controllerUtils";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -20,11 +20,7 @@ export class ReceptionPatientsController {
 
       res.status(200).json({ count: patients.length, items: patients });
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar pacientes" });
-      }
+      handleControllerError(res, error, "Erro ao listar pacientes");
     }
   }
 

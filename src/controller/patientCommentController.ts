@@ -1,11 +1,11 @@
 ﻿import type { Request, Response } from "express";
-import { handleControllerError } from "../utils/controllerUtils";
 import {
   CreatePatientCommentService,
   DeletePatientCommentService,
   ListPatientCommentsService,
   UpdatePatientCommentService,
 } from "../services/professionals/patientCommentService";
+import { handleControllerError } from "../utils/controllerUtils";
 
 export class PatientCommentController {
   /**
@@ -24,13 +24,7 @@ export class PatientCommentController {
       const result = await service.execute(userId, clinicId);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 500;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar comentários" });
-      }
+      handleControllerError(res, error, "Erro ao listar comentários");
     }
   }
 

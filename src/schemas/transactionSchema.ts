@@ -26,6 +26,7 @@ export const updateTransactionSchema = yup.object({
     .number()
     .typeError("Valor deve ser um número")
     .positive("Valor deve ser positivo")
+    .max(99999999.99, "Valor máximo excedido")
     .optional(),
 
   category: yup.string().max(100).optional().nullable(),
@@ -70,6 +71,7 @@ export const createTransactionSchema = yup.object({
     .number()
     .typeError("Valor deve ser um número")
     .positive("Valor deve ser positivo")
+    .max(99999999.99, "Valor máximo excedido")
     .required("Valor é obrigatório"),
 
   category: yup.string().max(100).optional(),

@@ -1,16 +1,15 @@
 ﻿import type { Request, Response } from "express";
-import { handleControllerError } from "../utils/controllerUtils";
 import { ActivateReceptionPatientService } from "../services/auth/activateReceptionPatientService";
 import { LoginService } from "../services/auth/loginService";
+import { ForgotPasswordService, ResetPasswordService } from "../services/auth/passwordResetService";
 import { ResendVerificationService } from "../services/auth/resendVerificationService";
 import { VerifyEmailService } from "../services/auth/verifyEmailService";
 import {
   CompletePatientService,
   RegisterPatientService,
 } from "../services/patients/patientRegistrationService";
+import { handleControllerError } from "../utils/controllerUtils";
 import { resolveVerifyRedirect } from "../utils/verifyRedirectUtils";
-import { ForgotPasswordService, ResetPasswordService } from "../services/auth/passwordResetService";
-
 
 export class AuthController {
   /**
@@ -22,11 +21,14 @@ export class AuthController {
       const result = await service.execute(req.body);
       res.status(200).json(result);
     } catch (error) {
+      // LoginService lança Error puro (sem statusCode) para credenciais
+      // inválidas e conta inativa — sempre foi 401, preserva o status e a
+      // mensagem (inclui orientação para conta pendente de ativação).
       if (error instanceof Error) {
         res.status(401).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao fazer login" });
+        return;
       }
+      handleControllerError(res, error, "Erro ao fazer login");
     }
   }
 
@@ -59,11 +61,13 @@ export class AuthController {
       const result = await service.execute(token);
       res.status(200).json(result);
     } catch (error) {
+      // VerifyEmailService lança Error puro (sem statusCode) para token
+      // inválido/expirado — sempre foi 400, preserva o status.
       if (error instanceof Error) {
         res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao verificar email" });
+        return;
       }
+      handleControllerError(res, error, "Erro ao verificar email");
     }
   }
 
@@ -78,11 +82,7 @@ export class AuthController {
       const result = await service.execute({ email });
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao reenviar verificação" });
-      }
+      handleControllerError(res, error, "Erro ao reenviar verificação");
     }
   }
 

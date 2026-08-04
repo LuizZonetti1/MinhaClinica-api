@@ -6,6 +6,7 @@ import { ListPatientAppointmentsService } from "../services/patients/listPatient
 import { PatientDashboardService } from "../services/patients/patientDashboardService";
 import { RescheduleAppointmentService } from "../services/patients/rescheduleAppointmentService";
 import type { PatientRescheduleInput } from "../types/patient";
+import { handleControllerError } from "../utils/controllerUtils";
 
 export class PatientDashboardController {
   async getDashboard(req: Request, res: Response): Promise<void> {
@@ -16,13 +17,14 @@ export class PatientDashboardController {
       const data = await service.execute(userId);
 
       res.status(200).json({ data });
-    } catch (error: unknown) {
-      const err = error as { message?: string };
-      if (err.message === "Paciente não encontrado") {
-        res.status(404).json({ message: err.message });
+    } catch (error) {
+      // PatientDashboardService lança Error puro (sem statusCode) para paciente
+      // não encontrado — sempre foi 404, preserva o status.
+      if (error instanceof Error && error.message === "Paciente não encontrado") {
+        res.status(404).json({ message: error.message });
         return;
       }
-      res.status(500).json({ message: err.message || "Erro ao carregar dashboard" });
+      handleControllerError(res, error, "Erro ao carregar dashboard");
     }
   }
 
@@ -35,17 +37,18 @@ export class PatientDashboardController {
       await service.execute(id, userId);
 
       res.status(200).json({ message: "Presença confirmada com sucesso" });
-    } catch (error: unknown) {
-      const err = error as { message?: string };
-      if (err.message === "Consulta não encontrada") {
-        res.status(404).json({ message: err.message });
+    } catch (error) {
+      // ConfirmAppointmentService lança Error puro (sem statusCode) para estas
+      // duas regras de negócio conhecidas — preserva o status já esperado.
+      if (error instanceof Error && error.message === "Consulta não encontrada") {
+        res.status(404).json({ message: error.message });
         return;
       }
-      if (err.message?.includes("SCHEDULED")) {
-        res.status(400).json({ message: err.message });
+      if (error instanceof Error && error.message.includes("SCHEDULED")) {
+        res.status(400).json({ message: error.message });
         return;
       }
-      res.status(500).json({ message: err.message || "Erro ao confirmar presença" });
+      handleControllerError(res, error, "Erro ao confirmar presença");
     }
   }
 
@@ -62,10 +65,8 @@ export class PatientDashboardController {
       const data = await service.execute(userId, status);
 
       res.status(200).json({ data });
-    } catch (error: unknown) {
-      const err = error as { message?: string; statusCode?: number };
-      const status = err.statusCode ?? 500;
-      res.status(status).json({ message: err.message || "Erro ao listar consultas" });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao listar consultas");
     }
   }
 
@@ -82,10 +83,8 @@ export class PatientDashboardController {
       const data = await service.execute(id, userId);
 
       res.status(200).json({ data });
-    } catch (error: unknown) {
-      const err = error as { message?: string; statusCode?: number };
-      const status = err.statusCode ?? 500;
-      res.status(status).json({ message: err.message || "Erro ao cancelar consulta" });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao cancelar consulta");
     }
   }
 
@@ -103,10 +102,8 @@ export class PatientDashboardController {
       const result = await service.execute(appointmentId, userId, input);
 
       res.status(200).json({ data: result });
-    } catch (error: unknown) {
-      const err = error as { message?: string; statusCode?: number };
-      const status = err.statusCode ?? 500;
-      res.status(status).json({ message: err.message || "Erro ao remarcar consulta" });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao remarcar consulta");
     }
   }
 
@@ -123,10 +120,8 @@ export class PatientDashboardController {
       const data = await service.execute(id, userId);
 
       res.status(200).json({ data });
-    } catch (error: unknown) {
-      const err = error as { message?: string; statusCode?: number };
-      const status = err.statusCode ?? 500;
-      res.status(status).json({ error: err.message || "Erro ao carregar consulta" });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao carregar consulta");
     }
   }
 }

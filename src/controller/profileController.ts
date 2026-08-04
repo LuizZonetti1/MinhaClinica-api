@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { uploadProfile } from "../config/multer";
 import { updatePatientProfileSchema } from "../schemas/patientProfileSchema";
 import {
   changePasswordSchema,
@@ -16,10 +17,10 @@ import {
   UpdateProfileService,
 } from "../services/users/profileService";
 import { UpdateUserRolesService } from "../services/users/updateUserRolesService";
-import { UserRole } from "../types/enums";
-import { uploadProfile } from "../config/multer";
+import type { UserRole } from "../types/enums";
+import type { UpdateProfessionalProfileInput } from "../types/profile";
 import { deleteFromCloudinary, extractPublicId } from "../utils/cloudinaryHelper";
-import { UpdateProfessionalProfileInput } from "../types/profile";
+import { handleControllerError } from "../utils/controllerUtils";
 
 export class ProfileController {
   /**
@@ -34,13 +35,14 @@ export class ProfileController {
       const data = await service.execute(userId);
 
       res.status(200).json({ data });
-    } catch (error: unknown) {
-      const err = error as { message?: string };
-      if (err.message === "Usuário não encontrado") {
-        res.status(404).json({ message: err.message });
+    } catch (error) {
+      // profileService lança Error puro (sem statusCode) para "não encontrado"
+      // — sempre foi 404, preserva o status.
+      if (error instanceof Error && error.message === "Usuário não encontrado") {
+        res.status(404).json({ message: error.message });
         return;
       }
-      res.status(500).json({ message: err.message || "Erro ao buscar perfil" });
+      handleControllerError(res, error, "Erro ao buscar perfil");
     }
   }
 
@@ -56,13 +58,12 @@ export class ProfileController {
       const data = await service.execute(userId);
 
       res.status(200).json({ data });
-    } catch (error: unknown) {
-      const err = error as { message?: string };
-      if (err.message === "Usuário não encontrado") {
-        res.status(404).json({ message: err.message });
+    } catch (error) {
+      if (error instanceof Error && error.message === "Usuário não encontrado") {
+        res.status(404).json({ message: error.message });
         return;
       }
-      res.status(500).json({ message: err.message || "Erro ao buscar perfil" });
+      handleControllerError(res, error, "Erro ao buscar perfil");
     }
   }
 
@@ -79,13 +80,12 @@ export class ProfileController {
       const data = await service.execute(userId, clinicId);
 
       res.status(200).json({ data });
-    } catch (error: unknown) {
-      const err = error as { message?: string };
-      if (err.message === "Profissional não encontrado") {
-        res.status(404).json({ message: err.message });
+    } catch (error) {
+      if (error instanceof Error && error.message === "Profissional não encontrado") {
+        res.status(404).json({ message: error.message });
         return;
       }
-      res.status(500).json({ message: err.message || "Erro ao buscar perfil" });
+      handleControllerError(res, error, "Erro ao buscar perfil");
     }
   }
 
@@ -113,16 +113,16 @@ export class ProfileController {
 
       res.status(200).json({ message: "Perfil atualizado com sucesso" });
     } catch (error: unknown) {
-      const err = error as { name?: string; errors?: string[]; message?: string };
+      const err = error as { name?: string; errors?: string[] };
       if (err.name === "ValidationError") {
         res.status(400).json({ message: "Erro de validação", errors: err.errors });
         return;
       }
-      if (err.message === "Profissional não encontrado") {
-        res.status(404).json({ message: err.message });
+      if (error instanceof Error && error.message === "Profissional não encontrado") {
+        res.status(404).json({ message: error.message });
         return;
       }
-      res.status(500).json({ message: err.message || "Erro ao atualizar perfil" });
+      handleControllerError(res, error, "Erro ao atualizar perfil");
     }
   }
 
@@ -142,7 +142,7 @@ export class ProfileController {
       if ((uploadError as NodeJS.ErrnoException).code === "LIMIT_FILE_SIZE") {
         res.status(400).json({ message: "Arquivo muito grande. Máximo: 2 MB." });
       } else {
-        res.status(400).json({ message: uploadError.message || "Erro no upload do arquivo." });
+        handleControllerError(res, uploadError, "Erro no upload do arquivo.");
       }
       return;
     }
@@ -185,12 +185,19 @@ export class ProfileController {
         data: updated,
       });
     } catch (error: unknown) {
-      const err = error as { name?: string; errors?: string[]; message?: string };
+      const err = error as { name?: string; errors?: string[] };
       if (err.name === "ValidationError") {
         res.status(400).json({ message: "Erro de validação", errors: err.errors });
         return;
       }
-      res.status(400).json({ message: err.message || "Erro ao atualizar perfil" });
+      // UpdateProfileService lança Error puro (sem statusCode) — este método
+      // sempre mapeou qualquer erro (não só "Usuário não encontrado") para
+      // 400, preserva o status.
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao atualizar perfil");
     }
   }
 
@@ -215,16 +222,22 @@ export class ProfileController {
 
       res.status(200).json({ message: "Senha alterada com sucesso" });
     } catch (error: unknown) {
-      const err = error as { name?: string; errors?: string[]; message?: string };
+      const err = error as { name?: string; errors?: string[] };
       if (err.name === "ValidationError") {
         res.status(400).json({ message: "Erro de validação", errors: err.errors });
         return;
       }
-      if (err.message === "Senha atual incorreta") {
-        res.status(401).json({ message: err.message });
+      if (error instanceof Error && error.message === "Senha atual incorreta") {
+        res.status(401).json({ message: error.message });
         return;
       }
-      res.status(400).json({ message: err.message || "Erro ao alterar senha" });
+      // ChangePasswordService só lança essas duas mensagens conhecidas; a
+      // segunda ("Usuário não encontrado") sempre caiu no fallback 400.
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao alterar senha");
     }
   }
 
@@ -240,10 +253,8 @@ export class ProfileController {
       const data = await service.execute(userId);
 
       res.status(200).json({ data });
-    } catch (error: unknown) {
-      const err = error as { message?: string; statusCode?: number };
-      const status = err.statusCode ?? 500;
-      res.status(status).json({ message: err.message || "Erro ao buscar perfil" });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao buscar perfil");
     }
   }
 
@@ -270,18 +281,12 @@ export class ProfileController {
 
       res.status(200).json({ message: "Perfil atualizado com sucesso" });
     } catch (error: unknown) {
-      const err = error as {
-        name?: string;
-        errors?: string[];
-        message?: string;
-        statusCode?: number;
-      };
+      const err = error as { name?: string; errors?: string[] };
       if (err.name === "ValidationError") {
         res.status(400).json({ message: "Erro de validação", errors: err.errors });
         return;
       }
-      const status = err.statusCode ?? 500;
-      res.status(status).json({ message: err.message || "Erro ao atualizar perfil" });
+      handleControllerError(res, error, "Erro ao atualizar perfil");
     }
   }
 
@@ -303,13 +308,19 @@ export class ProfileController {
       const result = await service.execute(userId, roles);
 
       res.status(200).json({ message: "Papéis atualizados com sucesso", ...result });
-    } catch (error: unknown) {
-      const err = error as { message?: string };
-      if (err.message === "Usuário não encontrado") {
-        res.status(404).json({ message: err.message });
+    } catch (error) {
+      if (error instanceof Error && error.message === "Usuário não encontrado") {
+        res.status(404).json({ message: error.message });
         return;
       }
-      res.status(400).json({ message: err.message || "Erro ao atualizar papéis" });
+      // UpdateUserRolesService lança outras mensagens de regra de negócio
+      // (papel primário, papéis não permitidos, CPF) que sempre caíram no
+      // fallback 400.
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao atualizar papéis");
     }
   }
 }

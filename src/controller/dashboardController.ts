@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { DashboardService } from "../services/dashboard/dashboardService";
+import { handleControllerError } from "../utils/controllerUtils";
 
 export class DashboardController {
   async getSummary(req: Request, res: Response): Promise<void> {
@@ -16,11 +17,7 @@ export class DashboardController {
 
       res.status(200).json(data);
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao carregar dados do dashboard" });
-      }
+      handleControllerError(res, error, "Erro ao carregar dados do dashboard");
     }
   }
 
@@ -41,11 +38,7 @@ export class DashboardController {
 
       res.status(200).json(data);
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao carregar evolucao historica do dashboard" });
-      }
+      handleControllerError(res, error, "Erro ao carregar evolucao historica do dashboard");
     }
   }
 }

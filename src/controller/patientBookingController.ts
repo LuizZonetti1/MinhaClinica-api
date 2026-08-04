@@ -4,6 +4,7 @@ import { ListProfessionalsService } from "../services/appointments/listProfessio
 import { PatientCreateAppointmentService } from "../services/patients/patientCreateAppointmentService";
 import { SearchClinicsService } from "../services/patients/searchClinicsService";
 import type { PatientBookingInput } from "../types/patient";
+import { handleControllerError } from "../utils/controllerUtils";
 
 export class PatientBookingController {
   /**
@@ -19,8 +20,7 @@ export class PatientBookingController {
 
       res.status(200).json({ data });
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      res.status(500).json({ message: err.message || "Erro ao buscar clínicas" });
+      handleControllerError(res, error, "Erro ao buscar clínicas");
     }
   }
 
@@ -37,9 +37,7 @@ export class PatientBookingController {
 
       res.status(200).json({ data });
     } catch (error: unknown) {
-      const err = error as { message?: string; statusCode?: number };
-      const status = err.statusCode ?? 500;
-      res.status(status).json({ message: err.message || "Erro ao listar profissionais" });
+      handleControllerError(res, error, "Erro ao listar profissionais");
     }
   }
 
@@ -65,9 +63,7 @@ export class PatientBookingController {
 
       res.status(200).json({ data });
     } catch (error: unknown) {
-      const err = error as { message?: string; statusCode?: number };
-      const status = err.statusCode ?? 500;
-      res.status(status).json({ message: err.message || "Erro ao buscar horários" });
+      handleControllerError(res, error, "Erro ao buscar horários");
     }
   }
 
@@ -85,9 +81,7 @@ export class PatientBookingController {
 
       res.status(201).json({ data });
     } catch (error: unknown) {
-      const err = error as { message?: string; statusCode?: number };
-      const status = err.statusCode ?? 500;
-      res.status(status).json({ message: err.message || "Erro ao criar agendamento" });
+      handleControllerError(res, error, "Erro ao criar agendamento");
     }
   }
 }

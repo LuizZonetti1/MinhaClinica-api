@@ -25,8 +25,9 @@ import { DeleteClinicService } from "../services/clinics/deleteClinicService";
 import { GetClinicService } from "../services/clinics/getClinicService";
 import { UpdateClinicService } from "../services/clinics/updateClinicService";
 import type { WorkingDaysPreset } from "../types/clinic";
+import type { CompleteClinicOwnerInput } from "../types/user";
+import { handleControllerError } from "../utils/controllerUtils";
 import { resolveVerifyRedirect } from "../utils/verifyRedirectUtils";
-import { CompleteClinicOwnerInput } from "../types/user";
 
 export class ClinicController {
   async updateClinic(req: Request, res: Response): Promise<void> {
@@ -75,9 +76,7 @@ export class ClinicController {
       }
 
       // Trata outros erros
-      res.status(400).json({
-        message: error.message || "Erro ao atualizar clínica",
-      });
+      handleControllerError(res, error, "Erro ao atualizar clínica");
     }
   }
 
@@ -92,10 +91,8 @@ export class ClinicController {
         total: clinics.length,
         data: clinics,
       });
-    } catch (error: any) {
-      res.status(400).json({
-        message: error.message || "Erro ao listar clínicas",
-      });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao listar clínicas");
     }
   }
 
@@ -120,17 +117,18 @@ export class ClinicController {
         message: "Clínica encontrada",
         data: clinic,
       });
-    } catch (error: any) {
-      if (error.message === "Clínica não encontrada") {
-        res.status(404).json({
-          message: error.message,
-        });
+    } catch (error) {
+      // GetClinicService lança Error puro (sem statusCode) para clínica não
+      // encontrada — sempre foi 404, preserva o status.
+      if (error instanceof Error && error.message === "Clínica não encontrada") {
+        res.status(404).json({ message: error.message });
         return;
       }
-
-      res.status(400).json({
-        message: error.message || "Erro ao buscar clínica",
-      });
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao buscar clínica");
     }
   }
 
@@ -153,10 +151,8 @@ export class ClinicController {
       res.status(200).json({
         message: "Clínica deletada com sucesso",
       });
-    } catch (error: any) {
-      res.status(400).json({
-        message: error.message || "Erro ao deletar clínica",
-      });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao deletar clínica");
     }
   }
 
@@ -181,8 +177,7 @@ export class ClinicController {
         res.status(400).json({ message: "Erro de validação", errors: error.errors });
         return;
       }
-      const status = error.statusCode ?? 400;
-      res.status(status).json({ error: error.message || "Erro ao iniciar cadastro da clínica" });
+      handleControllerError(res, error, "Erro ao iniciar cadastro da clínica");
     }
   }
 
@@ -200,8 +195,8 @@ export class ClinicController {
       const service = new VerifyEmailService();
       const result = await service.execute(token);
       res.status(200).json(result);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message || "Erro ao verificar e-mail" });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao verificar e-mail");
     }
   }
 
@@ -215,8 +210,8 @@ export class ClinicController {
       const service = new ResendClinicVerificationService();
       const result = await service.execute({ email });
       res.status(200).json(result);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message || "Erro ao reenviar verificação" });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao reenviar verificação");
     }
   }
 
@@ -249,8 +244,7 @@ export class ClinicController {
         res.status(400).json({ message: "Erro de validação", errors: error.errors });
         return;
       }
-      const status = error.statusCode ?? 400;
-      res.status(status).json({ error: error.message || "Erro ao completar cadastro da clínica" });
+      handleControllerError(res, error, "Erro ao completar cadastro da clínica");
     }
   }
 
@@ -268,12 +262,18 @@ export class ClinicController {
       const data = await service.execute(clinicId);
 
       res.status(200).json({ data });
-    } catch (error: any) {
-      if (error.message === "Clínica não encontrada") {
+    } catch (error) {
+      // GetClinicSettingsService lança Error puro (sem statusCode) para clínica
+      // não encontrada — sempre foi 404, preserva o status.
+      if (error instanceof Error && error.message === "Clínica não encontrada") {
         res.status(404).json({ message: error.message });
         return;
       }
-      res.status(400).json({ message: error.message || "Erro ao buscar configurações" });
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao buscar configurações");
     }
   }
 
@@ -299,7 +299,7 @@ export class ClinicController {
         res.status(400).json({ message: "Erro de validação", errors: error.errors });
         return;
       }
-      res.status(400).json({ message: error.message || "Erro ao atualizar informações" });
+      handleControllerError(res, error, "Erro ao atualizar informações");
     }
   }
 
@@ -330,9 +330,7 @@ export class ClinicController {
         res.status(400).json({ message: "Erro de validação", errors: error.errors });
         return;
       }
-      res
-        .status(400)
-        .json({ message: error.message || "Erro ao atualizar configurações de agenda" });
+      handleControllerError(res, error, "Erro ao atualizar configurações de agenda");
     }
   }
 
@@ -360,7 +358,7 @@ export class ClinicController {
         res.status(400).json({ message: "Erro de validação", errors: error.errors });
         return;
       }
-      res.status(400).json({ message: error.message || "Erro ao atualizar notificações" });
+      handleControllerError(res, error, "Erro ao atualizar notificações");
     }
   }
 
@@ -388,9 +386,7 @@ export class ClinicController {
         res.status(400).json({ message: "Erro de validação", errors: error.errors });
         return;
       }
-      res
-        .status(400)
-        .json({ message: error.message || "Erro ao atualizar configurações de segurança" });
+      handleControllerError(res, error, "Erro ao atualizar configurações de segurança");
     }
   }
 }

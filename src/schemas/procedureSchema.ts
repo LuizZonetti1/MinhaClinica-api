@@ -14,6 +14,13 @@ export const createProcedureSchema = yup.object({
     .min(5, "Duração mínima de 5 minutos")
     .max(480, "Duração máxima de 480 minutos")
     .required("Duração é obrigatória"),
+  defaultPrice: yup
+    .number()
+    .typeError("Preço deve ser um número")
+    .min(0, "Preço não pode ser negativo")
+    .max(99999999.99, "Preço máximo excedido")
+    .optional()
+    .nullable(),
   defaultType: yup
     .string()
     .oneOf(Object.values(AppointmentType), "Tipo de procedimento inválido")
@@ -40,6 +47,13 @@ export const updateProcedureSchema = yup.object({
     .min(5, "Duração mínima de 5 minutos")
     .max(480, "Duração máxima de 480 minutos")
     .optional(),
+  defaultPrice: yup
+    .number()
+    .typeError("Preço deve ser um número")
+    .min(0, "Preço não pode ser negativo")
+    .max(99999999.99, "Preço máximo excedido")
+    .optional()
+    .nullable(),
   isActive: yup.boolean().optional(),
   defaultType: yup
     .string()

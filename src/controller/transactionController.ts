@@ -8,6 +8,7 @@ import type {
   TransactionPeriod,
   UpdateTransactionInput,
 } from "../types/transaction";
+import { handleControllerError } from "../utils/controllerUtils";
 
 const VALID_PERIODS: TransactionPeriod[] = ["1m", "3m", "6m", "12m"];
 
@@ -51,11 +52,7 @@ export class TransactionController {
         res.status(400).json({ message: "Erro de validação", errors: error.errors });
         return;
       }
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao criar transação" });
-      }
+      handleControllerError(res, error, "Erro ao criar transação");
     }
   }
 
@@ -83,11 +80,7 @@ export class TransactionController {
 
       res.status(200).json(data);
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar transações" });
-      }
+      handleControllerError(res, error, "Erro ao listar transações");
     }
   }
 
@@ -131,19 +124,17 @@ export class TransactionController {
         res.status(400).json({ message: "Erro de validação", errors: error.errors });
         return;
       }
-      if (error.message === "Transação não encontrada") {
+      // UpdateTransactionService lança Error puro (sem statusCode) para estas duas
+      // regras de negócio conhecidas — preserva o status já esperado pelo frontend.
+      if (error instanceof Error && error.message === "Transação não encontrada") {
         res.status(404).json({ error: error.message });
         return;
       }
-      if (error.message?.startsWith("Acesso negado")) {
+      if (error instanceof Error && error.message.startsWith("Acesso negado")) {
         res.status(403).json({ error: error.message });
         return;
       }
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao atualizar transação" });
-      }
+      handleControllerError(res, error, "Erro ao atualizar transação");
     }
   }
 }

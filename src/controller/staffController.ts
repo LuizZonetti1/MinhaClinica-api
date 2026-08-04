@@ -1,14 +1,15 @@
 import type { Request, Response } from "express";
+import { GetReceptionistsService } from "../services/staff/getProfessional";
 import {
   DeactivateReceptionService,
   GetReceptionByIdService,
   UpdateReceptionService,
 } from "../services/staff/receptionManagementService";
-import { GetReceptionistsService } from "../services/staff/getProfessional";
 import {
   CompleteStaffService,
   InviteStaffService,
 } from "../services/staff/staffRegistrationService";
+import { handleControllerError } from "../utils/controllerUtils";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -47,11 +48,14 @@ export class StaffController {
 
       res.status(201).json(result);
     } catch (error) {
+      // staffRegistrationService lança Error puro (sem statusCode) para várias
+      // regras de negócio ("Email já cadastrado", "CPF já cadastrado", etc) —
+      // sempre foi 400, preserva o status.
       if (error instanceof Error) {
         res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao enviar convite" });
+        return;
       }
+      handleControllerError(res, error, "Erro ao enviar convite");
     }
   }
 
@@ -75,9 +79,9 @@ export class StaffController {
     } catch (error) {
       if (error instanceof Error) {
         res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao completar cadastro" });
+        return;
       }
+      handleControllerError(res, error, "Erro ao completar cadastro");
     }
   }
 
@@ -102,11 +106,7 @@ export class StaffController {
         items: receptionists,
       });
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar recepcionistas" });
-      }
+      handleControllerError(res, error, "Erro ao listar recepcionistas");
     }
   }
 
@@ -135,10 +135,17 @@ export class StaffController {
       res.status(200).json(receptionist);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(resolveStatusCode(error.message)).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao buscar recepcionista" });
+        const normalized = error.message.toLowerCase();
+        const isKnownBusinessError =
+          normalized.includes("nao encontrado") ||
+          normalized.includes("agendamentos ativos") ||
+          normalized.includes("nao e possivel");
+        if (isKnownBusinessError) {
+          res.status(resolveStatusCode(error.message)).json({ error: error.message });
+          return;
+        }
       }
+      handleControllerError(res, error, "Erro ao buscar recepcionista");
     }
   }
 
@@ -167,10 +174,17 @@ export class StaffController {
       res.status(200).json(result);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(resolveStatusCode(error.message)).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao atualizar recepcionista" });
+        const normalized = error.message.toLowerCase();
+        const isKnownBusinessError =
+          normalized.includes("nao encontrado") ||
+          normalized.includes("agendamentos ativos") ||
+          normalized.includes("nao e possivel");
+        if (isKnownBusinessError) {
+          res.status(resolveStatusCode(error.message)).json({ error: error.message });
+          return;
+        }
       }
+      handleControllerError(res, error, "Erro ao atualizar recepcionista");
     }
   }
 
@@ -199,10 +213,17 @@ export class StaffController {
       res.status(200).json(result);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(resolveStatusCode(error.message)).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao desativar recepcionista" });
+        const normalized = error.message.toLowerCase();
+        const isKnownBusinessError =
+          normalized.includes("nao encontrado") ||
+          normalized.includes("agendamentos ativos") ||
+          normalized.includes("nao e possivel");
+        if (isKnownBusinessError) {
+          res.status(resolveStatusCode(error.message)).json({ error: error.message });
+          return;
+        }
       }
+      handleControllerError(res, error, "Erro ao desativar recepcionista");
     }
   }
 }

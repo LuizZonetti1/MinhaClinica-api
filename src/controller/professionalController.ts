@@ -1,14 +1,15 @@
 import type { Request, Response } from "express";
+import { GetProfessionalsService } from "../services/professionals/getProfessionalsService";
 import {
   DeactivateProfessionalService,
   GetProfessionalByIdService,
   UpdateProfessionalService,
 } from "../services/professionals/professionalManagementService";
-import { GetProfessionalsService } from "../services/professionals/getProfessionalsService";
 import {
   CompleteProfessionalService,
   InviteProfessionalService,
 } from "../services/professionals/professionalRegistrationService";
+import { handleControllerError } from "../utils/controllerUtils";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -47,11 +48,13 @@ export class ProfessionalController {
 
       res.status(201).json(result);
     } catch (error) {
+      // professionalRegistrationService lança Error puro (sem statusCode) para
+      // várias regras de negócio — sempre foi 400, preserva o status.
       if (error instanceof Error) {
         res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao enviar convite" });
+        return;
       }
+      handleControllerError(res, error, "Erro ao enviar convite");
     }
   }
 
@@ -75,9 +78,9 @@ export class ProfessionalController {
     } catch (error) {
       if (error instanceof Error) {
         res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao completar cadastro" });
+        return;
       }
+      handleControllerError(res, error, "Erro ao completar cadastro");
     }
   }
 
@@ -102,11 +105,7 @@ export class ProfessionalController {
         items: professionals,
       });
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar profissionais" });
-      }
+      handleControllerError(res, error, "Erro ao listar profissionais");
     }
   }
 
@@ -135,10 +134,17 @@ export class ProfessionalController {
       res.status(200).json(professional);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(resolveStatusCode(error.message)).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao buscar profissional" });
+        const normalized = error.message.toLowerCase();
+        const isKnownBusinessError =
+          normalized.includes("nao encontrado") ||
+          normalized.includes("agendamentos ativos") ||
+          normalized.includes("nao e possivel");
+        if (isKnownBusinessError) {
+          res.status(resolveStatusCode(error.message)).json({ error: error.message });
+          return;
+        }
       }
+      handleControllerError(res, error, "Erro ao buscar profissional");
     }
   }
 
@@ -167,10 +173,17 @@ export class ProfessionalController {
       res.status(200).json(result);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(resolveStatusCode(error.message)).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao atualizar profissional" });
+        const normalized = error.message.toLowerCase();
+        const isKnownBusinessError =
+          normalized.includes("nao encontrado") ||
+          normalized.includes("agendamentos ativos") ||
+          normalized.includes("nao e possivel");
+        if (isKnownBusinessError) {
+          res.status(resolveStatusCode(error.message)).json({ error: error.message });
+          return;
+        }
       }
+      handleControllerError(res, error, "Erro ao atualizar profissional");
     }
   }
 
@@ -199,10 +212,17 @@ export class ProfessionalController {
       res.status(200).json(result);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(resolveStatusCode(error.message)).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao desativar profissional" });
+        const normalized = error.message.toLowerCase();
+        const isKnownBusinessError =
+          normalized.includes("nao encontrado") ||
+          normalized.includes("agendamentos ativos") ||
+          normalized.includes("nao e possivel");
+        if (isKnownBusinessError) {
+          res.status(resolveStatusCode(error.message)).json({ error: error.message });
+          return;
+        }
       }
+      handleControllerError(res, error, "Erro ao desativar profissional");
     }
   }
 }

@@ -1,7 +1,11 @@
 import type { Request, Response } from "express";
-import { ReportExportService, ReportExportValidationError } from "../services/reports/reportExportService";
+import {
+  ReportExportService,
+  ReportExportValidationError,
+} from "../services/reports/reportExportService";
 import { ReportService } from "../services/reports/reportService";
 import type { ReportPeriod } from "../types/report";
+import { handleControllerError } from "../utils/controllerUtils";
 
 const VALID_PERIODS: ReportPeriod[] = ["1m", "3m", "6m", "12m"];
 
@@ -27,11 +31,7 @@ export class ReportController {
 
       res.status(200).json(data);
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao gerar relatório" });
-      }
+      handleControllerError(res, error, "Erro ao gerar relatório");
     }
   }
 
@@ -60,7 +60,7 @@ export class ReportController {
       const { fileName, buffer } = await service.generatePdf(clinicId, startDate, endDate);
 
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename=\"${fileName}\"`);
+      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
       res.setHeader("Content-Length", String(buffer.byteLength));
       res.status(200).send(buffer);
     } catch (error) {
@@ -69,11 +69,7 @@ export class ReportController {
         return;
       }
 
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao exportar relatorio em PDF" });
-      }
+      handleControllerError(res, error, "Erro ao exportar relatorio em PDF");
     }
   }
 }

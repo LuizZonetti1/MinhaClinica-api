@@ -1,10 +1,10 @@
 ﻿import type { Request, Response } from "express";
-import { handleControllerError } from "../utils/controllerUtils";
 import { GetProfessionalsAgendaService } from "../services/reception/agendaService";
 import {
   ReceptionDashboardService,
   UpdateCheckinStatusService,
 } from "../services/reception/receptionDashboardService";
+import { handleControllerError } from "../utils/controllerUtils";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -23,11 +23,7 @@ export class ReceptionDashboardController {
 
       res.status(200).json(data);
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao carregar dados da recepção" });
-      }
+      handleControllerError(res, error, "Erro ao carregar dados da recepção");
     }
   }
 

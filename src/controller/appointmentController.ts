@@ -48,11 +48,7 @@ export class AppointmentController {
       const result = await service.execute(clinicId);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar profissionais" });
-      }
+      handleControllerError(res, error, "Erro ao listar profissionais");
     }
   }
 
@@ -123,11 +119,7 @@ export class AppointmentController {
       const result = await service.execute(userId, clinicId);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(500).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar consultas" });
-      }
+      handleControllerError(res, error, "Erro ao listar consultas");
     }
   }
 
@@ -148,13 +140,7 @@ export class AppointmentController {
       const result = await service.execute(userId, clinicId);
       res.status(200).json(result);
     } catch (error) {
-      if (error instanceof Error) {
-        const statusCode =
-          "statusCode" in error ? (error as Error & { statusCode: number }).statusCode : 500;
-        res.status(statusCode).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Erro ao listar pacientes" });
-      }
+      handleControllerError(res, error, "Erro ao listar pacientes");
     }
   }
 
