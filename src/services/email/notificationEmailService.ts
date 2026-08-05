@@ -1,3 +1,4 @@
+import { escapeHtml } from "../../utils/escapeHtml";
 import type { EmailProvider } from "./emailProvider";
 
 /**
@@ -25,6 +26,11 @@ export class NotificationEmailService {
         professionalName: string,
         clinicName: string,
     ): Promise<void> {
+        const safeName = escapeHtml(name);
+        const safeAppointmentDate = escapeHtml(appointmentDate);
+        const safeStartTime = escapeHtml(startTime);
+        const safeProfessionalName = escapeHtml(professionalName);
+        const safeClinicName = escapeHtml(clinicName);
         const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8">
@@ -41,13 +47,13 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
 <div class="container">
   <div class="header"><h1>✅ Agendamento Confirmado</h1></div>
   <div class="content">
-    <h2>Olá, ${name}!</h2>
+    <h2>Olá, ${safeName}!</h2>
     <p>Seu agendamento foi confirmado com sucesso.</p>
     <div class="info-box">
-      <p><strong>📅 Data:</strong> ${appointmentDate}</p>
-      <p><strong>🕐 Horário:</strong> ${startTime}</p>
-      <p><strong>👨‍⚕️ Profissional:</strong> ${professionalName}</p>
-      <p><strong>🏥 Clínica:</strong> ${clinicName}</p>
+      <p><strong>📅 Data:</strong> ${safeAppointmentDate}</p>
+      <p><strong>🕐 Horário:</strong> ${safeStartTime}</p>
+      <p><strong>👨‍⚕️ Profissional:</strong> ${safeProfessionalName}</p>
+      <p><strong>🏥 Clínica:</strong> ${safeClinicName}</p>
     </div>
     <p>Chegue com 10 minutos de antecedência. Qualquer dúvida, entre em contato com a clínica.</p>
   </div>
@@ -74,6 +80,11 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
         windowLabel?: string,
     ): Promise<void> {
         const when = windowLabel ? `em ${windowLabel}` : `no dia ${appointmentDate}`;
+        const safeName = escapeHtml(name);
+        const safeWhen = escapeHtml(when);
+        const safeAppointmentDate = escapeHtml(appointmentDate);
+        const safeStartTime = escapeHtml(startTime);
+        const safeProfessionalName = escapeHtml(professionalName);
         const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8">
@@ -90,12 +101,12 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
 <div class="container">
   <div class="header"><h1>🔔 Lembrete de Consulta</h1></div>
   <div class="content">
-    <h2>Olá, ${name}!</h2>
-    <p>Você tem uma consulta agendada <strong>${when}</strong>.</p>
+    <h2>Olá, ${safeName}!</h2>
+    <p>Você tem uma consulta agendada <strong>${safeWhen}</strong>.</p>
     <div class="info-box">
-      <p><strong>📅 Data:</strong> ${appointmentDate}</p>
-      <p><strong>🕐 Horário:</strong> ${startTime}</p>
-      <p><strong>👨‍⚕️ Profissional:</strong> ${professionalName}</p>
+      <p><strong>📅 Data:</strong> ${safeAppointmentDate}</p>
+      <p><strong>🕐 Horário:</strong> ${safeStartTime}</p>
+      <p><strong>👨‍⚕️ Profissional:</strong> ${safeProfessionalName}</p>
     </div>
     <p>Não esqueça de comparecer. Em caso de impossibilidade, avise a clínica com antecedência.</p>
   </div>
@@ -124,6 +135,11 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
         professionalName: string,
         clinicName: string,
     ): Promise<void> {
+        const safeName = escapeHtml(name);
+        const safeAppointmentDate = escapeHtml(appointmentDate);
+        const safeStartTime = escapeHtml(startTime);
+        const safeProfessionalName = escapeHtml(professionalName);
+        const safeClinicName = escapeHtml(clinicName);
         const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8">
@@ -141,13 +157,13 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
 <div class="container">
   <div class="header"><h1>❌ Consulta Cancelada</h1></div>
   <div class="content">
-    <h2>Olá, ${name}!</h2>
+    <h2>Olá, ${safeName}!</h2>
     <p>Informamos que a sua consulta foi <strong>cancelada</strong>.</p>
     <div class="info-box">
-      <p><strong>📅 Data:</strong> ${appointmentDate}</p>
-      <p><strong>🕐 Horário:</strong> ${startTime}</p>
-      <p><strong>👨‍⚕️ Profissional:</strong> ${professionalName}</p>
-      <p><strong>🏥 Clínica:</strong> ${clinicName}</p>
+      <p><strong>📅 Data:</strong> ${safeAppointmentDate}</p>
+      <p><strong>🕐 Horário:</strong> ${safeStartTime}</p>
+      <p><strong>👨‍⚕️ Profissional:</strong> ${safeProfessionalName}</p>
+      <p><strong>🏥 Clínica:</strong> ${safeClinicName}</p>
     </div>
     <p>Se desejar, você pode agendar uma nova consulta diretamente pelo portal do paciente.</p>
     <center>
@@ -184,6 +200,13 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
         professionalName: string,
         clinicName: string,
     ): Promise<void> {
+        const safeName = escapeHtml(name);
+        const safeOldDate = escapeHtml(oldDate);
+        const safeOldTime = escapeHtml(oldTime);
+        const safeNewDate = escapeHtml(newDate);
+        const safeNewTime = escapeHtml(newTime);
+        const safeProfessionalName = escapeHtml(professionalName);
+        const safeClinicName = escapeHtml(clinicName);
         const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8">
@@ -201,17 +224,17 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
 <div class="container">
   <div class="header"><h1>🔄 Consulta Reagendada</h1></div>
   <div class="content">
-    <h2>Olá, ${name}!</h2>
+    <h2>Olá, ${safeName}!</h2>
     <p>Sua consulta foi <strong>reagendada</strong>. Confira os novos dados:</p>
     <div class="info-box">
-      <p><strong>📅 Nova data:</strong> ${newDate}</p>
-      <p><strong>🕐 Novo horário:</strong> ${newTime}</p>
-      <p><strong>👨‍⚕️ Profissional:</strong> ${professionalName}</p>
-      <p><strong>🏥 Clínica:</strong> ${clinicName}</p>
+      <p><strong>📅 Nova data:</strong> ${safeNewDate}</p>
+      <p><strong>🕐 Novo horário:</strong> ${safeNewTime}</p>
+      <p><strong>👨‍⚕️ Profissional:</strong> ${safeProfessionalName}</p>
+      <p><strong>🏥 Clínica:</strong> ${safeClinicName}</p>
     </div>
     <p style="font-size:14px;color:#6B7280;">Horário anterior:</p>
     <div class="old-info">
-      <p>📅 ${oldDate} às 🕐 ${oldTime}</p>
+      <p>📅 ${safeOldDate} às 🕐 ${safeOldTime}</p>
     </div>
     <p style="margin-top:16px;">Chegue com 10 minutos de antecedência. Em caso de dúvida, entre em contato com a clínica.</p>
   </div>
@@ -236,6 +259,10 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
         message: string,
         clinicName: string,
     ): Promise<void> {
+        const safeRecipientName = escapeHtml(recipientName);
+        const safeSubject = escapeHtml(subject);
+        const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
+        const safeClinicName = escapeHtml(clinicName);
         const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8">
@@ -249,13 +276,13 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
 </head>
 <body>
 <div class="container">
-  <div class="header"><h1>📢 Comunicado — ${clinicName}</h1></div>
+  <div class="header"><h1>📢 Comunicado — ${safeClinicName}</h1></div>
   <div class="content">
-    <h2>Olá, ${recipientName}!</h2>
-    <h3>${subject}</h3>
-    <p>${message.replace(/\n/g, "<br>")}</p>
+    <h2>Olá, ${safeRecipientName}!</h2>
+    <h3>${safeSubject}</h3>
+    <p>${safeMessage}</p>
   </div>
-  <div class="footer"><p>${clinicName} — Este é um email automático, não responda.</p></div>
+  <div class="footer"><p>${safeClinicName} — Este é um email automático, não responda.</p></div>
 </div>
 </body>
 </html>`;
@@ -276,6 +303,10 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
         subject: string,
         message: string,
     ): Promise<void> {
+        const safeRecipientName = escapeHtml(recipientName);
+        const safeSenderName = escapeHtml(senderName);
+        const safeSubject = escapeHtml(subject);
+        const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
         const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8">
@@ -292,11 +323,11 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
 <div class="container">
   <div class="header"><h1>💬 Nova Mensagem</h1></div>
   <div class="content">
-    <h2>Olá, ${recipientName}!</h2>
-    <p><strong>${senderName}</strong> enviou uma mensagem para você:</p>
+    <h2>Olá, ${safeRecipientName}!</h2>
+    <p><strong>${safeSenderName}</strong> enviou uma mensagem para você:</p>
     <div class="msg-box">
-      <p><strong>${subject}</strong></p>
-      <p>${message.replace(/\n/g, "<br>")}</p>
+      <p><strong>${safeSubject}</strong></p>
+      <p>${safeMessage}</p>
     </div>
     <p>Acesse o sistema para responder.</p>
   </div>

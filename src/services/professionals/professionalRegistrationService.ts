@@ -30,7 +30,11 @@ export class InviteProfessionalService {
     const existingUser = await this.userRepository.findByEmail(adminClinicId, data.email);
 
     if (existingUser) {
-      throw new Error("Email já cadastrado nesta clínica");
+      throw Object.assign(new Error("Este e-mail já possui cadastro na plataforma."), {
+        statusCode: 409,
+        code: "EMAIL_ALREADY_REGISTERED",
+        action: "LOGIN_OR_RECOVER",
+      });
     }
 
     // Buscar nome da clínica
@@ -124,7 +128,11 @@ export class CompleteProfessionalService {
     // Verificar se CPF já existe em outro usuário
     const existingCpf = await this.userRepository.findByCpf(userClinicId, data.cpf);
     if (existingCpf && existingCpf.id !== userId) {
-      throw new Error("CPF já cadastrado");
+      throw Object.assign(new Error("Este CPF já possui cadastro na plataforma."), {
+        statusCode: 409,
+        code: "CPF_ALREADY_REGISTERED",
+        action: "LOGIN_OR_RECOVER",
+      });
     }
 
     // Hash da senha

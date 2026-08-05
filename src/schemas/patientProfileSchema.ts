@@ -1,7 +1,12 @@
 import * as yup from "yup";
+import { stripHtmlTags } from "../utils/sanitizeText";
 
 export const updatePatientProfileSchema = yup.object({
-  name: yup.string().min(2, "Nome deve ter ao menos 2 caracteres").optional(),
+  name: yup
+    .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
+    .min(2, "Nome deve ter ao menos 2 caracteres")
+    .optional(),
   phone: yup
     .string()
     .matches(/^\d{10,11}$/, "Telefone inválido. Use apenas dígitos (10 ou 11)")

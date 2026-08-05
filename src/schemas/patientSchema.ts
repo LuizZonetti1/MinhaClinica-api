@@ -1,5 +1,6 @@
 import * as yup from "yup";
 import { Gender } from "../types/enums";
+import { stripHtmlTags } from "../utils/sanitizeText";
 import { validateCPF } from "../utils/validateCPF";
 import { validateCep } from "../utils/validateCep";
 
@@ -56,6 +57,7 @@ const GENDER_VALUES = Object.values(Gender);
 export const receptionRegisterPatientSchema = yup.object({
   name: yup
     .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .required("Nome é obrigatório")
     .min(3, "Nome deve ter no mínimo 3 caracteres")
     .max(100, "Nome deve ter no máximo 100 caracteres"),
@@ -147,7 +149,11 @@ export const receptionRegisterPatientSchema = yup.object({
   conditions: yup.string().nullable().max(1000),
   observations: yup.string().nullable().max(1000),
 
-  emergencyContactName: yup.string().nullable().max(100),
+  emergencyContactName: yup
+    .string()
+    .nullable()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
+    .max(100),
   emergencyContactPhone: yup
     .string()
     .nullable()
@@ -274,7 +280,11 @@ export const completePatientSchema = yup.object({
   observations: yup.string().nullable().max(1000),
 
   // Contato de emergência
-  emergencyContactName: yup.string().nullable().max(100),
+  emergencyContactName: yup
+    .string()
+    .nullable()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
+    .max(100),
   emergencyContactPhone: yup
     .string()
     .nullable()

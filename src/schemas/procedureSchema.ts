@@ -1,10 +1,11 @@
 import * as yup from "yup";
 import { AppointmentType } from "../types/enums";
+import { stripHtmlTags } from "../utils/sanitizeText";
 
 export const createProcedureSchema = yup.object({
   name: yup
     .string()
-    .transform((v) => (typeof v === "string" ? v.trim() : v))
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .min(2, "Nome deve ter no mínimo 2 caracteres")
     .max(80, "Nome deve ter no máximo 80 caracteres")
     .required("Nome é obrigatório"),
@@ -37,7 +38,7 @@ export const setMyProceduresSchema = yup.object({
 export const updateProcedureSchema = yup.object({
   name: yup
     .string()
-    .transform((v) => (typeof v === "string" ? v.trim() : v))
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .min(2, "Nome deve ter no mínimo 2 caracteres")
     .max(80, "Nome deve ter no máximo 80 caracteres")
     .optional(),

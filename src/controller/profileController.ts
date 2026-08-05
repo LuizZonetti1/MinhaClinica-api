@@ -313,9 +313,13 @@ export class ProfileController {
         res.status(404).json({ message: error.message });
         return;
       }
-      // UpdateUserRolesService lança outras mensagens de regra de negócio
-      // (papel primário, papéis não permitidos, CPF) que sempre caíram no
-      // fallback 400.
+      // CPF duplicado é a única regra aqui com statusCode explícito (409) —
+      // as demais mensagens de negócio (papel primário, papéis não
+      // permitidos) sempre caíram no fallback 400.
+      if (error instanceof Error && "statusCode" in error) {
+        handleControllerError(res, error, "Erro ao atualizar papéis");
+        return;
+      }
       if (error instanceof Error) {
         res.status(400).json({ message: error.message });
         return;

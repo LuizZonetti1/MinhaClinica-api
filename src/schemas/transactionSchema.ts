@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { stripHtmlTags } from "../utils/sanitizeText";
 
 const transactionTypes = ["INCOME", "EXPENSE"] as const;
 const paymentMethods = [
@@ -16,6 +17,7 @@ export const updateTransactionSchema = yup.object({
 
   title: yup
     .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .min(3, "Título deve ter no mínimo 3 caracteres")
     .max(200, "Título deve ter no máximo 200 caracteres")
     .optional(),
@@ -61,6 +63,7 @@ export const createTransactionSchema = yup.object({
 
   title: yup
     .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .min(3, "Título deve ter no mínimo 3 caracteres")
     .max(200, "Título deve ter no máximo 200 caracteres")
     .required("Título é obrigatório"),

@@ -1,9 +1,28 @@
 ﻿import type { Request, Response } from "express";
 import { AuditLogRepository } from "../repository/auditLogRepository";
+import { paginationSchema } from "../schemas/paginationSchema";
 import { VerifyIntegrityService } from "../services/documents/verifyIntegrityService";
 import { handleControllerError } from "../utils/controllerUtils";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+async function parsePagination(
+  query: Request["query"],
+): Promise<{ page: number; limit: number }> {
+  try {
+    const result = await paginationSchema.validate(
+      { page: query.page, limit: query.limit },
+      { abortEarly: false, stripUnknown: true },
+    );
+    return { page: result.page ?? 1, limit: result.limit ?? 20 };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error && "errors" in error && Array.isArray((error as { errors: unknown }).errors)
+        ? (error as { errors: string[] }).errors.join(" ")
+        : "Parâmetros de paginação inválidos.";
+    throw Object.assign(new Error(message), { statusCode: 400 });
+  }
+}
 
 function parseQueryDate(value: unknown, field: string): Date | undefined {
   if (!value) return undefined;
@@ -35,10 +54,11 @@ export class AuditController {
         return;
       }
 
-      const { entity, action, userId, startDate, endDate, page, limit } = req.query;
+      const { entity, action, userId, startDate, endDate } = req.query;
 
       const parsedStartDate = parseQueryDate(startDate, "startDate");
       const parsedEndDate = parseQueryDate(endDate, "endDate");
+      const { page, limit } = await parsePagination(req.query);
 
       const result = await auditLogRepository.findAll({
         clinicId,
@@ -47,8 +67,8 @@ export class AuditController {
         userId: userId as string | undefined,
         startDate: parsedStartDate,
         endDate: parsedEndDate,
-        page: page ? Number(page) : undefined,
-        limit: limit ? Number(limit) : undefined,
+        page,
+        limit,
       });
 
       res.status(200).json(result);

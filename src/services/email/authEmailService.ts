@@ -1,5 +1,6 @@
 import type { EmailProvider } from "./emailProvider";
 import { UserRole } from "../../types/enums";
+import { escapeHtml } from "../../utils/escapeHtml";
 
 /**
  * Emails relacionados à autenticação e registro de usuários.
@@ -25,6 +26,7 @@ export class AuthEmailService {
         verificationToken: string,
     ): Promise<void> {
         const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=patient`;
+        const safeName = escapeHtml(name);
 
         const html = `
 <!DOCTYPE html>
@@ -46,7 +48,7 @@ export class AuthEmailService {
             <h1>🏥 Bem-vindo à Minha Clínica</h1>
         </div>
         <div class="content">
-            <h2>Olá, ${name}!</h2><p>Seja bem-vindo(a) ao Minha Clínica.</p>
+            <h2>Olá, ${safeName}!</h2><p>Seja bem-vindo(a) ao Minha Clínica.</p>
             <p>Para ativar sua conta, clique no botão abaixo:</p>
             <center>
                 <a href="${verificationUrl}" class="button">Verificar Email</a>
@@ -84,6 +86,8 @@ export class AuthEmailService {
     ): Promise<void> {
         const apiUrl = process.env.API_URL ?? `http://localhost:${process.env.PORT ?? 3001}`;
         const verificationUrl = `${apiUrl}/api/clinics/verify-email/${verificationToken}`;
+        const safeOwnerName = escapeHtml(ownerName);
+        const safeClinicTradeName = escapeHtml(clinicTradeName);
 
         const html = `
 <!DOCTYPE html>
@@ -106,10 +110,10 @@ export class AuthEmailService {
             <h1>🏥 Cadastro de Clínica — Minha Clínica</h1>
         </div>
         <div class="content">
-            <h2>Olá, ${ownerName}!</h2>
+            <h2>Olá, ${safeOwnerName}!</h2>
             <p>Recebemos a solicitação de cadastro da clínica:</p>
             <div class="clinic-box">
-                <strong>${clinicTradeName}</strong>
+                <strong>${safeClinicTradeName}</strong>
             </div>
             <p>Para confirmar seu e-mail e continuar o cadastro, clique no botão abaixo:</p>
             <center>
@@ -148,6 +152,8 @@ export class AuthEmailService {
         verificationToken: string,
     ): Promise<void> {
         const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=professional`;
+        const safeName = escapeHtml(name);
+        const safeClinicName = escapeHtml(clinicName);
 
         const html = `
 <!DOCTYPE html>
@@ -169,8 +175,8 @@ export class AuthEmailService {
             <h1>👨‍⚕️ Convite para Profissional</h1>
         </div>
         <div class="content">
-            <h2>Olá, ${name}!</h2>
-            <p>Você foi convidado para trabalhar na clínica <strong>${clinicName}</strong>.</p>
+            <h2>Olá, ${safeName}!</h2>
+            <p>Você foi convidado para trabalhar na clínica <strong>${safeClinicName}</strong>.</p>
             <p>Para aceitar o convite e completar seu cadastro, clique no botão abaixo:</p>
             <center>
                 <a href="${verificationUrl}" class="button">Aceitar Convite</a>
@@ -209,6 +215,8 @@ export class AuthEmailService {
     ): Promise<void> {
         const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=staff`;
         const roleText = role === UserRole.ADMIN ? "Administrador" : "Recepcionista";
+        const safeName = escapeHtml(name);
+        const safeClinicName = escapeHtml(clinicName);
 
         const html = `
 <!DOCTYPE html>
@@ -230,8 +238,8 @@ export class AuthEmailService {
             <h1>💼 Convite - ${roleText}</h1>
         </div>
         <div class="content">
-            <h2>Olá, ${name}!</h2>
-            <p>Você foi convidado para ser <strong>${roleText}</strong> na <strong>${clinicName}</strong>.</p>
+            <h2>Olá, ${safeName}!</h2>
+            <p>Você foi convidado para ser <strong>${roleText}</strong> na <strong>${safeClinicName}</strong>.</p>
             <p>Para aceitar o convite e completar seu cadastro, clique no botão abaixo:</p>
             <center>
                 <a href="${verificationUrl}" class="button">Aceitar Convite</a>
@@ -270,6 +278,9 @@ export class AuthEmailService {
         clinicName: string,
     ): Promise<void> {
         const activationUrl = `${process.env.FRONTEND_URL}/ativar-conta?token=${activationToken}`;
+        const safeName = escapeHtml(name);
+        const safeClinicName = escapeHtml(clinicName);
+        const safeEmail = escapeHtml(email);
 
         const html = `
 <!DOCTYPE html>
@@ -292,10 +303,10 @@ export class AuthEmailService {
             <h1>🏥 Bem-vindo(a) à Minha Clínica</h1>
         </div>
         <div class="content">
-            <h2>Olá, ${name}!</h2>
+            <h2>Olá, ${safeName}!</h2>
             <p>Sua conta foi criada pela equipe da:</p>
-            <div class="clinic-box">${clinicName}</div>
-            <p>Seu e-mail de login é <strong>${email}</strong>. Para acessar o portal do paciente, clique no botão abaixo e defina sua própria senha:</p>
+            <div class="clinic-box">${safeClinicName}</div>
+            <p>Seu e-mail de login é <strong>${safeEmail}</strong>. Para acessar o portal do paciente, clique no botão abaixo e defina sua própria senha:</p>
             <center>
                 <a href="${activationUrl}" class="button">Ativar Conta</a>
             </center>
@@ -331,6 +342,7 @@ export class AuthEmailService {
         resetToken: string,
     ): Promise<void> {
         const resetUrl = `${process.env.FRONTEND_URL}/redefinir-senha?token=${resetToken}`;
+        const safeName = escapeHtml(name);
 
         const html = `
 <!DOCTYPE html>
@@ -353,7 +365,7 @@ export class AuthEmailService {
             <h1>🔑 Redefinição de Senha</h1>
         </div>
         <div class="content">
-            <h2>Olá, ${name}!</h2>
+            <h2>Olá, ${safeName}!</h2>
             <p>Recebemos uma solicitação para redefinir a senha da sua conta no <strong>Minha Clínica</strong>.</p>
             <p>Clique no botão abaixo para criar uma nova senha:</p>
             <center>
@@ -393,6 +405,7 @@ export class AuthEmailService {
         otp: string,
         expiresMinutes = 10,
     ): Promise<void> {
+        const safeName = escapeHtml(name);
         const html = `
 <!DOCTYPE html>
 <html>
@@ -414,7 +427,7 @@ export class AuthEmailService {
             <h1>🔐 Verificação de Acesso — Minha Clínica</h1>
         </div>
         <div class="content">
-            <h2>Olá, ${name}!</h2>
+            <h2>Olá, ${safeName}!</h2>
             <p>Detectamos um acesso de um dispositivo não reconhecido. Use o código abaixo para confirmar seu login:</p>
             <div class="otp-box">
                 <div class="otp-code">${otp}</div>

@@ -1,5 +1,6 @@
 import * as yup from "yup";
 import { UserRole } from "../types/enums";
+import { stripHtmlTags } from "../utils/sanitizeText";
 import { validateCPF } from "../utils/validateCPF";
 
 const STAFF_ROLES = [UserRole.RECEPTIONIST, UserRole.ADMIN];
@@ -11,6 +12,7 @@ const STAFF_ROLES = [UserRole.RECEPTIONIST, UserRole.ADMIN];
 export const inviteStaffSchema = yup.object({
   name: yup
     .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .required("Nome é obrigatório")
     .min(3, "Nome deve ter no mínimo 3 caracteres")
     .max(100, "Nome deve ter no máximo 100 caracteres"),
@@ -62,6 +64,7 @@ export const updateReceptionSchema = yup
   .object({
     name: yup
       .string()
+      .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
       .optional()
       .min(3, "Nome deve ter no mínimo 3 caracteres")
       .max(100, "Nome deve ter no máximo 100 caracteres"),

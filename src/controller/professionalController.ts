@@ -48,8 +48,13 @@ export class ProfessionalController {
 
       res.status(201).json(result);
     } catch (error) {
-      // professionalRegistrationService lança Error puro (sem statusCode) para
-      // várias regras de negócio — sempre foi 400, preserva o status.
+      // Email duplicado agora carrega statusCode/code/action explícitos (409).
+      // As demais regras de negócio deste serviço continuam em Error puro,
+      // sempre 400 — preserva o status para elas.
+      if (error instanceof Error && "statusCode" in error) {
+        handleControllerError(res, error, "Erro ao enviar convite");
+        return;
+      }
       if (error instanceof Error) {
         res.status(400).json({ error: error.message });
         return;
@@ -76,6 +81,11 @@ export class ProfessionalController {
 
       res.status(200).json(result);
     } catch (error) {
+      // CPF duplicado agora carrega statusCode/code/action explícitos (409).
+      if (error instanceof Error && "statusCode" in error) {
+        handleControllerError(res, error, "Erro ao completar cadastro");
+        return;
+      }
       if (error instanceof Error) {
         res.status(400).json({ error: error.message });
         return;

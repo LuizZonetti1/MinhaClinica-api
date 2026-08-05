@@ -160,7 +160,10 @@ export class UpdateUserRolesService {
                 // Garante que o CPF não está vinculado a outro usuário
                 const cpfOwner = await prisma.patient.findUnique({ where: { cpf: userCpf } });
                 if (cpfOwner) {
-                    throw new Error("Este CPF já está cadastrado como paciente por outro usuário.");
+                    throw Object.assign(
+                        new Error("Este CPF já está cadastrado como paciente por outro usuário."),
+                        { statusCode: 409 },
+                    );
                 }
 
                 await prisma.patient.create({

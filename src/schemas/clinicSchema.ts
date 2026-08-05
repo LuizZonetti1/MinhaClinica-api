@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { stripHtmlTags } from "../utils/sanitizeText";
 import { validateCPF } from "../utils/validateCPF";
 import { validateCep } from "../utils/validateCep";
 
@@ -18,12 +19,14 @@ export const clinicRegisterStartSchema = yup.object({
   // ── Dados da clínica ──────────────────────────────────────────
   legalName: yup
     .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .required("Razão social é obrigatória")
     .min(3, "Razão social deve ter no mínimo 3 caracteres")
     .max(200, "Razão social deve ter no máximo 200 caracteres"),
 
   tradeName: yup
     .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .required("Nome fantasia é obrigatório")
     .min(3, "Nome fantasia deve ter no mínimo 3 caracteres")
     .max(200, "Nome fantasia deve ter no máximo 200 caracteres"),
@@ -108,6 +111,7 @@ export const clinicRegisterStartSchema = yup.object({
   // ── Dados do dono (futuro usuário ADMIN) ──────────────────────
   ownerName: yup
     .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .required("Nome do responsável é obrigatório")
     .min(3, "Nome deve ter no mínimo 3 caracteres")
     .max(100),
@@ -156,8 +160,18 @@ export const clinicRegisterCompleteSchema = yup.object({
  * PUT /api/clinics/:id
  */
 export const clinicUpdateSchema = yup.object({
-  legalName: yup.string().min(3).max(200).optional(),
-  tradeName: yup.string().min(3).max(200).optional(),
+  legalName: yup
+    .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
+    .min(3)
+    .max(200)
+    .optional(),
+  tradeName: yup
+    .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
+    .min(3)
+    .max(200)
+    .optional(),
   email: yup.string().email().lowercase().optional(),
   phone: yup.string().matches(phoneRegex).optional(),
   website: yup.string().url().optional(),
@@ -190,7 +204,12 @@ const workingDaysPresets = ["WEEKDAYS", "MON_TO_SAT", "ALL_WEEK"] as const;
  * PATCH /api/clinics/settings/info
  */
 export const clinicInfoUpdateSchema = yup.object({
-  tradeName: yup.string().min(3).max(200).optional(),
+  tradeName: yup
+    .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
+    .min(3)
+    .max(200)
+    .optional(),
   cnpj: yup
     .string()
     .matches(cnpjRegex, "CNPJ deve conter exatamente 14 dígitos")

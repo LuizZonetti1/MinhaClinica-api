@@ -62,14 +62,22 @@ export class ReceptionPatientRegistrationService {
           { statusCode: 409 },
         );
       }
-      throw Object.assign(new Error("Email já cadastrado"), { statusCode: 409 });
+      throw Object.assign(new Error("Este e-mail já possui cadastro na plataforma."), {
+        statusCode: 409,
+        code: "EMAIL_ALREADY_REGISTERED",
+        action: "LOGIN_OR_RECOVER",
+      });
     }
 
     // ── 2) Verificar duplicidade de CPF ──────────────────────────────────────
     const cleanCpf = data.cpf.replace(/\D/g, "");
     const existingCpf = await this.userRepository.findByCpf(cleanCpf);
     if (existingCpf) {
-      throw Object.assign(new Error("CPF já cadastrado"), { statusCode: 409 });
+      throw Object.assign(new Error("Este CPF já possui cadastro na plataforma."), {
+        statusCode: 409,
+        code: "CPF_ALREADY_REGISTERED",
+        action: "LOGIN_OR_RECOVER",
+      });
     }
 
     // ── 3) Gerar senha aleatória e hashear ─────────────────────────────────

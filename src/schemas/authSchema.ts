@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { stripHtmlTags } from "../utils/sanitizeText";
 
 /**
  * Schema para login
@@ -20,6 +21,7 @@ export const loginSchema = yup.object({
 export const registerStartSchema = yup.object({
   name: yup
     .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .required("Nome é obrigatório")
     .min(3, "Nome deve ter no mínimo 3 caracteres")
     .max(100, "Nome deve ter no máximo 100 caracteres"),

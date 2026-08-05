@@ -24,7 +24,14 @@ export const handleControllerError = (
     const statusCode = (error as Error & { statusCode: number }).statusCode;
 
     if (statusCode < 500) {
-      res.status(statusCode).json({ error: error.message });
+      // Erros estruturados (ex: CPF/e-mail duplicado) carregam code/action
+      // além da mensagem, para o frontend oferecer uma ação de saída.
+      const { code, action } = error as Error & { code?: string; action?: string };
+      res.status(statusCode).json({
+        error: error.message,
+        ...(code && { code }),
+        ...(action && { action }),
+      });
       return;
     }
 

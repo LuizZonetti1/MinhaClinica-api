@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { stripHtmlTags } from "../utils/sanitizeText";
 
 const phoneRegex = /^\d{10,11}$/;
 const timeRegex = /^\d{2}:\d{2}$/;
@@ -10,6 +11,7 @@ const timeRegex = /^\d{2}:\d{2}$/;
 export const updateProfileSchema = yup.object({
   name: yup
     .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .min(3, "Nome deve ter no mínimo 3 caracteres")
     .max(100, "Nome deve ter no máximo 100 caracteres")
     .optional(),
@@ -59,6 +61,7 @@ const workingHourSchema = yup.object({
 export const updateProfessionalProfileSchema = yup.object({
   name: yup
     .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
     .min(3, "Nome deve ter no mínimo 3 caracteres")
     .max(100, "Nome deve ter no máximo 100 caracteres")
     .optional(),
