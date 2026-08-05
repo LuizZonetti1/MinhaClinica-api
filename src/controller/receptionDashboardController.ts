@@ -1,10 +1,19 @@
 ﻿import type { Request, Response } from "express";
+import { RescheduleAppointmentService } from "../services/patients/rescheduleAppointmentService";
 import { GetProfessionalsAgendaService } from "../services/reception/agendaService";
 import {
   ReceptionDashboardService,
   UpdateCheckinStatusService,
 } from "../services/reception/receptionDashboardService";
+import { AppointmentStatus } from "../types/enums";
+import type { PatientRescheduleInput } from "../types/patient";
 import { handleControllerError } from "../utils/controllerUtils";
+
+const RECEPTION_RESCHEDULE_ALLOWED_STATUSES = [
+  AppointmentStatus.SCHEDULED,
+  AppointmentStatus.CONFIRMED,
+  AppointmentStatus.WAITING,
+] as string[];
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -70,6 +79,38 @@ export class ReceptionDashboardController {
       res.status(200).json(result);
     } catch (error) {
       handleControllerError(res, error, "Erro ao atualizar status do agendamento");
+    }
+  }
+
+  async rescheduleAppointment(req: Request, res: Response): Promise<void> {
+    try {
+      const { clinicId, userId } = req;
+      const appointmentId = String(req.params.id);
+
+      if (!clinicId || !userId) {
+        res.status(400).json({ error: "Clínica não identificada no token" });
+        return;
+      }
+
+      if (!UUID_REGEX.test(appointmentId)) {
+        res.status(400).json({ error: "ID do agendamento inválido" });
+        return;
+      }
+
+      // clinicId sempre vem do token, nunca do body — o body é validado pelo
+      // mesmo schema do fluxo do paciente (que exige o campo), mas em modo
+      // clínica confiar no clinicId do cliente abriria uma brecha cross-tenant
+      // (o modo clínica não tem a checagem de posse por paciente).
+      const input = { ...(req.body as PatientRescheduleInput), clinicId };
+
+      const service = new RescheduleAppointmentService();
+      const result = await service.execute(appointmentId, userId, input, {
+        allowedStatuses: RECEPTION_RESCHEDULE_ALLOWED_STATUSES,
+      });
+
+      res.status(200).json({ data: result });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao remarcar consulta");
     }
   }
 

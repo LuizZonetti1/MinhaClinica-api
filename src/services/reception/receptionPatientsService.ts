@@ -23,6 +23,7 @@ export class ListReceptionPatientAppointmentsService {
         type: true,
         status: true,
         notes: true,
+        professionalId: true,
         professional: {
           select: {
             user: { select: { name: true } },
@@ -42,6 +43,7 @@ export class ListReceptionPatientAppointmentsService {
       date: a.appointmentDate,
       startTime: a.startTime,
       endTime: a.endTime,
+      professionalId: a.professionalId,
       professionalName: a.professional.user.name,
       professionalSpecialty: a.professional.specialties[0]?.specialty.name ?? null,
       appointmentType: a.type,

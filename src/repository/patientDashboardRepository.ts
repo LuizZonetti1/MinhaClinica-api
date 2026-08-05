@@ -118,12 +118,22 @@ export class PatientDashboardRepository {
   }
 
   /** Busca agendamento por id verificando posse do paciente e clinicId */
-  async findAppointmentForReschedule(appointmentId: string, userId: string, clinicId: string) {
+  /**
+   * Busca o agendamento para remarcação.
+   * Modo paciente (ownerUserId informado): exige posse do paciente, além do
+   * tenant. Modo clínica (ownerUserId omitido): qualquer agendamento do
+   * tenant — usado pela recepção, que já tem checkRole(ADMIN, RECEPTIONIST).
+   */
+  async findAppointmentForReschedule(
+    appointmentId: string,
+    clinicId: string,
+    ownerUserId?: string,
+  ) {
     return prisma.appointment.findFirst({
       where: {
         id: appointmentId,
         clinicId,
-        patient: { userId },
+        ...(ownerUserId ? { patient: { userId: ownerUserId } } : {}),
       },
       select: {
         id: true,

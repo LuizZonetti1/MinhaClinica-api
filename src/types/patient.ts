@@ -120,6 +120,7 @@ export interface ReceptionAppointmentItem {
   date: Date;
   startTime: string;
   endTime: string;
+  professionalId: string;
   professionalName: string;
   professionalSpecialty: string | null;
   appointmentType: string;

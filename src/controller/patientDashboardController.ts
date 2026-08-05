@@ -99,7 +99,7 @@ export class PatientDashboardController {
       const input = req.body as PatientRescheduleInput;
 
       const service = new RescheduleAppointmentService();
-      const result = await service.execute(appointmentId, userId, input);
+      const result = await service.execute(appointmentId, userId, input, { ownerUserId: userId });
 
       res.status(200).json({ data: result });
     } catch (error) {

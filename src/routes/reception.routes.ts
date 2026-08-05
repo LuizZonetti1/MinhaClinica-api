@@ -5,7 +5,10 @@ import { ReceptionPatientsController } from "../controller/receptionPatientsCont
 import { StaffController } from "../controller/staffController";
 import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
-import { updateAppointmentStatusSchema } from "../schemas/appointmentSchema";
+import {
+  rescheduleAppointmentSchema,
+  updateAppointmentStatusSchema,
+} from "../schemas/appointmentSchema";
 import { completeStaffSchema, updateReceptionSchema } from "../schemas/staffSchema";
 import { UserRole } from "../types/enums";
 
@@ -72,6 +75,19 @@ router.patch(
   checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
   validate(updateAppointmentStatusSchema),
   (req, res) => receptionDashboardController.patchAppointmentStatus(req, res),
+);
+
+/**
+ * PROTEGIDO (ADMIN | RECEPTIONIST) — Remarcar um agendamento
+ * PATCH /api/reception/appointments/:id/reschedule
+ * Body: { appointmentDate, startTime, clinicId, professionalId }
+ */
+router.patch(
+  "/appointments/:id/reschedule",
+  authMiddleware,
+  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
+  validate(rescheduleAppointmentSchema),
+  (req, res) => receptionDashboardController.rescheduleAppointment(req, res),
 );
 
 /**

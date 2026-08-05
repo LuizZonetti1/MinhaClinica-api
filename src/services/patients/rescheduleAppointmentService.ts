@@ -4,7 +4,7 @@ import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
 import { PatientDashboardRepository } from "../../repository/patientDashboardRepository";
 import { ProcedureRepository } from "../../repository/procedureRepository";
-import { AppointmentChannel, AppointmentStatus } from "../../types/enums";
+import { AppointmentChannel, AppointmentStatus, DayOfWeek } from "../../types/enums";
 import type { PatientRescheduleInput, PatientRescheduleResult } from "../../types/patient";
 import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDuration";
 
@@ -12,6 +12,17 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+
+// Dias da semana: Date.getDay() → DayOfWeek (mesmo mapeamento de getAvailableSlotsService)
+const JS_DAY_TO_ENUM: Record<number, DayOfWeek> = {
+  0: DayOfWeek.SUNDAY,
+  1: DayOfWeek.MONDAY,
+  2: DayOfWeek.TUESDAY,
+  3: DayOfWeek.WEDNESDAY,
+  4: DayOfWeek.THURSDAY,
+  5: DayOfWeek.FRIDAY,
+  6: DayOfWeek.SATURDAY,
+};
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -24,30 +35,45 @@ function minutesToTime(minutes: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+const DEFAULT_ALLOWED_STATUSES = [
+  AppointmentStatus.SCHEDULED,
+  AppointmentStatus.CONFIRMED,
+] as string[];
+
+export interface RescheduleOptions {
+  /** Quando informado, exige que o agendamento pertença a este paciente (fluxo do paciente). */
+  ownerUserId?: string;
+  /** Status de origem aceitos. Padrão: SCHEDULED, CONFIRMED (comportamento atual do paciente). */
+  allowedStatuses?: string[];
+}
+
 export class RescheduleAppointmentService {
   private repository = new PatientDashboardRepository();
   private procedureRepository = new ProcedureRepository();
 
   async execute(
     appointmentId: string,
-    userId: string,
+    actorUserId: string,
     input: PatientRescheduleInput,
+    options: RescheduleOptions = {},
   ): Promise<PatientRescheduleResult> {
-    // Busca o agendamento original verificando posse pelo userId e clinicId
+    const { ownerUserId, allowedStatuses = DEFAULT_ALLOWED_STATUSES } = options;
+
+    // Busca o agendamento original. Modo paciente (ownerUserId informado) exige
+    // posse; modo clínica (recepção) só exige o tenant.
     const original = await this.repository.findAppointmentForReschedule(
       appointmentId,
-      userId,
       input.clinicId,
+      ownerUserId,
     );
 
     if (!original) {
       throw Object.assign(new Error("Agendamento não encontrado"), { statusCode: 404 });
     }
 
-    const allowedStatuses = [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] as string[];
     if (!allowedStatuses.includes(original.status)) {
       throw Object.assign(
-        new Error("Só é possível remarcar consultas com status SCHEDULED ou CONFIRMED"),
+        new Error(`Só é possível remarcar consultas com status ${allowedStatuses.join(", ")}`),
         { statusCode: 400 },
       );
     }
@@ -61,6 +87,25 @@ export class RescheduleAppointmentService {
     if (!professional) {
       throw Object.assign(new Error("Profissional não encontrado ou inativo"), {
         statusCode: 404,
+      });
+    }
+
+    // O profissional precisa atender no dia da semana da nova data. Checagem
+    // mínima (não recalcula horários/blocks — isso é feito em
+    // getAvailableSlotsService, fora do escopo deste serviço).
+    const dayOfWeek = JS_DAY_TO_ENUM[dayjs.tz(input.appointmentDate, DEFAULT_TIMEZONE).day()];
+    const workingDay = await prisma.professionalWorkingHours.findFirst({
+      where: {
+        professionalId: input.professionalId,
+        dayOfWeek,
+        isWorking: true,
+      },
+      select: { id: true },
+    });
+
+    if (!workingDay) {
+      throw Object.assign(new Error("O profissional não atende neste dia da semana."), {
+        statusCode: 400,
       });
     }
 
@@ -142,7 +187,7 @@ export class RescheduleAppointmentService {
           type: original.type,
           channel: (original.channel as AppointmentChannel) ?? AppointmentChannel.IN_PERSON,
           notes: original.notes ?? undefined,
-          createdBy: userId,
+          createdBy: actorUserId,
         },
         select: { id: true, appointmentDate: true, startTime: true, endTime: true },
       });
