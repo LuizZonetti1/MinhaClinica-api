@@ -1,8 +1,8 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { prisma } from "../../database/prisma";
 import { ReceptionDashboardRepository } from "../../repository/receptionDashboardRepository";
-import { AutoNoShowService } from "../appointments/autoNoShowService";
 import type {
   ReceptionAppointmentsTodayResponse,
   ReceptionDashboardSummary,
@@ -13,12 +13,15 @@ import {
   type AppointmentStatus as AppointmentStatusType,
   AppointmentType,
   type AppointmentType as AppointmentTypeType,
+  DocumentStatus,
 } from "../../types/enums";
 import {
   CHECKIN_DONE_STATUSES,
   CONSULTATION_EXCLUDED_STATUSES,
   PENDING_CHECKIN_STATUSES,
 } from "../../utils/appointmentStatusRules";
+import { assertValidTransition } from "../appointments/appointmentTransitions";
+import { AutoNoShowService } from "../appointments/autoNoShowService";
 
 const APPOINTMENT_TYPE_LABELS: Record<AppointmentTypeType, string> = {
   [AppointmentType.CONSULTATION]: "Consulta",
@@ -48,7 +51,9 @@ export class ReceptionDashboardService {
 
     const parsed = dayjs.tz(date, DEFAULT_TIMEZONE);
     if (!parsed.isValid()) {
-      throw Object.assign(new Error("Data invalida. Use o formato YYYY-MM-DD"), { statusCode: 400 });
+      throw Object.assign(new Error("Data invalida. Use o formato YYYY-MM-DD"), {
+        statusCode: 400,
+      });
     }
 
     return parsed;
@@ -84,7 +89,12 @@ export class ReceptionDashboardService {
         startOfDay,
         endOfDay,
       ),
-      this.repository.countTodayByStatuses(clinicId, [...CHECKIN_DONE_STATUSES], startOfDay, endOfDay),
+      this.repository.countTodayByStatuses(
+        clinicId,
+        [...CHECKIN_DONE_STATUSES],
+        startOfDay,
+        endOfDay,
+      ),
       this.repository.countTodayByStatuses(
         clinicId,
         [AppointmentStatus.SCHEDULED],
@@ -173,6 +183,44 @@ export class UpdateCheckinStatusService {
     if (!appointment) {
       throw Object.assign(new Error("Agendamento nao encontrado"), { statusCode: 404 });
     }
+
+    // Trava de integridade clínica: checada ANTES da matriz de transição
+    // genérica, para que o usuário veja o motivo real (documento já emitido)
+    // em vez da mensagem genérica de transição inválida. Uma consulta com
+    // documento já finalizado (relatório, atestado, receita, etc — qualquer
+    // status além de rascunho) não pode voltar a um status anterior. A única
+    // transição permitida a partir daqui é registrar um adendo, que tem
+    // fluxo próprio.
+    if (
+      appointment.status === AppointmentStatus.COMPLETED ||
+      appointment.status === AppointmentStatus.COMPLETED_WITH_ADDENDUM
+    ) {
+      const isAddendumPath =
+        appointment.status === AppointmentStatus.COMPLETED &&
+        status === AppointmentStatus.COMPLETED_WITH_ADDENDUM;
+
+      if (!isAddendumPath) {
+        const hasFinalizedDocument = await prisma.document.findFirst({
+          where: {
+            appointmentId,
+            status: { not: DocumentStatus.DRAFT },
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+
+        if (hasFinalizedDocument) {
+          throw Object.assign(
+            new Error(
+              "Esta consulta possui documento clínico já emitido e não pode ter o status alterado.",
+            ),
+            { statusCode: 409 },
+          );
+        }
+      }
+    }
+
+    assertValidTransition(appointment.status, status);
 
     const updated = await this.repository.updateAppointmentStatus(appointmentId, status);
 
@@ -268,7 +316,7 @@ export class UpdateCheckinStatusService {
             await notifRepo.markAsSent(sn.id);
           }
         })
-        .catch(() => { });
+        .catch(() => {});
     }
 
     return { id: updated.id, status: updated.status };
