@@ -131,6 +131,8 @@ export class CompleteStaffService {
         mustChangePassword: true, // Staff deve trocar senha no primeiro login
         verificationToken: null,
         verificationExpires: null,
+        termsAcceptedAt: new Date(),
+        privacyAcceptedAt: new Date(),
       },
     });
 

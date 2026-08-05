@@ -195,6 +195,8 @@ export class CompleteClinicOwnerService {
         mustChangePassword: false,
         verificationToken: null,
         verificationExpires: null,
+        termsAcceptedAt: new Date(),
+        privacyAcceptedAt: new Date(),
       },
     });
 

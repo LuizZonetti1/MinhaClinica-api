@@ -1,4 +1,5 @@
 ﻿import type { Request, Response } from "express";
+import { AcceptTermsService } from "../services/auth/acceptTermsService";
 import { ActivateReceptionPatientService } from "../services/auth/activateReceptionPatientService";
 import { LoginService } from "../services/auth/loginService";
 import { ForgotPasswordService, ResetPasswordService } from "../services/auth/passwordResetService";
@@ -175,6 +176,22 @@ export class AuthController {
       res.status(200).json({ message: "Senha redefinida com sucesso." });
     } catch (error) {
       handleControllerError(res, error, "Erro ao redefinir senha");
+    }
+  }
+
+  /**
+   * POST /api/auth/accept-terms
+   * Registra o aceite de Termos/Privacidade para o usuário logado — usado
+   * pelo banner de pendência de contas criadas antes deste recurso existir.
+   */
+  async acceptTerms(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.userId as string;
+      const service = new AcceptTermsService();
+      const result = await service.execute(userId);
+      res.status(200).json(result);
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao registrar aceite");
     }
   }
 }

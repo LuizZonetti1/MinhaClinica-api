@@ -144,6 +144,11 @@ export const clinicRegisterCompleteSchema = yup.object({
     .required("Telefone é obrigatório")
     .matches(phoneRegex, "Telefone deve ter 10 ou 11 dígitos")
     .transform((v) => v?.replace(/\D/g, "")),
+
+  termsAccepted: yup
+    .boolean()
+    .oneOf([true], "É necessário aceitar os Termos de Uso e a Política de Privacidade")
+    .required("É necessário aceitar os Termos de Uso e a Política de Privacidade"),
 });
 
 /**

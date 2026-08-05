@@ -283,4 +283,9 @@ export const completePatientSchema = yup.object({
       const digits = v.replace(/\D/g, "");
       return digits.length >= 8 && digits.length <= 11;
     }),
+
+  termsAccepted: yup
+    .boolean()
+    .oneOf([true], "É necessário aceitar os Termos de Uso e a Política de Privacidade")
+    .required("É necessário aceitar os Termos de Uso e a Política de Privacidade"),
 });

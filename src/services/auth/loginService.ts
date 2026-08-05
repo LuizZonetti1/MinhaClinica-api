@@ -86,6 +86,7 @@ export class LoginService {
         roles: user.roles.length > 0 ? user.roles : [user.role],
         clinicId: user.clinicId,
         clinicName: user.clinic?.tradeName ?? null,
+        termsAccepted: Boolean(user.termsAcceptedAt && user.privacyAcceptedAt),
       },
     };
   }

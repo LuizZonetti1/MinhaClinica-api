@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { AuthController } from "../controller/authController";
-import { tempRegistrationAuth } from "../middlewares/auth";
+import { authMiddleware, tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
 import {
   activateAccountSchema,
@@ -69,6 +69,8 @@ function flattenPatientBody(req: Request, _res: Response, next: NextFunction): v
       medicalInfo.emergencyContactPhone ??
       medicalInfo.emergencyPhone ??
       medicalInfo.telefoneEmergencia,
+
+    termsAccepted: b.termsAccepted,
   };
 
   next();
@@ -192,6 +194,14 @@ router.post("/forgot-password", emailLimiter, validate(forgotPasswordSchema), (r
  */
 router.post("/reset-password", authLimiter, validate(resetPasswordSchema), (req, res) =>
   authController.resetPassword(req, res),
+);
+
+/**
+ * PROTEGIDO — Registrar aceite de Termos/Privacidade (contas anteriores a este recurso)
+ * POST /api/auth/accept-terms
+ */
+router.post("/accept-terms", authMiddleware, (req, res) =>
+  authController.acceptTerms(req, res),
 );
 
 export default router;

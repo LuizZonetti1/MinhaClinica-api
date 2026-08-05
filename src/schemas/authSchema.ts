@@ -75,6 +75,10 @@ export const activateAccountSchema = yup.object({
     .required("Senha é obrigatória")
     .min(8, "Senha deve ter no mínimo 8 caracteres")
     .max(50, "Senha deve ter no máximo 50 caracteres"),
+  termsAccepted: yup
+    .boolean()
+    .oneOf([true], "É necessário aceitar os Termos de Uso e a Política de Privacidade")
+    .required("É necessário aceitar os Termos de Uso e a Política de Privacidade"),
 });
 
 /**

@@ -78,6 +78,8 @@ export class ActivateReceptionPatientService {
         verificationToken: null,
         verificationExpires: null,
         mustChangePassword: false,
+        termsAcceptedAt: new Date(),
+        privacyAcceptedAt: new Date(),
       },
     });
 

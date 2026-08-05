@@ -54,6 +54,7 @@ export interface CompletePatientInput {
   observations?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
+  termsAccepted: boolean;
 }
 
 // ── Registro de clínica (etapas) ──────────────────────────────────────────────
@@ -84,6 +85,7 @@ export interface CompleteClinicOwnerInput {
   password: string;
   cpf: string;
   phone: string;
+  termsAccepted: boolean;
 }
 
 export interface InviteStaffInput {
@@ -96,6 +98,7 @@ export interface CompleteStaffInput {
   cpf: string;
   phone: string;
   password: string;
+  termsAccepted: boolean;
 }
 
 export interface InviteProfessionalInput {
@@ -113,6 +116,7 @@ export interface CompleteProfessionalInput {
   registrationState: string;
   defaultAppointmentDuration?: number;
   formations?: string;
+  termsAccepted: boolean;
 }
 
 export interface UpdateProfessionalInput {

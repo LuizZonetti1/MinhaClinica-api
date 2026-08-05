@@ -66,6 +66,11 @@ export const completeProfessionalSchema = yup.object({
     .default(30),
 
   formations: yup.string().optional(),
+
+  termsAccepted: yup
+    .boolean()
+    .oneOf([true], "É necessário aceitar os Termos de Uso e a Política de Privacidade")
+    .required("É necessário aceitar os Termos de Uso e a Política de Privacidade"),
 });
 
 /**

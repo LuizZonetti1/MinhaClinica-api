@@ -154,6 +154,8 @@ export class CompletePatientService {
         phone: cleanPhone,
         password: hashedPassword,
         status: UserStatus.ACTIVE, // Ativa o usuário
+        termsAcceptedAt: new Date(),
+        privacyAcceptedAt: new Date(),
       },
     });
 

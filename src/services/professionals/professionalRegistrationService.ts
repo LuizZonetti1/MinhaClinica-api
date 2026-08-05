@@ -140,6 +140,8 @@ export class CompleteProfessionalService {
         status: UserStatus.ACTIVE, // Ativa o usuário
         verificationToken: null,
         verificationExpires: null,
+        termsAcceptedAt: new Date(),
+        privacyAcceptedAt: new Date(),
       },
     });
 
