@@ -5,12 +5,13 @@ import { AuthController } from "../controller/authController";
 import { tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
 import {
+  activateAccountSchema,
+  forgotPasswordSchema,
   loginSchema,
   registerStartSchema,
   resendVerificationSchema,
-  verifyEmailSchema,
-  forgotPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
 } from "../schemas/authSchema";
 import { completePatientSchema } from "../schemas/patientSchema";
 
@@ -153,11 +154,22 @@ router.post(
 );
 
 /**
- * PÚBLICO — Ativar conta de paciente cadastrado pela recepção
+ * PÚBLICO — Validar token de ativação sem consumi-lo (carregamento da página)
+ * GET /api/auth/activate-account/:token
+ */
+router.get("/activate-account/:token", tokenLimiter, (req, res) =>
+  authController.checkActivationToken(req, res),
+);
+
+/**
+ * PÚBLICO — Ativar conta de paciente cadastrado pela recepção e definir a senha
  * POST /api/auth/activate-account
  */
-router.post("/activate-account", tokenLimiter, (req, res) =>
-  authController.activateAccount(req, res),
+router.post(
+  "/activate-account",
+  tokenLimiter,
+  validate(activateAccountSchema),
+  (req, res) => authController.activateAccount(req, res),
 );
 
 /**

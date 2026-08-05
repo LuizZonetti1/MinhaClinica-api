@@ -81,9 +81,10 @@ export class NotificationController {
         targetRoles: body.targetRoles as string[] | undefined,
       });
 
-      res
-        .status(200)
-        .json({ message: `Comunicado enviado para ${result.sent} usuário(s)`, data: result });
+      res.status(202).json({
+        message: `Comunicado aceito para ${result.accepted} usuário(s). A entrega está sendo processada.`,
+        data: result,
+      });
     } catch (error: unknown) {
       const err = error as { inner?: { message: string }[] };
       if (err.inner) {

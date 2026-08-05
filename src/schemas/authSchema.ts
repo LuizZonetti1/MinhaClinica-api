@@ -64,6 +64,20 @@ export const forgotPasswordSchema = yup.object({
 });
 
 /**
+ * Schema para ativar conta de paciente cadastrado pela recepção e definir a
+ * senha de acesso. Mesma regra de senha do cadastro público (completePatientSchema).
+ * POST /auth/activate-account
+ */
+export const activateAccountSchema = yup.object({
+  token: yup.string().required("Token é obrigatório"),
+  password: yup
+    .string()
+    .required("Senha é obrigatória")
+    .min(8, "Senha deve ter no mínimo 8 caracteres")
+    .max(50, "Senha deve ter no máximo 50 caracteres"),
+});
+
+/**
  * Schema para confirmar a nova senha
  * POST /auth/reset-password
  */

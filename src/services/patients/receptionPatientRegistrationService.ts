@@ -128,11 +128,12 @@ export class ReceptionPatientRegistrationService {
       },
     });
 
-    // ── 8) Enviar email de boas-vindas ─────────────────────────────────────
+    // ── 8) Enviar email de boas-vindas (sem a senha temporária — ela é gerada
+    // só para o hash inicial da conta; o paciente define a própria senha na
+    // ativação, ver ActivateReceptionPatientService) ──────────────────────
     await this.emailService.sendReceptionWelcomeEmail(
       data.email,
       data.name,
-      temporaryPassword,
       activation.token,
       clinicName,
     );

@@ -115,18 +115,30 @@ export class AuthController {
   }
 
   /**
+   * GET /api/auth/activate-account/:token
+   * Valida o token de ativação sem consumi-lo — usado pela página ao carregar,
+   * antes de exibir o formulário de senha.
+   */
+  async checkActivationToken(req: Request, res: Response): Promise<void> {
+    try {
+      const token = req.params.token as string;
+      const service = new ActivateReceptionPatientService();
+      const result = await service.validateToken(token);
+      res.status(200).json(result);
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao validar token de ativação");
+    }
+  }
+
+  /**
    * POST /api/auth/activate-account
-   * Ativa conta de paciente cadastrado pela recepção
+   * Ativa conta de paciente cadastrado pela recepção e define a senha de acesso
    */
   async activateAccount(req: Request, res: Response): Promise<void> {
     try {
-      const { token } = req.body;
-      if (!token) {
-        res.status(400).json({ error: "Token não fornecido" });
-        return;
-      }
+      const { token, password } = req.body;
       const service = new ActivateReceptionPatientService();
-      const result = await service.execute(token);
+      const result = await service.execute(token, password);
       res.status(200).json(result);
     } catch (error) {
       handleControllerError(res, error, "Erro ao ativar conta");
