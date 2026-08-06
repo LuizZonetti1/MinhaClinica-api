@@ -19,7 +19,9 @@ export type ReceptionTodayAppointmentStatus =
   | "CHECKED_IN"
   | "IN_PROGRESS"
   | "DONE"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "NO_SHOW"
+  | "RESCHEDULED";
 
 export interface ReceptionTodayAppointmentItem {
   id: string;

@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
-import { type AppointmentStatus, TransactionType } from "../../types/enums";
+import { AppointmentStatus, TransactionType } from "../../types/enums";
 import { CONSULTATION_EXCLUDED_STATUSES } from "../../utils/appointmentStatusRules";
 
 dayjs.extend(utc);
@@ -775,14 +775,17 @@ export class ReportExportService {
       }),
     ]);
 
-    const cancelledStatuses = new Set<AppointmentStatus>([...CONSULTATION_EXCLUDED_STATUSES]);
+    // Não-contáveis como consulta realizada (cancelada, não compareceu, reagendada).
+    const nonCountableStatuses = new Set<AppointmentStatus>([...CONSULTATION_EXCLUDED_STATUSES]);
+    // "Cancelamentos" é uma métrica específica: só CANCELLED, não NO_SHOW/RESCHEDULED.
+    const cancelledOnlyStatuses = new Set<AppointmentStatus>([AppointmentStatus.CANCELLED]);
 
     const consultationsCount = appointments.filter(
-      (item) => !cancelledStatuses.has(item.status as AppointmentStatus),
+      (item) => !nonCountableStatuses.has(item.status as AppointmentStatus),
     ).length;
 
     const cancellationsCount = appointments.filter((item) =>
-      cancelledStatuses.has(item.status as AppointmentStatus),
+      cancelledOnlyStatuses.has(item.status as AppointmentStatus),
     ).length;
 
     const totalRevenue = financialRecords

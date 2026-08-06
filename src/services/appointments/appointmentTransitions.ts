@@ -44,7 +44,7 @@ const STATUS_LABELS: Record<string, string> = {
   [AppointmentStatus.COMPLETED_WITH_ADDENDUM]: "Concluída com adendo",
   [AppointmentStatus.CANCELLED]: "Cancelada",
   [AppointmentStatus.NO_SHOW]: "Não compareceu",
-  [AppointmentStatus.RESCHEDULED]: "Remarcada",
+  [AppointmentStatus.RESCHEDULED]: "Reagendada",
 };
 
 const label = (status: string): string => STATUS_LABELS[status] ?? status;

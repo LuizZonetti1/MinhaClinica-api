@@ -68,13 +68,16 @@ export class ReportService {
     }
 
     // ── Summary ──────────────────────────────────────────────────────────────
-    const cancelledStatuses = new Set<AppointmentStatus>([...CONSULTATION_EXCLUDED_STATUSES]);
+    // Não-contáveis como consulta realizada (cancelada, não compareceu, reagendada).
+    const nonCountableStatuses = new Set<AppointmentStatus>([...CONSULTATION_EXCLUDED_STATUSES]);
+    // "Cancelamentos" é uma métrica específica: só CANCELLED, não NO_SHOW/RESCHEDULED.
+    const cancelledOnlyStatuses = new Set<AppointmentStatus>([AppointmentStatus.CANCELLED]);
 
     const consultationsCount = appointments.filter(
-      (a) => !cancelledStatuses.has(a.status as AppointmentStatus),
+      (a) => !nonCountableStatuses.has(a.status as AppointmentStatus),
     ).length;
     const cancellationsCount = appointments.filter((a) =>
-      cancelledStatuses.has(a.status as AppointmentStatus),
+      cancelledOnlyStatuses.has(a.status as AppointmentStatus),
     ).length;
 
     const totalRevenue = financials
@@ -97,9 +100,9 @@ export class ReportService {
       // @db.Date chega como UTC midnight — usar .utc() evita shift de timezone
       const key = dayjs(a.appointmentDate).utc().format("YYYY-MM");
       if (!apptByMonth[key]) continue;
-      if (cancelledStatuses.has(a.status as AppointmentStatus)) {
+      if (cancelledOnlyStatuses.has(a.status as AppointmentStatus)) {
         apptByMonth[key].cancellations++;
-      } else {
+      } else if (!nonCountableStatuses.has(a.status as AppointmentStatus)) {
         apptByMonth[key].consultations++;
       }
     }
