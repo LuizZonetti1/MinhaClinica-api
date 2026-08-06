@@ -6,13 +6,13 @@ import { AuditService } from "../audit/auditService";
 const procedureRepository = new ProcedureRepository();
 const auditService = new AuditService();
 
-// Preço fora de escopo nesta fase (sem tela/módulo financeiro ainda) — placeholder
-// até o módulo financeiro existir.
+// Usado apenas quando o procedimento é criado sem preço informado.
 const DEFAULT_PROCEDURE_PRICE = 0;
 
 interface CreateProcedureInput {
   name: string;
   defaultDuration: number;
+  defaultPrice?: number | null;
   defaultType?: AppointmentType;
 }
 
@@ -23,7 +23,7 @@ export class CreateProcedureService {
         clinicId: context.clinicId,
         name: input.name,
         defaultDuration: input.defaultDuration,
-        defaultPrice: DEFAULT_PROCEDURE_PRICE,
+        defaultPrice: input.defaultPrice ?? DEFAULT_PROCEDURE_PRICE,
         defaultType: input.defaultType ?? AppointmentType.CONSULTATION,
       });
 
@@ -35,6 +35,7 @@ export class CreateProcedureService {
         newData: {
           name: procedure.name,
           defaultDuration: procedure.defaultDuration,
+          defaultPrice: procedure.defaultPrice,
           defaultType: procedure.defaultType,
           isActive: procedure.isActive,
         },

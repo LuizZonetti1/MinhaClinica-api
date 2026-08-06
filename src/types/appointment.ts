@@ -23,6 +23,8 @@ export interface ProfessionalListItem {
   bufferTime: number;
   calendarColor: string;
   avatarUrl: string | null;
+  /** Dias da semana com atendimento configurado (ex: ["MONDAY", "TUESDAY"]). */
+  workingDays: string[];
 }
 
 // ── Slots disponíveis (Etapa 2) ───────────────────────────────────────────────

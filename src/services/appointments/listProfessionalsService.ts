@@ -16,6 +16,7 @@ export class ListProfessionalsService {
       bufferTime: p.bufferTime,
       calendarColor: p.calendarColor,
       avatarUrl: p.user.avatarUrl,
+      workingDays: p.workingHours.map((wh) => wh.dayOfWeek),
     }));
   }
 }

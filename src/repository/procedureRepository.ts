@@ -34,6 +34,7 @@ export class ProcedureRepository {
     data: {
       name?: string;
       defaultDuration?: number;
+      defaultPrice?: number | null;
       isActive?: boolean;
       defaultType?: AppointmentType;
     },

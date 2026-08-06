@@ -9,6 +9,7 @@ const auditService = new AuditService();
 interface UpdateProcedureInput {
   name?: string;
   defaultDuration?: number;
+  defaultPrice?: number | null;
   isActive?: boolean;
   defaultType?: AppointmentType;
 }
@@ -31,12 +32,14 @@ export class UpdateProcedureService {
         oldData: {
           name: existing.name,
           defaultDuration: existing.defaultDuration,
+          defaultPrice: existing.defaultPrice,
           defaultType: existing.defaultType,
           isActive: existing.isActive,
         },
         newData: {
           name: updated.name,
           defaultDuration: updated.defaultDuration,
+          defaultPrice: updated.defaultPrice,
           defaultType: updated.defaultType,
           isActive: updated.isActive,
         },

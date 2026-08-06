@@ -48,6 +48,10 @@ export class AppointmentRepository {
           },
           take: 1,
         },
+        workingHours: {
+          where: { isWorking: true },
+          select: { dayOfWeek: true },
+        },
       },
       orderBy: { user: { name: "asc" } },
     });
