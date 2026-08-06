@@ -124,6 +124,19 @@ export class UpdateClinicScheduleService {
       throw new Error("Clínica não encontrada");
     }
 
+    // Um PATCH pode enviar só um dos dois horários — valida contra o que vai
+    // valer depois de aplicado (o novo valor, ou o que já está salvo).
+    const existingSettings = await this.clinicRepository.findSettingsByClinicId(clinicId);
+    const effectiveOpenTime = data.openTime ?? existingSettings?.openTime ?? "08:00";
+    const effectiveCloseTime = data.closeTime ?? existingSettings?.closeTime ?? "18:00";
+
+    if (effectiveOpenTime >= effectiveCloseTime) {
+      throw Object.assign(
+        new Error("Horário de fechamento deve ser depois do horário de abertura."),
+        { statusCode: 400 },
+      );
+    }
+
     return this.clinicRepository.upsertSettings(clinicId, {
       openTime: data.openTime,
       closeTime: data.closeTime,

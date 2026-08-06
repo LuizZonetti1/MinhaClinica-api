@@ -1,5 +1,6 @@
 import * as yup from "yup";
 import { stripHtmlTags } from "../utils/sanitizeText";
+import { rejectField } from "./profileSchema";
 
 export const updatePatientProfileSchema = yup.object({
   name: yup
@@ -26,4 +27,7 @@ export const updatePatientProfileSchema = yup.object({
     .string()
     .matches(/^\d{8}$/, "CEP deve ter 8 dígitos (sem traço)")
     .optional(),
+
+  cpf: rejectField("CPF", "Entre em contato com a clínica."),
+  email: rejectField("E-mail", "Entre em contato com a clínica."),
 });
