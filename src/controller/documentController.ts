@@ -70,8 +70,9 @@ export class DocumentController {
 
       const appointmentId = req.params.id as string;
       const docId = req.params.docId as string;
+      const acknowledgeIncomplete = req.body?.acknowledgeIncomplete === true;
       const service = new FinalizeDocumentService();
-      const result = await service.execute(appointmentId, docId, context);
+      const result = await service.execute(appointmentId, docId, context, acknowledgeIncomplete);
       res.status(200).json(result);
     } catch (error) {
       handleControllerError(res, error, "Erro ao finalizar documento");

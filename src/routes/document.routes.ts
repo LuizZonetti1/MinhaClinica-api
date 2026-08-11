@@ -7,6 +7,7 @@ import { prisma } from "../database/prisma";
 import {
   createAddendumSchema,
   createDocumentSchema,
+  finalizeDocumentSchema,
   updateDocumentSchema,
 } from "../schemas/documentSchema";
 import { UserRole } from "../types/enums";
@@ -52,6 +53,7 @@ router.patch(
   "/:id/documents/:docId/finalize",
   authMiddleware,
   checkRole(UserRole.PROFESSIONAL),
+  validate(finalizeDocumentSchema),
   (req, res) => controller.finalizeDocument(req, res),
 );
 

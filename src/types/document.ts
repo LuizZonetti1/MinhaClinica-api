@@ -16,6 +16,7 @@ export interface CreateAddendumInput {
   content: Record<string, unknown>;
   originalDocumentId?: string | null;
   internalNotes?: string | null;
+  acknowledgeIncomplete?: boolean;
 }
 
 export interface DocumentResponse {

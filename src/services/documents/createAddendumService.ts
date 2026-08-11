@@ -1,7 +1,9 @@
+import * as yup from "yup";
 import { prisma } from "../../database/prisma";
 import { DocumentRepository } from "../../repository/documentRepository";
+import { DOCUMENT_CONTENT_SCHEMAS, NO_OVERRIDE_TYPES } from "../../schemas/documentContentSchemas";
 import type { AuditContext, CreateAddendumInput } from "../../types/document";
-import { AppointmentStatus, DocumentStatus } from "../../types/enums";
+import { AppointmentStatus, DocumentStatus, DocumentType } from "../../types/enums";
 import { generateIntegrityHash } from "../../utils/hashUtils";
 import { AuditService } from "../audit/auditService";
 
@@ -52,6 +54,24 @@ export class CreateAddendumService {
         throw Object.assign(new Error("Documento original não pertence a esta consulta"), {
           statusCode: 400,
         });
+      }
+    }
+
+    const schema = DOCUMENT_CONTENT_SCHEMAS[input.type as DocumentType];
+    if (schema) {
+      try {
+        await schema.validate(input.content, { abortEarly: false });
+      } catch (err) {
+        const errors = err instanceof yup.ValidationError ? err.errors : ["Conteúdo inválido"];
+        const isBlocking = NO_OVERRIDE_TYPES.includes(input.type as DocumentType);
+
+        if (isBlocking || !input.acknowledgeIncomplete) {
+          throw Object.assign(new Error("Documento incompleto"), {
+            statusCode: 400,
+            code: isBlocking ? "DOCUMENT_CONTENT_BLOCKED" : "DOCUMENT_CONTENT_INCOMPLETE",
+            errors,
+          });
+        }
       }
     }
 

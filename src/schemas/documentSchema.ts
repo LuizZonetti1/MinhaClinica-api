@@ -29,4 +29,9 @@ export const createAddendumSchema = yup.object({
     .nullable()
     .optional(),
   internalNotes: yup.string().nullable().optional(),
+  acknowledgeIncomplete: yup.boolean().optional(),
+});
+
+export const finalizeDocumentSchema = yup.object({
+  acknowledgeIncomplete: yup.boolean().optional(),
 });

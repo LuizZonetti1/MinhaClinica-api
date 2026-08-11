@@ -1,7 +1,8 @@
 import { prisma } from "../../database/prisma";
 import { DocumentRepository } from "../../repository/documentRepository";
+import { DOCUMENT_CONTENT_SCHEMAS, NO_OVERRIDE_TYPES } from "../../schemas/documentContentSchemas";
 import type { AuditContext } from "../../types/document";
-import { AppointmentStatus, DocumentStatus } from "../../types/enums";
+import { AppointmentStatus, DocumentStatus, DocumentType } from "../../types/enums";
 import { generateIntegrityHash } from "../../utils/hashUtils";
 import { AuditService } from "../audit/auditService";
 
@@ -43,6 +44,30 @@ export class ConcludeAppointmentService {
       documentRepository.findFinalizedByAppointmentId(appointmentId),
       documentRepository.findDraftsByAppointmentId(appointmentId),
     ]);
+
+    // Fecha a porta dos fundos: documentos de tipo sem override (ex.: receita
+    // controlada) precisam ser revalidados aqui, pois podem ter sido finalizados
+    // antes desta checagem existir.
+    const blockingInvalidDocs: string[] = [];
+    for (const doc of finalizedDocs) {
+      if (!NO_OVERRIDE_TYPES.includes(doc.type as DocumentType)) continue;
+      const schema = DOCUMENT_CONTENT_SCHEMAS[doc.type as DocumentType];
+      if (!schema) continue;
+      try {
+        await schema.validate(doc.content, { abortEarly: false });
+      } catch {
+        blockingInvalidDocs.push(doc.documentNumber);
+      }
+    }
+
+    if (blockingInvalidDocs.length > 0) {
+      throw Object.assign(
+        new Error(
+          `Documentos incompletos impedem a conclusão da consulta: ${blockingInvalidDocs.join(", ")}`,
+        ),
+        { statusCode: 400, code: "DOCUMENT_CONTENT_BLOCKED" },
+      );
+    }
 
     // Transação atômica: enviar todos finalizados + concluir consulta
     const result = await prisma.$transaction(async (tx) => {

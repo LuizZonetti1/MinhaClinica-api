@@ -1,13 +1,20 @@
+import * as yup from "yup";
 import { DocumentRepository } from "../../repository/documentRepository";
+import { DOCUMENT_CONTENT_SCHEMAS, NO_OVERRIDE_TYPES } from "../../schemas/documentContentSchemas";
 import type { AuditContext } from "../../types/document";
-import { AppointmentStatus, DocumentStatus } from "../../types/enums";
+import { AppointmentStatus, DocumentStatus, DocumentType } from "../../types/enums";
 import { AuditService } from "../audit/auditService";
 
 const documentRepository = new DocumentRepository();
 const auditService = new AuditService();
 
 export class FinalizeDocumentService {
-  async execute(appointmentId: string, docId: string, context: AuditContext) {
+  async execute(
+    appointmentId: string,
+    docId: string,
+    context: AuditContext,
+    acknowledgeIncomplete?: boolean,
+  ) {
     const document = await documentRepository.findById(docId);
 
     if (!document) {
@@ -42,6 +49,29 @@ export class FinalizeDocumentService {
       );
     }
 
+    const schema = DOCUMENT_CONTENT_SCHEMAS[document.type as DocumentType];
+    let incompleteAcknowledged = false;
+    let missingFields: string[] | undefined;
+
+    if (schema) {
+      try {
+        await schema.validate(document.content, { abortEarly: false });
+      } catch (err) {
+        const errors = err instanceof yup.ValidationError ? err.errors : ["Conteúdo inválido"];
+        const isBlocking = NO_OVERRIDE_TYPES.includes(document.type as DocumentType);
+
+        if (isBlocking || !acknowledgeIncomplete) {
+          throw Object.assign(new Error("Documento incompleto"), {
+            statusCode: 400,
+            code: isBlocking ? "DOCUMENT_CONTENT_BLOCKED" : "DOCUMENT_CONTENT_INCOMPLETE",
+            errors,
+          });
+        }
+        incompleteAcknowledged = true;
+        missingFields = errors;
+      }
+    }
+
     const updated = await documentRepository.update(docId, {
       status: DocumentStatus.FINALIZED,
       updatedBy: context.userId,
@@ -53,7 +83,10 @@ export class FinalizeDocumentService {
       entity: "Document",
       entityId: docId,
       oldData: { status: DocumentStatus.DRAFT },
-      newData: { status: DocumentStatus.FINALIZED },
+      newData: {
+        status: DocumentStatus.FINALIZED,
+        ...(incompleteAcknowledged && { incompleteAcknowledged: true, missingFields }),
+      },
     });
 
     return updated;
