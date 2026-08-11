@@ -14,6 +14,30 @@ function getExt(filename: string): string {
   return path.extname(filename).replace(".", "").toLowerCase();
 }
 
+// ── MIME esperado por extensão ─────────────────────────────────────────────────
+// getExt só olha o nome do arquivo — renomear payload.exe para payload.png passa
+// direto por PROFILE_FORMATS/DOCUMENT_FORMATS/CLINIC_FORMATS. Exige que o
+// file.mimetype reportado pelo cliente seja coerente com a extensão (não basta
+// estar em algum lugar da allowlist da categoria: .png com application/pdf,
+// por exemplo, também é rejeitado).
+//
+// Nota: file.mimetype vem do cliente e é falsificável — isso eleva a barra sem
+// eliminar o risco. Validação por magic number exigiria ler o buffer em
+// memória, o que conflita com o storage direto no Cloudinary; não vale
+// reescrever o pipeline de upload por isso agora.
+const EXT_MIME_MAP: Record<string, ReadonlySet<string>> = {
+  jpg: new Set(["image/jpeg"]),
+  jpeg: new Set(["image/jpeg"]),
+  png: new Set(["image/png"]),
+  webp: new Set(["image/webp"]),
+  pdf: new Set(["application/pdf"]),
+  svg: new Set(["image/svg+xml"]),
+};
+
+function isMimeConsistent(ext: string, mimetype: string): boolean {
+  return Boolean(EXT_MIME_MAP[ext]?.has(mimetype));
+}
+
 // ── Storage: fotos de perfil ──────────────────────────────────────────────────
 // Pasta: minhaclinica/profiles
 // Formatos: jpg, jpeg, png, webp
@@ -37,7 +61,7 @@ export const uploadProfile = multer({
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter(_req, file, cb) {
     const ext = getExt(file.originalname);
-    if (!PROFILE_FORMATS.has(ext)) {
+    if (!PROFILE_FORMATS.has(ext) || !isMimeConsistent(ext, file.mimetype)) {
       return cb(
         Object.assign(
           new Error("Formato inválido. Use JPG, JPEG, PNG ou WebP para foto de perfil."),
@@ -79,7 +103,7 @@ export const uploadDocument = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter(_req, file, cb) {
     const ext = getExt(file.originalname);
-    if (!DOCUMENT_FORMATS.has(ext)) {
+    if (!DOCUMENT_FORMATS.has(ext) || !isMimeConsistent(ext, file.mimetype)) {
       return cb(
         Object.assign(
           new Error("Formato inválido. Use JPG, JPEG, PNG ou PDF para documentos clínicos."),
@@ -112,7 +136,7 @@ export const uploadClinic = multer({
   limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter(_req, file, cb) {
     const ext = getExt(file.originalname);
-    if (!CLINIC_FORMATS.has(ext)) {
+    if (!CLINIC_FORMATS.has(ext) || !isMimeConsistent(ext, file.mimetype)) {
       return cb(
         Object.assign(
           new Error("Formato inválido. Use JPG, JPEG, PNG, WebP ou SVG para imagens de clínica."),
