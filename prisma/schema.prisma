@@ -351,9 +351,10 @@ model User {
   passwordChangedAt    DateTime? // Registra quando a senha foi alterada (para revogar tokens antigos)
 
   // Autenticação em dois fatores (via email OTP + dispositivo confiável)
-  twoFactorEnabled    Boolean   @default(false)
-  twoFactorOtp        String?   // Código OTP temporário (hash SHA-256)
-  twoFactorOtpExpires DateTime? // Expiração do OTP
+  twoFactorEnabled     Boolean   @default(false)
+  twoFactorOtp         String?   // Código OTP temporário (hash SHA-256)
+  twoFactorOtpExpires  DateTime? // Expiração do OTP
+  twoFactorOtpAttempts Int       @default(0) // Tentativas de validação desde o último OTP gerado
 
   // Especialidade pendente (para profissionais em processo de convite)
   pendingSpecialtyId String?
