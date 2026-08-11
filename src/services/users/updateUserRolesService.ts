@@ -169,7 +169,6 @@ export class UpdateUserRolesService {
                 await prisma.patient.create({
                     data: {
                         userId,
-                        clinicId: null, // Universal: sem vínculo com clínica específica
                         cpf: userCpf,
                         dateOfBirth: new Date("1900-01-01"), // Placeholder — atualizar via perfil do paciente
                         gender: Gender.PREFER_NOT_TO_SAY,   // Placeholder — atualizar via perfil do paciente

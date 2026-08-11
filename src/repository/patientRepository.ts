@@ -7,7 +7,6 @@ export class PatientRepository {
    */
   async createPatient(data: {
     userId: string;
-    clinicId?: string; // Opcional: vinculado ao agendar, não ao registrar
     cpf: string;
     rg?: string;
     dateOfBirth: Date;
@@ -31,7 +30,6 @@ export class PatientRepository {
     return prisma.patient.create({
       data: {
         userId: data.userId,
-        clinicId: data.clinicId ?? null,
         cpf: data.cpf,
         rg: data.rg,
         dateOfBirth: data.dateOfBirth,
@@ -92,46 +90,6 @@ export class PatientRepository {
             status: true,
           },
         },
-      },
-    });
-  }
-
-  /**
-   * Lista todos os pacientes da clínica
-   */
-  async findAllByClinic(
-    clinicId: string,
-    filters?: {
-      isActive?: boolean;
-      search?: string; // Busca por nome, cpf, email
-    },
-  ) {
-    return prisma.patient.findMany({
-      where: {
-        clinicId,
-        isActive: filters?.isActive,
-        ...(filters?.search && {
-          OR: [
-            { user: { name: { contains: filters.search, mode: "insensitive" } } },
-            { cpf: { contains: filters.search } },
-            { user: { email: { contains: filters.search, mode: "insensitive" } } },
-          ],
-        }),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            status: true,
-            avatarUrl: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
       },
     });
   }

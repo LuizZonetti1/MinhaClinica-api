@@ -208,7 +208,6 @@ model Clinic {
   holidays         ClinicHoliday[]
   specialties      Specialty[]
   professionals    Professional[]
-  patients         Patient[]
   procedures       Procedure[]
   appointments     Appointment[]
   financialRecords FinancialRecord[]
@@ -533,19 +532,14 @@ model ProfessionalScheduleBlock {
 // ========================================
 
 model Patient {
-  id       String  @id @default(uuid())
-  // Paciente é identidade global, sem vínculo fixo de clínica — o vínculo real
-  // é por Appointment (uma consulta por clínica). O plano original era popular
-  // este campo ao agendar a primeira consulta, mas isso nunca foi implementado:
-  // nenhum código escreve clinicId aqui, então é sempre null hoje. Ainda é lido
-  // em services/notifications/birthdayCronService.ts:16 (`patient.clinicId ?? ""`),
-  // o que grava Notification.clinicId="" — Notification.clinicId é obrigatório
-  // e tem FK pra Clinic, então isso provavelmente falha em runtime. Não corrigido
-  // aqui — depende de decisão de produto (paciente com consultas em N clínicas:
-  // notificação de aniversário vai pra todas? nenhuma?). Não usar este campo
-  // para escopo em código novo.
-  clinicId String?
-  clinic   Clinic? @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  id String @id @default(uuid())
+  // Paciente é identidade global — não tem clinicId. O vínculo com clínica é
+  // só via Appointment (uma consulta por clínica). Havia um campo clinicId
+  // aqui antes; nunca foi escrito por nenhum código e um consumidor
+  // (birthdayCronService) o usava como se fosse — gravava Notification com
+  // clinicId="" e violava a FK obrigatória em runtime. Removido; ver
+  // notificationRepository.findBirthdayRecipients, que deriva o par
+  // (paciente, clínica) de Appointment.
 
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

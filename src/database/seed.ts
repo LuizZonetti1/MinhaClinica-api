@@ -683,7 +683,6 @@ async function main() {
     });
     const patient = await prisma.patient.create({
       data: {
-        clinicId: clinic1.id,
         userId: user.id,
         cpf: patientData.cpf,
         dateOfBirth: patientData.dateOfBirth,
@@ -1723,7 +1722,6 @@ async function main() {
   });
   const c2Pat1 = await prisma.patient.create({
     data: {
-      clinicId: clinic2.id,
       userId: c2PatUser1.id,
       cpf: "88800000001",
       dateOfBirth: new Date("1982-04-12"),
@@ -1758,7 +1756,6 @@ async function main() {
   });
   const c2Pat2 = await prisma.patient.create({
     data: {
-      clinicId: clinic2.id,
       userId: c2PatUser2.id,
       cpf: "88800000002",
       dateOfBirth: new Date("1996-09-08"),
@@ -2184,7 +2181,6 @@ async function main() {
   });
   const c3Pat1 = await prisma.patient.create({
     data: {
-      clinicId: clinic3.id,
       userId: c3PatUser1.id,
       cpf: "30000000010",
       dateOfBirth: new Date("1988-03-14"),
@@ -2219,7 +2215,6 @@ async function main() {
   });
   const c3Pat2 = await prisma.patient.create({
     data: {
-      clinicId: clinic3.id,
       userId: c3PatUser2.id,
       cpf: "30000000011",
       dateOfBirth: new Date("1995-11-28"),
@@ -2254,7 +2249,6 @@ async function main() {
   });
   const c3Pat3 = await prisma.patient.create({
     data: {
-      clinicId: clinic3.id,
       userId: c3PatUser3.id,
       cpf: "30000000012",
       dateOfBirth: new Date("2015-06-05"),
@@ -2711,7 +2705,6 @@ async function main() {
   });
   const c4Pat1 = await prisma.patient.create({
     data: {
-      clinicId: clinic4.id,
       userId: c4PatUser1.id,
       cpf: "40000000010",
       dateOfBirth: new Date("1992-07-18"),
@@ -2746,7 +2739,6 @@ async function main() {
   });
   const c4Pat2 = await prisma.patient.create({
     data: {
-      clinicId: clinic4.id,
       userId: c4PatUser2.id,
       cpf: "40000000011",
       dateOfBirth: new Date("1980-02-25"),
@@ -2782,7 +2774,6 @@ async function main() {
   });
   const c4Pat3 = await prisma.patient.create({
     data: {
-      clinicId: clinic4.id,
       userId: c4PatUser3.id,
       cpf: "40000000012",
       dateOfBirth: new Date("1975-12-01"),
@@ -3257,7 +3248,6 @@ async function main() {
   });
   const c5Pat1 = await prisma.patient.create({
     data: {
-      clinicId: clinic5.id,
       userId: c5PatUser1.id,
       cpf: "50000000010",
       dateOfBirth: new Date("1998-04-22"),
@@ -3293,7 +3283,6 @@ async function main() {
   });
   const c5Pat2 = await prisma.patient.create({
     data: {
-      clinicId: clinic5.id,
       userId: c5PatUser2.id,
       cpf: "50000000011",
       dateOfBirth: new Date("2010-09-17"),
@@ -3328,7 +3317,6 @@ async function main() {
   });
   const c5Pat3 = await prisma.patient.create({
     data: {
-      clinicId: clinic5.id,
       userId: c5PatUser3.id,
       cpf: "50000000012",
       dateOfBirth: new Date("1973-01-09"),
@@ -3769,7 +3757,6 @@ async function main() {
   });
   const c6Pat1 = await prisma.patient.create({
     data: {
-      clinicId: clinic6.id,
       userId: c6PatUser1.id,
       cpf: "60000000010",
       dateOfBirth: new Date("2014-08-30"),
@@ -3804,7 +3791,6 @@ async function main() {
   });
   const c6Pat2 = await prisma.patient.create({
     data: {
-      clinicId: clinic6.id,
       userId: c6PatUser2.id,
       cpf: "60000000011",
       dateOfBirth: new Date("1987-05-16"),
@@ -4235,7 +4221,6 @@ async function main() {
   });
   const c7Pat1 = await prisma.patient.create({
     data: {
-      clinicId: clinic7.id,
       userId: c7PatUser1.id,
       cpf: "70000000010",
       dateOfBirth: new Date("1970-06-14"),
@@ -4271,7 +4256,6 @@ async function main() {
   });
   const c7Pat2 = await prisma.patient.create({
     data: {
-      clinicId: clinic7.id,
       userId: c7PatUser2.id,
       cpf: "70000000011",
       dateOfBirth: new Date("1960-10-28"),
@@ -4730,7 +4714,6 @@ async function main() {
   });
   const c8Pat1 = await prisma.patient.create({
     data: {
-      clinicId: clinic8.id,
       userId: c8PatUser1.id,
       cpf: "80000000010",
       dateOfBirth: new Date("1995-08-12"),
@@ -4765,7 +4748,6 @@ async function main() {
   });
   const c8Pat2 = await prisma.patient.create({
     data: {
-      clinicId: clinic8.id,
       userId: c8PatUser2.id,
       cpf: "80000000011",
       dateOfBirth: new Date("1982-03-20"),
