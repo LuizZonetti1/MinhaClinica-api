@@ -68,11 +68,14 @@ export class RegisterPatientService {
       }
 
       // Cadastro completo → erro
-      throw Object.assign(new Error("Este e-mail já possui cadastro na plataforma."), {
-        statusCode: 409,
-        code: "EMAIL_ALREADY_REGISTERED",
-        action: "LOGIN_OR_RECOVER",
-      });
+      throw Object.assign(
+        new Error("Este e-mail já está cadastrado. Use a busca de pacientes para localizá-lo."),
+        {
+          statusCode: 409,
+          code: "EMAIL_ALREADY_REGISTERED",
+          action: "LOGIN_OR_RECOVER",
+        },
+      );
     }
 
     // Criar token de verificação (25 minutos)
@@ -140,11 +143,14 @@ export class CompletePatientService {
     // Verificar se CPF já existe em outro usuário (busca global)
     const existingCpf = await this.userRepository.findByCpfGlobal(cleanCpf);
     if (existingCpf && existingCpf.id !== userId) {
-      throw Object.assign(new Error("Este CPF já possui cadastro na plataforma."), {
-        statusCode: 409,
-        code: "CPF_ALREADY_REGISTERED",
-        action: "LOGIN_OR_RECOVER",
-      });
+      throw Object.assign(
+        new Error("Este CPF já está cadastrado. Use a busca de pacientes para localizá-lo."),
+        {
+          statusCode: 409,
+          code: "CPF_ALREADY_REGISTERED",
+          action: "LOGIN_OR_RECOVER",
+        },
+      );
     }
 
     // Hash da senha
