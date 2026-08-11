@@ -2,7 +2,14 @@ import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
 import { AuthController } from "../controller/authController";
 import { authMiddleware, tempRegistrationAuth } from "../middlewares/auth";
-import { authLimiter, emailLimiter, tokenLimiter } from "../middlewares/rateLimiters";
+import {
+  emailLimiter,
+  ipFloodLimiter,
+  loginLimiter,
+  passwordResetLimiter,
+  registerLimiter,
+  tokenLimiter,
+} from "../middlewares/rateLimiters";
 import { validate } from "../middlewares/validation";
 import {
   activateAccountSchema,
@@ -82,15 +89,19 @@ const authController = new AuthController();
 /**
  * PÚBLICO — Login
  */
-router.post("/login", authLimiter, validate(loginSchema), (req, res) =>
-  authController.login(req, res),
+router.post(
+  "/login",
+  ipFloodLimiter,
+  loginLimiter,
+  validate(loginSchema),
+  (req, res) => authController.login(req, res),
 );
 
 /**
  * PÚBLICO — Etapa 1: Início do cadastro
  * POST /api/auth/register/start
  */
-router.post("/register/start", authLimiter, validate(registerStartSchema), (req, res) =>
+router.post("/register/start", registerLimiter, validate(registerStartSchema), (req, res) =>
   authController.registerStart(req, res),
 );
 
@@ -163,7 +174,7 @@ router.post("/forgot-password", emailLimiter, validate(forgotPasswordSchema), (r
  * PÚBLICO — Confirmar nova senha com o token recebido por email
  * POST /api/auth/reset-password
  */
-router.post("/reset-password", authLimiter, validate(resetPasswordSchema), (req, res) =>
+router.post("/reset-password", passwordResetLimiter, validate(resetPasswordSchema), (req, res) =>
   authController.resetPassword(req, res),
 );
 
