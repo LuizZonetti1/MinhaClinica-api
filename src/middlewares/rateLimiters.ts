@@ -1,3 +1,12 @@
+/**
+ * Limitação conhecida: todos os limiters abaixo usam o MemoryStore padrão do
+ * express-rate-limit — o contador vive no processo Node. Com múltiplas
+ * instâncias (scale-out) ou em cold start (ex.: Render free tier), o contador
+ * zera. Decisão tomada: sem Redis por ora, sem produção nem cliente real
+ * ainda. A correção que importa aqui é a CHAVE (conta em vez de IP), que
+ * independe do store. Caminho de migração, quando necessário: trocar `store`
+ * por um `RedisStore` de `rate-limit-redis` — a API de cada limiter não muda.
+ */
 import type { Request } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { verifyTwoFactorPendingToken } from "../utils/jwtUtils";
