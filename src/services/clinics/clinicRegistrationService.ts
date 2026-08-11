@@ -179,7 +179,7 @@ export class CompleteClinicOwnerService {
 
     // 2. Verificar CPF duplicado
     const cleanCpf = data.cpf.replace(/\D/g, "");
-    const existingCpf = await this.userRepository.findByCpf(cleanCpf);
+    const existingCpf = await this.userRepository.findByCpfGlobal(cleanCpf);
     if (existingCpf && existingCpf.id !== userId) {
       throw Object.assign(new Error("Este CPF já possui cadastro na plataforma."), {
         statusCode: 409,

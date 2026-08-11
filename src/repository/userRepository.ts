@@ -47,14 +47,14 @@ export class UserRepository {
     });
   }
 
-  // Busca por CPF globalmente (pacientes) ou dentro de uma clínica (staff)
-  async findByCpf(cpfOrClinicId: string, cpfOrUndefined?: string) {
-    const isClinicScoped = cpfOrUndefined !== undefined;
-    return prisma.user.findFirst({
-      where: isClinicScoped
-        ? { clinicId: cpfOrClinicId, cpf: cpfOrUndefined }
-        : { cpf: cpfOrClinicId },
-    });
+  // Busca por CPF globalmente — paciente é identidade única no sistema
+  async findByCpfGlobal(cpf: string) {
+    return prisma.user.findFirst({ where: { cpf } });
+  }
+
+  // Busca por CPF dentro de uma clínica — staff/profissional, escopados por tenant
+  async findByCpfInClinic(clinicId: string, cpf: string) {
+    return prisma.user.findFirst({ where: { clinicId, cpf } });
   }
 
   async updateUser(userId: string, data: UpdateUserInput) {

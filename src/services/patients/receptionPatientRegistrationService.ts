@@ -74,7 +74,7 @@ export class ReceptionPatientRegistrationService {
 
     // ── 2) Verificar duplicidade de CPF ──────────────────────────────────────
     const cleanCpf = data.cpf.replace(/\D/g, "");
-    const existingCpf = await this.userRepository.findByCpf(cleanCpf);
+    const existingCpf = await this.userRepository.findByCpfGlobal(cleanCpf);
     if (existingCpf) {
       throw Object.assign(
         new Error("Este CPF já está cadastrado. Use a busca de pacientes para localizá-lo."),

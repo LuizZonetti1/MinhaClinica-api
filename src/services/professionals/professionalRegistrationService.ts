@@ -165,7 +165,7 @@ export class CompleteProfessionalService {
     const userClinicId = user.clinicId; // string (narrowed)
 
     // Verificar se CPF já existe em outro usuário
-    const existingCpf = await this.userRepository.findByCpf(userClinicId, data.cpf);
+    const existingCpf = await this.userRepository.findByCpfInClinic(userClinicId, data.cpf);
     if (existingCpf && existingCpf.id !== userId) {
       throw Object.assign(new Error("Este CPF já possui cadastro na plataforma."), {
         statusCode: 409,

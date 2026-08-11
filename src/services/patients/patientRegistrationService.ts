@@ -138,7 +138,7 @@ export class CompletePatientService {
     }
 
     // Verificar se CPF já existe em outro usuário (busca global)
-    const existingCpf = await this.userRepository.findByCpf(cleanCpf);
+    const existingCpf = await this.userRepository.findByCpfGlobal(cleanCpf);
     if (existingCpf && existingCpf.id !== userId) {
       throw Object.assign(new Error("Este CPF já possui cadastro na plataforma."), {
         statusCode: 409,

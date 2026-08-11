@@ -97,21 +97,6 @@ export class PatientRepository {
   }
 
   /**
-   * Busca paciente por CPF
-   */
-  async findByCpf(clinicId: string, cpf: string) {
-    return prisma.patient.findFirst({
-      where: {
-        clinicId,
-        cpf,
-      },
-      include: {
-        user: true,
-      },
-    });
-  }
-
-  /**
    * Lista todos os pacientes da clínica
    */
   async findAllByClinic(
