@@ -360,8 +360,12 @@ model User {
   pendingSpecialtyId String?
 
   // Metadata
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Preenchido ao remover uma recepcionista (soft delete + anonimização) —
+  // não há model dedicado para recepcionista como há Professional, então o
+  // tombstone é marcado aqui mesmo. Não usado para ADMIN/PROFESSIONAL/PATIENT.
+  deletedAt DateTime?
 
   // Relacionamentos
   professional          Professional?
@@ -450,8 +454,11 @@ model Professional {
   // Status
   isActive Boolean @default(true)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Preenchido ao remover o profissional (soft delete + anonimização) —
+  // distinto de isActive, que pode ser alternado por outros motivos.
+  deletedAt DateTime?
 
   // Relacionamentos
   specialties     ProfessionalSpecialty[]
