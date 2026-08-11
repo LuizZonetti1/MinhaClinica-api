@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { DocumentController } from "../controller/documentController";
 import { authMiddleware, checkRole } from "../middlewares/auth";
-import { uploadDocumentAttachment } from "../middlewares/upload";
+import { handleMulterError, uploadDocumentAttachment } from "../middlewares/upload";
 import { validate } from "../middlewares/validation";
 import { prisma } from "../database/prisma";
 import {
@@ -127,6 +127,7 @@ router.post(
   authMiddleware,
   checkRole(...staffAndProfessional),
   uploadDocumentAttachment,
+  handleMulterError("5 MB"),
   (req, res) => controller.uploadAttachment(req, res),
 );
 

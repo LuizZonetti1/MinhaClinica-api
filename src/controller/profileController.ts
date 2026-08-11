@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { uploadProfile } from "../config/multer";
+import { translateMulterError } from "../middlewares/upload";
 import { updatePatientProfileSchema } from "../schemas/patientProfileSchema";
 import {
   changePasswordSchema,
@@ -139,8 +140,9 @@ export class ProfileController {
     });
 
     if (uploadError) {
-      if ((uploadError as NodeJS.ErrnoException).code === "LIMIT_FILE_SIZE") {
-        res.status(400).json({ message: "Arquivo muito grande. Máximo: 2 MB." });
+      const multerMessage = translateMulterError(uploadError, "2 MB");
+      if (multerMessage) {
+        res.status(400).json({ message: multerMessage });
       } else {
         handleControllerError(res, uploadError, "Erro no upload do arquivo.");
       }
