@@ -282,6 +282,7 @@ export class DeactivateReceptionService {
         email: `deleted-${receptionist.id}@removido.local`,
         phone: null,
         avatarUrl: null,
+        deletedAt: new Date(),
       },
     });
 
