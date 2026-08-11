@@ -38,7 +38,12 @@ export const uploadProfile = multer({
   fileFilter(_req, file, cb) {
     const ext = getExt(file.originalname);
     if (!PROFILE_FORMATS.has(ext)) {
-      return cb(new Error("Formato inválido. Use JPG, JPEG, PNG ou WebP para foto de perfil."));
+      return cb(
+        Object.assign(
+          new Error("Formato inválido. Use JPG, JPEG, PNG ou WebP para foto de perfil."),
+          { statusCode: 400 },
+        ),
+      );
     }
     cb(null, true);
   },
@@ -76,7 +81,10 @@ export const uploadDocument = multer({
     const ext = getExt(file.originalname);
     if (!DOCUMENT_FORMATS.has(ext)) {
       return cb(
-        new Error("Formato inválido. Use JPG, JPEG, PNG ou PDF para documentos clínicos."),
+        Object.assign(
+          new Error("Formato inválido. Use JPG, JPEG, PNG ou PDF para documentos clínicos."),
+          { statusCode: 400 },
+        ),
       );
     }
     cb(null, true);
@@ -106,7 +114,10 @@ export const uploadClinic = multer({
     const ext = getExt(file.originalname);
     if (!CLINIC_FORMATS.has(ext)) {
       return cb(
-        new Error("Formato inválido. Use JPG, JPEG, PNG, WebP ou SVG para imagens de clínica."),
+        Object.assign(
+          new Error("Formato inválido. Use JPG, JPEG, PNG, WebP ou SVG para imagens de clínica."),
+          { statusCode: 400 },
+        ),
       );
     }
     cb(null, true);
