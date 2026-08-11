@@ -21,7 +21,7 @@ const ACTIVE_APPOINTMENT_STATUSES = [
   AppointmentStatus.IN_PROGRESS,
 ] as const;
 
-const toRegistrationStatus = (status: string) => {
+export const toRegistrationStatus = (status: string) => {
   if (status === UserStatus.PENDING_ACTIVATION) return "INVITE_SENT";
   if (status === UserStatus.EMAIL_VERIFIED) return "EMAIL_VERIFIED";
   if (status === UserStatus.ACTIVE) return "COMPLETED";
