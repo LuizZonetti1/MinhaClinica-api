@@ -151,6 +151,17 @@ router.post("/complete", tempRegistrationAuth, validate(completeProfessionalSche
 );
 
 /**
+ * PROTEGIDO (ADMIN) — Cancelar convite pendente
+ * DELETE /api/professionals/invite/:userId
+ */
+router.delete(
+  "/invite/:userId",
+  authMiddleware,
+  checkRole(UserRole.ADMIN),
+  (req, res) => professionalController.cancelInvite(req, res),
+);
+
+/**
  * PROTEGIDO (ADMIN/RECEPTIONIST) — Visualizar profissional por id
  * GET /api/professionals/:id
  */

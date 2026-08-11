@@ -99,6 +99,45 @@ export class InviteProfessionalService {
 }
 
 /**
+ * CANCELAR CONVITE - remove o User pendente, liberando o e-mail para um novo convite.
+ * Só atua sobre convites de fato pendentes (PENDING_ACTIVATION, sem Professional
+ * vinculado) — depois que o convidado completa o cadastro, isso não é mais
+ * "cancelamento de convite", é remoção de profissional (outro fluxo).
+ */
+export class CancelProfessionalInviteService {
+  private userRepository = new UserRepository();
+
+  async execute(adminId: string, userId: string) {
+    const admin = await this.userRepository.findById(adminId);
+    if (!admin || admin.role !== UserRole.ADMIN) {
+      throw new Error("Apenas administradores podem cancelar convites");
+    }
+
+    if (!admin.clinicId) {
+      throw new Error("Admin não está vinculado a uma clínica");
+    }
+
+    const pendingUser = await prisma.user.findFirst({
+      where: {
+        id: userId,
+        clinicId: admin.clinicId,
+        role: UserRole.PROFESSIONAL,
+        status: UserStatus.PENDING_ACTIVATION,
+        professional: { is: null },
+      },
+    });
+
+    if (!pendingUser) {
+      throw new Error("Convite nao encontrado");
+    }
+
+    await prisma.user.delete({ where: { id: pendingUser.id } });
+
+    return { message: "Convite cancelado com sucesso" };
+  }
+}
+
+/**
  * COMPLETAR CADASTRO PROFISSIONAL - ETAPA 3
  */
 export class CompleteProfessionalService {

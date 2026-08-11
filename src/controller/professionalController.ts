@@ -6,6 +6,7 @@ import {
   UpdateProfessionalService,
 } from "../services/professionals/professionalManagementService";
 import {
+  CancelProfessionalInviteService,
   CompleteProfessionalService,
   InviteProfessionalService,
 } from "../services/professionals/professionalRegistrationService";
@@ -91,6 +92,38 @@ export class ProfessionalController {
         return;
       }
       handleControllerError(res, error, "Erro ao completar cadastro");
+    }
+  }
+
+  /**
+   * DELETE /api/professionals/invite/:userId
+   * Cancela um convite pendente (remove o User, libera o e-mail)
+   */
+  async cancelInvite(req: Request, res: Response): Promise<void> {
+    try {
+      const adminId = req.userId;
+      const userId = req.params.userId as string;
+
+      if (!adminId) {
+        res.status(401).json({ error: "Nao autenticado" });
+        return;
+      }
+
+      if (!UUID_REGEX.test(userId)) {
+        res.status(400).json({ error: "ID do convite invalido" });
+        return;
+      }
+
+      const service = new CancelProfessionalInviteService();
+      const result = await service.execute(adminId, userId);
+
+      res.status(200).json(result);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(resolveStatusCode(error.message)).json({ error: error.message });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao cancelar convite");
     }
   }
 
