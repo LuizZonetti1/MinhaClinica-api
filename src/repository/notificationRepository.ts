@@ -160,17 +160,40 @@ export class NotificationRepository {
         });
     }
 
-    async findPatientsByBirthday(month: number, day: number) {
-        const all = await prisma.patient.findMany({
-            where: { user: { status: "ACTIVE" } },
+    /**
+     * Paciente é identidade global, sem clinicId — o vínculo com clínica é só
+     * via Appointment. Retorna um par (paciente, clínica) por clínica onde o
+     * paciente tenha ao menos uma consulta nos últimos 12 meses; um paciente
+     * com consultas em N clínicas aparece N vezes, uma por clínica.
+     * distinct evita duplicar quando há várias consultas na mesma clínica.
+     *
+     * TODO: mover o filtro de mês/dia para SQL (via $queryRaw) quando a base
+     * crescer — hoje filtra em JS porque o Prisma não expõe EXTRACT(MONTH/DAY).
+     */
+    async findBirthdayRecipients(month: number, day: number) {
+        const since = new Date();
+        since.setFullYear(since.getFullYear() - 1);
+
+        const appointments = await prisma.appointment.findMany({
+            where: {
+                appointmentDate: { gte: since },
+                patient: { user: { status: "ACTIVE" } },
+            },
             select: {
                 clinicId: true,
-                dateOfBirth: true,
-                user: { select: { id: true, name: true, email: true, phone: true } },
+                clinic: { select: { id: true, tradeName: true, legalName: true } },
+                patient: {
+                    select: {
+                        dateOfBirth: true,
+                        user: { select: { id: true, name: true, email: true, phone: true } },
+                    },
+                },
             },
+            distinct: ["clinicId", "patientId"],
         });
-        return all.filter((p) => {
-            const d = new Date(p.dateOfBirth);
+
+        return appointments.filter(({ patient }) => {
+            const d = new Date(patient.dateOfBirth);
             return d.getUTCMonth() + 1 === month && d.getUTCDate() === day;
         });
     }
