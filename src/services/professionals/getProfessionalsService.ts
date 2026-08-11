@@ -17,7 +17,7 @@ export class GetProfessionalsService {
     const startOfNextMonth = dayjs().tz(DEFAULT_TIMEZONE).add(1, "month").startOf("month").toDate();
 
     const professionals = await prisma.professional.findMany({
-      where: { clinicId },
+      where: { clinicId, deletedAt: null },
       include: {
         user: {
           select: {

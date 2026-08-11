@@ -413,7 +413,7 @@ export class DeactivateProfessionalService {
     await prisma.$transaction([
       prisma.professional.update({
         where: { id: professional.id },
-        data: { isActive: false, bio: null, formations: null },
+        data: { isActive: false, deletedAt: new Date(), bio: null, formations: null },
       }),
       prisma.user.update({
         where: { id: professional.user.id },
