@@ -1,6 +1,7 @@
 ﻿import { Router } from "express";
 import { TwoFactorController } from "../controller/twoFactorController";
 import { authMiddleware } from "../middlewares/auth";
+import { emailLimiter, twoFactorValidateLimiter } from "../middlewares/rateLimiters";
 
 const router = Router();
 const twoFactorController = new TwoFactorController();
@@ -10,14 +11,16 @@ const twoFactorController = new TwoFactorController();
  * POST /api/auth/2fa/validate
  * Body: { tempToken, code }
  */
-router.post("/validate", (req, res) => twoFactorController.validate(req, res));
+router.post("/validate", twoFactorValidateLimiter, (req, res) =>
+  twoFactorController.validate(req, res),
+);
 
 /**
  * PÚBLICO — Reenviar OTP de email durante o login
  * POST /api/auth/2fa/resend
  * Body: { tempToken }
  */
-router.post("/resend", (req, res) => twoFactorController.resend(req, res));
+router.post("/resend", emailLimiter, (req, res) => twoFactorController.resend(req, res));
 
 /**
  * PROTEGIDO — Consultar status do 2FA

@@ -1,5 +1,6 @@
 import type { Request } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import { verifyTwoFactorPendingToken } from "../utils/jwtUtils";
 
 const normalizeEmail = (value: unknown): string => String(value ?? "").trim().toLowerCase();
 
@@ -47,6 +48,26 @@ export const passwordResetLimiter = rateLimit({
   max: 5,
   keyGenerator: (req) => String(req.body?.token ?? "").trim() || ipFallback(req),
   message: { message: "Muitas tentativas. Tente novamente em 1 hora." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// /2fa/validate nao tinha limite algum: um OTP de 6 digitos (1 milhao de
+// combinacoes) sobrevivia ate 10 minutos ate alguem acertar por forca bruta.
+// A chave e o userId decodificado do tempToken — assim o limite e por conta
+// que esta tentando logar, nao por IP. Token invalido cai no fallback de IP.
+export const twoFactorValidateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => {
+    try {
+      const { userId } = verifyTwoFactorPendingToken(String(req.body?.tempToken ?? ""));
+      return userId;
+    } catch {
+      return ipFallback(req);
+    }
+  },
+  message: { message: "Muitas tentativas. Tente novamente em 15 minutos." },
   standardHeaders: true,
   legacyHeaders: false,
 });
