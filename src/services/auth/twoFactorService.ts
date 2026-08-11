@@ -6,6 +6,7 @@ import { generateAuthToken, verifyTwoFactorPendingToken } from "../../utils/jwtU
 const OTP_EXPIRES_MINUTES = 10;
 const DEVICE_TRUSTED_DAYS = 7;
 const RESEND_COOLDOWN_SECONDS = 60;
+const MAX_OTP_ATTEMPTS = 5;
 
 function hashOtp(otp: string): string {
     return crypto.createHash("sha256").update(otp).digest("hex");
@@ -31,6 +32,7 @@ export class SendOtpService {
             data: {
                 twoFactorOtp: hashOtp(otp),
                 twoFactorOtpExpires: expiresAt,
+                twoFactorOtpAttempts: 0,
             },
         });
 
@@ -80,6 +82,7 @@ export class ValidateOtpService {
                 id: true,
                 twoFactorOtp: true,
                 twoFactorOtpExpires: true,
+                twoFactorOtpAttempts: true,
                 twoFactorEnabled: true,
                 status: true,
                 clinic: { select: { tradeName: true } },
@@ -100,6 +103,22 @@ export class ValidateOtpService {
             throw new Error("Código expirado. Tente fazer login novamente.");
         }
         if (hashOtp(code) !== user.twoFactorOtp) {
+            const attempts = user.twoFactorOtpAttempts + 1;
+
+            if (attempts >= MAX_OTP_ATTEMPTS) {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { twoFactorOtp: null, twoFactorOtpExpires: null, twoFactorOtpAttempts: 0 },
+                });
+                throw Object.assign(new Error("Código inválido. Faça login novamente."), {
+                    statusCode: 401,
+                });
+            }
+
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { twoFactorOtpAttempts: attempts },
+            });
             throw new Error("Código inválido.");
         }
 
@@ -114,6 +133,7 @@ export class ValidateOtpService {
                 data: {
                     twoFactorOtp: null,
                     twoFactorOtpExpires: null,
+                    twoFactorOtpAttempts: 0,
                     lastLoginAt: new Date(),
                 },
             }),
