@@ -8,6 +8,8 @@ import {
   clinicScheduleUpdateSchema,
   clinicSecurityUpdateSchema,
   clinicUpdateSchema,
+  clinicWorkingHoursUpdateSchema,
+  createClinicHolidaySchema,
 } from "../schemas/clinicSchema";
 import { VerifyEmailService } from "../services/auth/verifyEmailService";
 import {
@@ -16,12 +18,17 @@ import {
   ResendClinicVerificationService,
 } from "../services/clinics/clinicRegistrationService";
 import {
+  CreateClinicHolidayService,
+  DeleteClinicHolidayService,
+  GetClinicHolidaysService,
   GetClinicSettingsService,
+  GetClinicWorkingHoursService,
   UpdateClinicInfoService,
   UpdateClinicNotificationsService,
   UpdateClinicPolicyService,
   UpdateClinicScheduleService,
   UpdateClinicSecurityService,
+  UpdateClinicWorkingHoursService,
 } from "../services/clinics/clinicSettingsService";
 import { DeleteClinicService } from "../services/clinics/deleteClinicService";
 import { GetClinicService } from "../services/clinics/getClinicService";
@@ -417,6 +424,111 @@ export class ClinicController {
         return;
       }
       handleControllerError(res, error, "Erro ao atualizar regras de agendamento");
+    }
+  }
+
+  /**
+   * GET /api/clinics/settings/working-hours
+   * Lista o horário de funcionamento por dia da semana
+   */
+  async getWorkingHours(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+      const service = new GetClinicWorkingHoursService();
+      const items = await service.execute(clinicId);
+      res.status(200).json({ data: items });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao buscar horário de funcionamento");
+    }
+  }
+
+  /**
+   * PUT /api/clinics/settings/working-hours
+   * Substitui o horário de funcionamento dos dias enviados
+   */
+  async updateWorkingHours(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+
+      const validatedData = await clinicWorkingHoursUpdateSchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
+
+      const service = new UpdateClinicWorkingHoursService();
+      const items = await service.execute(clinicId, validatedData.days as never);
+
+      res
+        .status(200)
+        .json({ message: "Horário de funcionamento atualizado com sucesso", data: items });
+    } catch (error: any) {
+      if (error.name === "ValidationError") {
+        res.status(400).json({ message: "Erro de validação", errors: error.errors });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao atualizar horário de funcionamento");
+    }
+  }
+
+  /**
+   * GET /api/clinics/settings/holidays
+   * Lista feriados/dias sem atendimento cadastrados
+   */
+  async getHolidays(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+      const service = new GetClinicHolidaysService();
+      const items = await service.execute(clinicId);
+      res.status(200).json({ data: items });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao buscar feriados");
+    }
+  }
+
+  /**
+   * POST /api/clinics/settings/holidays
+   * Cadastra um feriado/dia sem atendimento
+   */
+  async createHoliday(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+
+      const validatedData = await createClinicHolidaySchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
+
+      const service = new CreateClinicHolidayService();
+      const holiday = await service.execute(
+        clinicId,
+        validatedData as { date: Date; description: string; isRecurring: boolean },
+      );
+
+      res.status(201).json({ message: "Feriado cadastrado com sucesso", data: holiday });
+    } catch (error: any) {
+      if (error.name === "ValidationError") {
+        res.status(400).json({ message: "Erro de validação", errors: error.errors });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao cadastrar feriado");
+    }
+  }
+
+  /**
+   * DELETE /api/clinics/settings/holidays/:id
+   * Remove um feriado/dia sem atendimento
+   */
+  async deleteHoliday(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+      const holidayId = req.params.id as string;
+
+      const service = new DeleteClinicHolidayService();
+      await service.execute(clinicId, holidayId);
+
+      res.status(204).send();
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao remover feriado");
     }
   }
 }

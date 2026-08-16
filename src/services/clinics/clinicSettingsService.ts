@@ -1,4 +1,6 @@
+import { ClinicHolidayRepository } from "../../repository/clinicHolidayRepository";
 import { ClinicRepository } from "../../repository/clinicRepository";
+import { ClinicWorkingHoursRepository } from "../../repository/clinicWorkingHoursRepository";
 import type {
   ClinicNotificationSettings,
   ClinicPolicySettings,
@@ -12,6 +14,7 @@ import type {
   UpdateClinicSecurityInput,
   WorkingDaysPreset,
 } from "../../types/clinic";
+import type { DayOfWeek } from "../../types/enums";
 
 // ── GET /api/clinics/settings ────────────────────────────────────────────────
 
@@ -234,5 +237,62 @@ export class UpdateClinicPolicyService {
       maxConsecutiveNoShows: data.maxConsecutiveNoShows,
       appointmentToleranceMinutes: data.appointmentToleranceMinutes,
     });
+  }
+}
+
+// ── GET/PUT /api/clinics/settings/working-hours ──────────────────────────────
+// ClinicWorkingHours (horário por dia da semana) — antes vestigial: nenhum
+// código de produção lia ou escrevia essa tabela, só o seed. A tela de
+// Configurações achatava tudo em openTime/closeTime únicos (ClinicSettings).
+
+export class GetClinicWorkingHoursService {
+  private repository = new ClinicWorkingHoursRepository();
+
+  async execute(clinicId: string) {
+    return this.repository.findByClinic(clinicId);
+  }
+}
+
+export class UpdateClinicWorkingHoursService {
+  private repository = new ClinicWorkingHoursRepository();
+
+  async execute(
+    clinicId: string,
+    days: { dayOfWeek: DayOfWeek; isOpen: boolean; openTime: string; closeTime: string }[],
+  ) {
+    return this.repository.upsertMany(clinicId, days);
+  }
+}
+
+// ── GET/POST/DELETE /api/clinics/settings/holidays ───────────────────────────
+// ClinicHoliday — antes vestigial: nenhum código de produção lia ou escrevia,
+// só o seed (feriados nunca bloqueavam agendamento na prática, embora
+// assertSlotIsBookable já os leia desde V5).
+
+export class GetClinicHolidaysService {
+  private repository = new ClinicHolidayRepository();
+
+  async execute(clinicId: string) {
+    return this.repository.findByClinic(clinicId);
+  }
+}
+
+export class CreateClinicHolidayService {
+  private repository = new ClinicHolidayRepository();
+
+  async execute(clinicId: string, data: { date: Date; description: string; isRecurring: boolean }) {
+    return this.repository.create({ clinicId, ...data });
+  }
+}
+
+export class DeleteClinicHolidayService {
+  private repository = new ClinicHolidayRepository();
+
+  async execute(clinicId: string, holidayId: string): Promise<void> {
+    const holiday = await this.repository.findById(holidayId);
+    if (!holiday || holiday.clinicId !== clinicId) {
+      throw Object.assign(new Error("Feriado não encontrado"), { statusCode: 404 });
+    }
+    await this.repository.delete(holidayId);
   }
 }

@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { DayOfWeek } from "../types/enums";
 import { stripHtmlTags } from "../utils/sanitizeText";
 import { validateCep } from "../utils/validateCep";
 import { validateCPF } from "../utils/validateCPF";
@@ -332,4 +333,57 @@ export const clinicPolicyUpdateSchema = yup.object({
     .min(0, "Tolerância não pode ser negativa")
     .max(120, "Tolerância máxima é de 120 minutos")
     .optional(),
+});
+
+/**
+ * Schema para atualização do horário de funcionamento por dia da semana
+ * PUT /api/clinics/settings/working-hours
+ * Substitui os dias enviados; dias omitidos não são alterados.
+ */
+export const clinicWorkingHoursUpdateSchema = yup.object({
+  days: yup
+    .array()
+    .of(
+      yup.object({
+        dayOfWeek: yup
+          .string()
+          .oneOf(Object.values(DayOfWeek), "Dia da semana inválido")
+          .required("Dia da semana é obrigatório"),
+        isOpen: yup.boolean().required("isOpen é obrigatório"),
+        openTime: yup
+          .string()
+          .matches(timeRegex, "Horário de abertura deve estar no formato HH:mm")
+          .required("Horário de abertura é obrigatório"),
+        closeTime: yup
+          .string()
+          .matches(timeRegex, "Horário de fechamento deve estar no formato HH:mm")
+          .required("Horário de fechamento é obrigatório")
+          .test(
+            "close-after-open",
+            "Horário de fechamento deve ser depois do horário de abertura",
+            function closeAfterOpen(value) {
+              const { openTime } = this.parent;
+              if (!value || !openTime) return true;
+              return value > openTime;
+            },
+          ),
+      }),
+    )
+    .min(1, "Envie ao menos um dia")
+    .required("Lista de dias é obrigatória"),
+});
+
+/**
+ * Schema para criação de feriado/dia sem atendimento
+ * POST /api/clinics/settings/holidays
+ */
+export const createClinicHolidaySchema = yup.object({
+  date: yup.date().typeError("Data inválida").required("Data é obrigatória"),
+  description: yup
+    .string()
+    .transform((v) => (typeof v === "string" ? stripHtmlTags(v) : v))
+    .min(2, "Descrição deve ter no mínimo 2 caracteres")
+    .max(120, "Descrição deve ter no máximo 120 caracteres")
+    .required("Descrição é obrigatória"),
+  isRecurring: yup.boolean().optional().default(false),
 });

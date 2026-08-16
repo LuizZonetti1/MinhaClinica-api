@@ -127,6 +127,35 @@ clinicRoutes.patch("/settings/policy", authMiddleware, checkRole(UserRole.ADMIN)
   clinicController.updatePolicy(req, res),
 );
 
+/**
+ * GET /api/clinics/settings/working-hours — Lista horário por dia da semana
+ * PUT /api/clinics/settings/working-hours — Atualiza horário por dia da semana
+ */
+clinicRoutes.get("/settings/working-hours", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  clinicController.getWorkingHours(req, res),
+);
+clinicRoutes.put("/settings/working-hours", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  clinicController.updateWorkingHours(req, res),
+);
+
+/**
+ * GET    /api/clinics/settings/holidays     — Lista feriados
+ * POST   /api/clinics/settings/holidays     — Cadastra feriado
+ * DELETE /api/clinics/settings/holidays/:id — Remove feriado
+ */
+clinicRoutes.get("/settings/holidays", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  clinicController.getHolidays(req, res),
+);
+clinicRoutes.post("/settings/holidays", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  clinicController.createHoliday(req, res),
+);
+clinicRoutes.delete(
+  "/settings/holidays/:id",
+  authMiddleware,
+  checkRole(UserRole.ADMIN),
+  (req, res) => clinicController.deleteHoliday(req, res),
+);
+
 // ── Consulta/atualização genérica por ID ─────────────────────────────────────
 
 // Rota para buscar clínica por ID
