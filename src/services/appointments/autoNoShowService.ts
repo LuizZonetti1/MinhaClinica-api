@@ -2,10 +2,12 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
+import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { ClinicRepository } from "../../repository/clinicRepository";
 import { NotificationRepository } from "../../repository/notificationRepository";
 import { AppointmentStatus } from "../../types/enums";
 import { PENDING_CHECKIN_STATUSES } from "../../utils/appointmentStatusRules";
+import { createEmailProvider, EmailService } from "../email/emailService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -79,10 +81,12 @@ export class AutoNoShowService {
               user: { select: { id: true, name: true, email: true, phone: true } },
             },
           },
+          clinic: { select: { tradeName: true } },
         },
       })
       .then(async (appts) => {
         const notifRepo = new NotificationRepository();
+        const auditLogRepo = new AuditLogRepository();
         for (const appt of appts) {
           const user = appt.patient?.user;
           if (!user) continue;
@@ -108,6 +112,18 @@ export class AutoNoShowService {
               where: { id: user.id },
               data: { status: "BLOCKED" },
             });
+
+            await auditLogRepo.create({
+              clinicId: appt.clinicId,
+              userId: null,
+              userName: "Sistema (rotina automática de faltas)",
+              action: "BLOCK_PATIENT_AUTO_NO_SHOW",
+              entity: "User",
+              entityId: user.id,
+              oldData: { status: "ACTIVE" },
+              newData: { status: "BLOCKED", noShowCount, maxConsecutiveNoShows },
+            });
+
             const blocked = await notifRepo.create({
               clinicId: appt.clinicId,
               recipientEmail: user.email,
@@ -122,12 +138,25 @@ export class AutoNoShowService {
               appointmentId: appt.id,
             });
             await notifRepo.markAsSent(blocked.id);
+
+            // Único canal alcançável pelo paciente bloqueado (ver comentário em
+            // sendAccountBlockedEmail) — falha aqui não deve derrubar o loop.
+            try {
+              const emailSvc = new EmailService(createEmailProvider());
+              await emailSvc.sendAccountBlockedEmail(
+                user.email,
+                user.name,
+                appt.clinic.tradeName,
+                maxConsecutiveNoShows,
+              );
+            } catch (err) {
+              console.error("[autoNoShowService] Falha ao enviar email de bloqueio:", err);
+            }
           }
         }
       })
-      .catch(() => { });
+      .catch(() => {});
 
     return result.count;
   }
 }
-
