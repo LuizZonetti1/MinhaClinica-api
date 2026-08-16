@@ -362,8 +362,11 @@ export const clinicWorkingHoursUpdateSchema = yup.object({
             "close-after-open",
             "Horário de fechamento deve ser depois do horário de abertura",
             function closeAfterOpen(value) {
-              const { openTime } = this.parent;
-              if (!value || !openTime) return true;
+              const { openTime, isOpen } = this.parent;
+              // Dias fechados podem chegar com openTime/closeTime "zerados"
+              // (ex: "00:00"/"00:00") — a validação só faz sentido quando o
+              // dia está aberto.
+              if (!isOpen || !value || !openTime) return true;
               return value > openTime;
             },
           ),
