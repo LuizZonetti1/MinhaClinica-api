@@ -66,4 +66,8 @@ export class EmailService {
   sendDirectMessageEmail = (
     ...args: Parameters<NotificationEmailService["sendDirectMessageEmail"]>
   ) => this.notif.sendDirectMessageEmail(...args);
+
+  sendAccountBlockedEmail = (
+    ...args: Parameters<NotificationEmailService["sendAccountBlockedEmail"]>
+  ) => this.notif.sendAccountBlockedEmail(...args);
 }

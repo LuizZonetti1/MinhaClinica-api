@@ -295,6 +295,58 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
         });
     }
 
+    /**
+     * Aviso de bloqueio de conta por excesso de faltas.
+     * Único canal alcançável pelo paciente bloqueado — ele perde acesso às
+     * notificações in-app junto com o login, então sem este email o aviso
+     * de bloqueio nunca chegaria a existir na prática.
+     */
+    async sendAccountBlockedEmail(
+        email: string,
+        name: string,
+        clinicName: string,
+        maxConsecutiveNoShows: number,
+    ): Promise<void> {
+        const safeName = escapeHtml(name);
+        const safeClinicName = escapeHtml(clinicName);
+        const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8">
+<style>
+body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
+.container{max-width:600px;margin:0 auto;padding:20px}
+.header{background-color:#EF4444;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0}
+.content{background-color:#f9f9f9;padding:30px;border-radius:0 0 8px 8px}
+.info-box{background:#FEF2F2;border-left:4px solid #EF4444;padding:12px 16px;border-radius:4px;margin:16px 0}
+.footer{text-align:center;margin-top:20px;font-size:12px;color:#666}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header"><h1>🔒 Conta Bloqueada</h1></div>
+  <div class="content">
+    <h2>Olá, ${safeName}!</h2>
+    <p>Sua conta na <strong>${safeClinicName}</strong> foi bloqueada por excesso de faltas em consultas agendadas.</p>
+    <div class="info-box">
+      <p>Consultas não compareceram (sem cancelamento prévio) atingiram o limite de
+      <strong>${maxConsecutiveNoShows}</strong> desta clínica.</p>
+    </div>
+    <p>Enquanto bloqueada, você não conseguirá fazer login nem agendar novas consultas.
+    Entre em contato com a clínica para regularizar a situação e desbloquear sua conta.</p>
+  </div>
+  <div class="footer"><p>${safeClinicName} — Este é um email automático, não responda.</p></div>
+</div>
+</body>
+</html>`;
+
+        await this.provider.sendEmail({
+            to: email,
+            subject: `Conta bloqueada — ${clinicName}`,
+            html,
+            text: `Olá ${name}, sua conta na ${clinicName} foi bloqueada por excesso de faltas (limite: ${maxConsecutiveNoShows}). Entre em contato com a clínica para desbloquear.`,
+        });
+    }
+
     /** Mensagem direta entre usuários da clínica */
     async sendDirectMessageEmail(
         email: string,
