@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
+import { ClinicRepository } from "../../repository/clinicRepository";
 import { NotificationRepository } from "../../repository/notificationRepository";
 import { AppointmentStatus } from "../../types/enums";
 import { PENDING_CHECKIN_STATUSES } from "../../utils/appointmentStatusRules";
@@ -10,10 +11,21 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const DEFAULT_TIMEZONE = "America/Sao_Paulo";
-const NO_SHOW_GRACE_MINUTES = 30;
+// Espelham os @default do model ClinicSettings (prisma/schema.prisma) para
+// clínicas sem linha de settings ainda criada (upsert só roda ao salvar a tela).
+const DEFAULT_APPOINTMENT_TOLERANCE_MINUTES = 15;
+const DEFAULT_MAX_CONSECUTIVE_NO_SHOWS = 3;
 
 export class AutoNoShowService {
+  private readonly clinicRepository = new ClinicRepository();
+
   async markOverdueByClinic(clinicId: string, now = dayjs().tz(DEFAULT_TIMEZONE)): Promise<number> {
+    const settings = await this.clinicRepository.findSettingsByClinicId(clinicId);
+    const toleranceMinutes =
+      settings?.appointmentToleranceMinutes ?? DEFAULT_APPOINTMENT_TOLERANCE_MINUTES;
+    const maxConsecutiveNoShows =
+      settings?.maxConsecutiveNoShows ?? DEFAULT_MAX_CONSECUTIVE_NO_SHOWS;
+
     const pendingCheckinAppointments = await prisma.appointment.findMany({
       where: {
         clinicId,
@@ -39,7 +51,7 @@ export class AutoNoShowService {
 
         if (!appointmentStart.isValid()) return false;
 
-        const noShowDeadline = appointmentStart.add(NO_SHOW_GRACE_MINUTES, "minute");
+        const noShowDeadline = appointmentStart.add(toleranceMinutes, "minute");
         return !noShowDeadline.isAfter(now);
       })
       .map((appointment) => appointment.id);
@@ -89,9 +101,9 @@ export class AutoNoShowService {
           });
           await notifRepo.markAsSent(n.id);
 
-          // Bloquear conta após 3 faltas
+          // Bloquear conta após maxConsecutiveNoShows faltas (configurável por clínica)
           const noShowCount = await notifRepo.countPatientNoShows(appt.patientId);
-          if (noShowCount >= 3) {
+          if (noShowCount >= maxConsecutiveNoShows) {
             await prisma.user.updateMany({
               where: { id: user.id },
               data: { status: "BLOCKED" },
