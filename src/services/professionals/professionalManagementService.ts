@@ -250,7 +250,11 @@ export class UpdateProfessionalService {
     let shouldResendInvite = false;
     let verificationTokenToSend: string | null = null;
 
-    if (emailChanged && professional.user.status !== UserStatus.ACTIVE) {
+    // E-mail troca de login e controla reset de senha — exige reverificacao
+    // sempre, nao so quando o usuario ainda nao esta ACTIVE (antes disso
+    // deixava o ADMIN trocar o e-mail de um profissional ja ativo sem
+    // nenhuma confirmacao do dono da nova caixa de entrada).
+    if (emailChanged) {
       const verification = createVerificationData(48);
       userUpdateData.status = UserStatus.PENDING_ACTIVATION;
       userUpdateData.verificationToken = verification.hashedToken;
