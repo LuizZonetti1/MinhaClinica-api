@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { Prisma } from "../../../generated/prisma";
 import { prisma } from "../../database/prisma";
 import { AppointmentRepository } from "../../repository/appointmentRepository";
 import { NotificationRepository } from "../../repository/notificationRepository";
@@ -150,39 +151,38 @@ export class CreateAppointmentService {
       isOnlineBooking: channel === AppointmentChannel.ONLINE_PORTAL,
     });
 
-    // Verificar conflito de horário
-    const conflict = await this.repository.hasConflict(
-      input.professionalId,
-      clinicId,
-      startOfDay,
-      endOfDay,
-      input.startTime,
-      endTime,
-    );
-
-    if (conflict) {
-      throw Object.assign(new Error("Este horário já está ocupado. Por favor, escolha outro."), {
-        statusCode: 409,
-      });
-    }
-
     // Converter appointmentDate para Date (meia-noite local)
     const appointmentDate = dayjsDate.startOf("day").toDate();
 
-    const created = await this.repository.create({
-      clinicId,
-      patientId: input.patientId,
-      professionalId: input.professionalId,
-      procedureId: input.procedureId,
-      appointmentDate,
-      startTime: input.startTime,
-      endTime,
-      duration,
-      type,
-      channel,
-      notes: input.notes,
-      createdBy,
-    });
+    // Checagem de conflito + create em transação Serializable (createIfNoConflict):
+    // duas requisições concorrentes para o mesmo slot não resultam mais em dois
+    // agendamentos — uma delas recebe erro de conflito de escrita do Postgres.
+    let created: Awaited<ReturnType<AppointmentRepository["createIfNoConflict"]>>;
+    try {
+      created = await this.repository.createIfNoConflict({
+        clinicId,
+        patientId: input.patientId,
+        professionalId: input.professionalId,
+        procedureId: input.procedureId,
+        appointmentDate,
+        startTime: input.startTime,
+        endTime,
+        duration,
+        type,
+        channel,
+        notes: input.notes,
+        createdBy,
+        startOfDay,
+        endOfDay,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+        throw Object.assign(new Error("Este horário já está ocupado. Por favor, escolha outro."), {
+          statusCode: 409,
+        });
+      }
+      throw error;
+    }
 
     const result: AppointmentCreatedResult = {
       id: created.id,

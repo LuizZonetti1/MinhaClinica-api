@@ -1,3 +1,4 @@
+import { Prisma } from "../../generated/prisma";
 import { prisma } from "../database/prisma";
 import {
   type AppointmentChannel,
@@ -113,8 +114,15 @@ export class AppointmentRepository {
     return { professional, workingHours, scheduleBlocks, appointments, activeWorkingDaysCount };
   }
 
-  /** Etapa 3 — Cria o agendamento */
-  async create(data: {
+  /**
+   * Etapa 3 — Checa conflito de horário e cria o agendamento numa única
+   * transação Serializable: sem isso, duas requisições concorrentes para o
+   * mesmo profissional/data/horário passavam ambas (check e create eram dois
+   * awaits sequenciais soltos, sem transação nem @@unique cobrindo o slot).
+   * Em conflito de escrita real, o Postgres aborta uma das transações
+   * (P2034) — o chamador deve tratar esse código como o mesmo 409 de conflito.
+   */
+  async createIfNoConflict(data: {
     clinicId: string;
     patientId: string;
     professionalId: string;
@@ -127,8 +135,49 @@ export class AppointmentRepository {
     channel: AppointmentChannel;
     notes?: string;
     createdBy: string;
+    startOfDay: Date;
+    endOfDay: Date;
   }) {
-    return prisma.appointment.create({ data });
+    return prisma.$transaction(
+      async (tx) => {
+        const conflictCount = await tx.appointment.count({
+          where: {
+            professionalId: data.professionalId,
+            clinicId: data.clinicId,
+            appointmentDate: { gte: data.startOfDay, lte: data.endOfDay },
+            status: { notIn: [...CONSULTATION_EXCLUDED_STATUSES] },
+            AND: [{ startTime: { lt: data.endTime } }, { endTime: { gt: data.startTime } }],
+          },
+        });
+
+        if (conflictCount > 0) {
+          throw Object.assign(
+            new Error("Este horário já está ocupado. Por favor, escolha outro."),
+            {
+              statusCode: 409,
+            },
+          );
+        }
+
+        return tx.appointment.create({
+          data: {
+            clinicId: data.clinicId,
+            patientId: data.patientId,
+            professionalId: data.professionalId,
+            procedureId: data.procedureId,
+            appointmentDate: data.appointmentDate,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            duration: data.duration,
+            type: data.type,
+            channel: data.channel,
+            notes: data.notes,
+            createdBy: data.createdBy,
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   /** Calendário — Lista agendamentos de um profissional num intervalo de datas */
@@ -184,26 +233,5 @@ export class AppointmentRepository {
     }
 
     return Array.from(seen.values());
-  }
-
-  /** Verifica conflito de horário antes de criar */
-  async hasConflict(
-    professionalId: string,
-    clinicId: string,
-    startOfDay: Date,
-    endOfDay: Date,
-    startTime: string,
-    endTime: string,
-  ) {
-    const count = await prisma.appointment.count({
-      where: {
-        professionalId,
-        clinicId,
-        appointmentDate: { gte: startOfDay, lte: endOfDay },
-        status: { notIn: [...CONSULTATION_EXCLUDED_STATUSES] },
-        AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }],
-      },
-    });
-    return count > 0;
   }
 }
