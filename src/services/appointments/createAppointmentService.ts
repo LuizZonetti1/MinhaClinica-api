@@ -9,6 +9,7 @@ import type { AppointmentCreatedResult, CreateAppointmentInput } from "../../typ
 import { AppointmentChannel, AppointmentType } from "../../types/enums";
 import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDuration";
 import { createEmailProvider, EmailService } from "../email/emailService";
+import { assertSlotIsBookable } from "./appointmentBookingRules";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -134,18 +135,20 @@ export class CreateAppointmentService {
     const dayjsDate = dayjs.tz(input.appointmentDate, DEFAULT_TIMEZONE);
     const startOfDay = dayjs.utc(input.appointmentDate).startOf("day").toDate();
     const endOfDay = dayjs.utc(input.appointmentDate).endOf("day").toDate();
-    const now = dayjs().tz(DEFAULT_TIMEZONE);
-    const appointmentStart = dayjsDate
-      .hour(Math.floor(startMinutes / 60))
-      .minute(startMinutes % 60)
-      .second(0)
-      .millisecond(0);
 
-    if (appointmentStart.isBefore(now)) {
-      throw Object.assign(new Error("Nao e permitido agendar em horario ja passado"), {
-        statusCode: 400,
-      });
-    }
+    const channel = input.channel ?? AppointmentChannel.IN_PERSON;
+
+    // Feriado, horário de trabalho, ProfessionalScheduleBlock, antecedência
+    // mínima/máxima e allowOnlineBooking — inclui a checagem de "não pode ser
+    // no passado" (minAdvanceBookingHours=0 equivale a ela).
+    await assertSlotIsBookable({
+      clinicId,
+      professionalId: input.professionalId,
+      dateStr: input.appointmentDate,
+      startTime: input.startTime,
+      endTime,
+      isOnlineBooking: channel === AppointmentChannel.ONLINE_PORTAL,
+    });
 
     // Verificar conflito de horário
     const conflict = await this.repository.hasConflict(
@@ -176,7 +179,7 @@ export class CreateAppointmentService {
       endTime,
       duration,
       type,
-      channel: input.channel ?? AppointmentChannel.IN_PERSON,
+      channel,
       notes: input.notes,
       createdBy,
     });
