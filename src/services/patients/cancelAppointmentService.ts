@@ -4,8 +4,15 @@ import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
 import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { ClinicRepository } from "../../repository/clinicRepository";
+import { NotificationRepository } from "../../repository/notificationRepository";
 import { PatientDashboardRepository } from "../../repository/patientDashboardRepository";
-import { AppointmentStatus, CancellationReason } from "../../types/enums";
+import {
+  AppointmentStatus,
+  CancellationReason,
+  NotificationChannel,
+  NotificationType,
+  UserRole,
+} from "../../types/enums";
 import { createEmailProvider, EmailService } from "../email/emailService";
 
 dayjs.extend(utc);
@@ -19,6 +26,7 @@ export class CancelAppointmentService {
   private repository = new PatientDashboardRepository();
   private clinicRepository = new ClinicRepository();
   private auditLogRepository = new AuditLogRepository();
+  private notificationRepository = new NotificationRepository();
 
   async execute(appointmentId: string, userId: string) {
     const patient = await this.repository.findPatientByUserId(userId);
@@ -139,6 +147,37 @@ export class CancelAppointmentService {
       }
     } catch (err) {
       console.error("[cancelAppointmentService] Falha ao enviar email de cancelamento:", err);
+    }
+
+    // Alerta a equipe da clínica (ADMIN/RECEPTIONIST) sobre o cancelamento —
+    // gate real de ClinicSettings.sendCancellationAlert (default true), que
+    // antes existia só no JSON de configurações sem nenhum efeito.
+    if (settings?.sendCancellationAlert !== false) {
+      try {
+        const staffUsers = await this.notificationRepository.findActiveClinicUsers(
+          appointment.clinicId,
+          [UserRole.ADMIN, UserRole.RECEPTIONIST],
+        );
+        const appointmentDate = appointment.appointmentDate.toLocaleDateString("pt-BR");
+        const startTime = appointment.startTime.slice(0, 5);
+        for (const staff of staffUsers) {
+          const notification = await this.notificationRepository.create({
+            clinicId: appointment.clinicId,
+            recipientEmail: staff.email,
+            recipientPhone: staff.phone ?? undefined,
+            recipientName: staff.name,
+            recipientUserId: staff.id,
+            type: NotificationType.APPOINTMENT_CANCELLATION,
+            channel: NotificationChannel.IN_APP,
+            subject: "Consulta cancelada pelo paciente",
+            message: `${user?.name ?? "Um paciente"} cancelou a consulta de ${appointmentDate} às ${startTime} com ${appointment.professional.user.name}.`,
+            appointmentId: appointment.id,
+          });
+          await this.notificationRepository.markAsSent(notification.id);
+        }
+      } catch (err) {
+        console.error("[cancelAppointmentService] Falha ao alertar a equipe:", err);
+      }
     }
 
     return updated;
