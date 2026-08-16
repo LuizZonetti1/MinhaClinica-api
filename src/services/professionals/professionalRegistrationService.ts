@@ -46,6 +46,17 @@ export class InviteProfessionalService {
       throw new Error("Clínica não encontrada");
     }
 
+    // Checagem só por e-mail deixa passar convite duplicado para a mesma
+    // pessoa com e-mail diferente — aviso não-bloqueante, não impede o convite.
+    const possibleDuplicate = await prisma.user.findFirst({
+      where: {
+        clinicId: adminClinicId,
+        status: UserStatus.PENDING_ACTIVATION,
+        name: { equals: data.name, mode: "insensitive" },
+      },
+      select: { email: true },
+    });
+
     // Criar token de verificação
     const verification = createVerificationData(48); // 48 horas
 
@@ -82,18 +93,31 @@ export class InviteProfessionalService {
       },
     });
 
-    // Enviar email
-    await this.emailService.sendProfessionalInviteEmail(
-      data.email,
-      data.name,
-      clinic.tradeName,
-      verification.token,
-    );
+    // Enviar email — o User pendente já foi persistido; se o envio falhar, o
+    // convite fica "meio criado" (usuário existe, ninguém recebeu o link).
+    // Nunca falha em silêncio: expõe emailWarning na resposta para o ADMIN.
+    let emailWarning: string | undefined;
+    try {
+      await this.emailService.sendProfessionalInviteEmail(
+        data.email,
+        data.name,
+        clinic.tradeName,
+        verification.token,
+      );
+    } catch (err) {
+      console.error("[InviteProfessionalService] Falha ao enviar email de convite:", err);
+      emailWarning =
+        "Convite criado, mas não foi possível enviar o e-mail. Reenvie o convite ou avise o profissional manualmente.";
+    }
 
     return {
       message: "Convite enviado com sucesso",
       email: data.email,
       userId: user.id,
+      emailWarning,
+      duplicateNameWarning: possibleDuplicate
+        ? `Já existe um convite pendente para "${data.name}" (${possibleDuplicate.email}). Confira se não é a mesma pessoa antes de prosseguir.`
+        : undefined,
     };
   }
 }

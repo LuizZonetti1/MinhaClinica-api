@@ -46,6 +46,17 @@ export class InviteStaffService {
       throw new Error("Clínica não encontrada");
     }
 
+    // Checagem só por e-mail deixa passar convite duplicado para a mesma
+    // pessoa com e-mail diferente — aviso não-bloqueante, não impede o convite.
+    const possibleDuplicate = await prisma.user.findFirst({
+      where: {
+        clinicId: adminClinicId,
+        status: UserStatus.PENDING_ACTIVATION,
+        name: { equals: data.name, mode: "insensitive" },
+      },
+      select: { email: true },
+    });
+
     // Criar token de verificação
     const verification = createVerificationData(48); // 48 horas
 
@@ -84,6 +95,9 @@ export class InviteStaffService {
       message: "Convite enviado com sucesso",
       email: data.email,
       userId: user.id,
+      duplicateNameWarning: possibleDuplicate
+        ? `Já existe um convite pendente para "${data.name}" (${possibleDuplicate.email}). Confira se não é a mesma pessoa antes de prosseguir.`
+        : undefined,
     };
   }
 }
