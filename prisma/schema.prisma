@@ -451,6 +451,11 @@ model Professional {
   calendarColor              String @default("#3B82F6") // Cor na agenda
 
   // Status
+  // Distinto de User.status: isActive é a participação do papel PROFESSIONAL
+  // especificamente (setado por reconcileProfessional ao adicionar/remover o
+  // papel), não o estado de login da conta. Um usuário pode ter isActive=false
+  // aqui e ainda logar normalmente por outro papel ativo (ex.: ADMIN) — desde
+  // que LoginService também considere esse papel usável. Ver updateUserRolesService.ts.
   isActive Boolean @default(true)
 
   createdAt DateTime  @default(now())
@@ -573,6 +578,10 @@ model Patient {
   emergencyContactPhone String? @db.VarChar(15)
 
   // Controle
+  // Distinto de User.status: isActive é a participação do papel PATIENT
+  // especificamente (setado por reconcilePatient ao adicionar/remover o
+  // papel), não o estado de login da conta. Ver comentário análogo em
+  // Professional.isActive e updateUserRolesService.ts.
   isActive          Boolean @default(true)
   noShowCount       Int     @default(0)
   totalAppointments Int     @default(0)
