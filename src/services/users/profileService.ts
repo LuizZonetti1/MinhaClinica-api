@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
+import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { DashboardRepository } from "../../repository/dashboardRepository";
 import { UserRepository } from "../../repository/userRepository";
 import { AppointmentStatus, UserRole } from "../../types/enums";
@@ -410,9 +411,11 @@ export class UpdateProfileService {
 
 export class ChangePasswordService {
   private userRepository: UserRepository;
+  private auditLogRepository: AuditLogRepository;
 
   constructor() {
     this.userRepository = new UserRepository();
+    this.auditLogRepository = new AuditLogRepository();
   }
 
   async execute(userId: string, data: ChangePasswordInput): Promise<void> {
@@ -429,6 +432,19 @@ export class ChangePasswordService {
 
     const hashed = await bcrypt.hash(data.newPassword, 10);
     await this.userRepository.updatePassword(userId, hashed);
+
+    // clinicId ausente = paciente puro (global) — AuditLog exige clinicId.
+    // oldData/newData nunca guardam hash de senha.
+    if (user.clinicId) {
+      await this.auditLogRepository.create({
+        clinicId: user.clinicId,
+        userId: user.id,
+        userName: user.name,
+        action: "CHANGE_PASSWORD",
+        entity: "User",
+        entityId: user.id,
+      });
+    }
   }
 }
 
