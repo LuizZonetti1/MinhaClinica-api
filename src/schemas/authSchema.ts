@@ -6,7 +6,11 @@ import { stripHtmlTags } from "../utils/sanitizeText";
  * Apenas email e senha (email já está vinculado à clínica)
  */
 export const loginSchema = yup.object({
-  email: yup.string().required("Email é obrigatório").email("Email inválido"),
+  email: yup
+    .string()
+    .required("Email é obrigatório")
+    .email("Email inválido")
+    .transform((v) => v?.toLowerCase().trim()),
 
   password: yup
     .string()
