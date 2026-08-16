@@ -1,6 +1,6 @@
 ﻿import bcrypt from "bcryptjs";
 import { prisma } from "../../database/prisma";
-import { UserStatus } from "../../types/enums";
+import { UserRole, UserStatus } from "../../types/enums";
 import { generateAuthToken, generateTwoFactorPendingToken } from "../../utils/jwtUtils";
 import { SendOtpService } from "./twoFactorService";
 
@@ -17,6 +17,8 @@ export class LoginService {
       },
       include: {
         clinic: true,
+        professional: true,
+        patient: true,
       },
     });
     if (!user) {
@@ -25,6 +27,21 @@ export class LoginService {
 
     // Verificar se conta está ativa
     if (user.status !== UserStatus.ACTIVE) {
+      throw new Error("Conta não está ativa. Complete seu cadastro ou aguarde aprovação.");
+    }
+
+    // ADMIN/RECEPTIONIST não têm registro próprio de isActive (só User.status
+    // controla o acesso); PROFESSIONAL/PATIENT usam o isActive do registro
+    // vinculado (ver comentário em Professional.isActive/Patient.isActive no
+    // schema). Login só falha aqui se NENHUM papel do usuário estiver usável —
+    // com multi-papel, basta um papel ativo para entrar.
+    const isRoleUsable = (role: UserRole): boolean => {
+      if (role === UserRole.PROFESSIONAL) return user.professional?.isActive === true;
+      if (role === UserRole.PATIENT) return user.patient?.isActive === true;
+      return true;
+    };
+    const rolesToCheck = user.roles.length > 0 ? user.roles : [user.role];
+    if (!rolesToCheck.some(isRoleUsable)) {
       throw new Error("Conta não está ativa. Complete seu cadastro ou aguarde aprovação.");
     }
 
