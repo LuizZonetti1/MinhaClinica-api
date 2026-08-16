@@ -4,7 +4,7 @@ import { prisma } from "../database/prisma";
 export class AuditLogRepository {
   async create(data: {
     clinicId: string;
-    userId: string;
+    userId: string | null;
     userName: string;
     action: string;
     entity: string;
