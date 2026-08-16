@@ -28,6 +28,44 @@ const medicationsSchema = yup
     hasValidMedication,
   );
 
+const CONTROLLED_MEDICATION_REQUIRED_FIELDS = [
+  "name",
+  "dosage",
+  "frequency",
+  "duration",
+  "quantity",
+] as const;
+
+/**
+ * A UI (MedicationItemFields) sempre marcou frequency/duration/quantity com
+ * asterisco de obrigatório para Receita Controlada, mas a validação real
+ * (aqui e no espelho do frontend) só exigia name+dosage — só 4 dos "7 campos
+ * ANVISA" eram de fato barrados. Exige todos os medicamentos completos (não
+ * basta um, diferente de medicationsSchema) por ser o único tipo de
+ * documento com bloqueio duro de finalização.
+ */
+const hasCompleteControlledMedication = (items: unknown): boolean =>
+  Array.isArray(items) &&
+  items.length > 0 &&
+  items.every(
+    (m) =>
+      typeof m === "object" &&
+      m !== null &&
+      CONTROLLED_MEDICATION_REQUIRED_FIELDS.every(
+        (field) =>
+          typeof (m as Record<string, unknown>)[field] === "string" &&
+          ((m as Record<string, unknown>)[field] as string).trim() !== "",
+      ),
+  );
+
+const controlledMedicationsSchema = yup
+  .array()
+  .test(
+    "has-complete-controlled-medication",
+    "Preencha nome, dosagem, frequência, duração e quantidade de todos os medicamentos",
+    hasCompleteControlledMedication,
+  );
+
 const clinicalReportSchema = yup
   .object()
   .test(
@@ -57,7 +95,7 @@ const prescriptionSchema = yup.object({
 });
 
 const controlledPrescriptionSchema = yup.object({
-  medications: medicationsSchema,
+  medications: controlledMedicationsSchema,
   notificationNumber: req("Número de notificação"),
   patientAddress: req("Endereço do paciente"),
 });
