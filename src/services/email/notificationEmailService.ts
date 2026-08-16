@@ -347,6 +347,55 @@ body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
         });
     }
 
+    /** Relatório diário resumido (ClinicSettings.sendDailyReport) */
+    async sendDailyReportEmail(
+        email: string,
+        recipientName: string,
+        clinicName: string,
+        dateLabel: string,
+        stats: { total: number; completed: number; cancelled: number; noShow: number },
+    ): Promise<void> {
+        const safeRecipientName = escapeHtml(recipientName);
+        const safeClinicName = escapeHtml(clinicName);
+        const safeDateLabel = escapeHtml(dateLabel);
+        const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8">
+<style>
+body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
+.container{max-width:600px;margin:0 auto;padding:20px}
+.header{background-color:#0EA5E9;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0}
+.content{background-color:#f9f9f9;padding:30px;border-radius:0 0 8px 8px}
+.info-box{background:#F0F9FF;border-left:4px solid #0EA5E9;padding:12px 16px;border-radius:4px;margin:16px 0}
+.footer{text-align:center;margin-top:20px;font-size:12px;color:#666}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header"><h1>📊 Relatório do dia — ${safeDateLabel}</h1></div>
+  <div class="content">
+    <h2>Olá, ${safeRecipientName}!</h2>
+    <p>Resumo de hoje em <strong>${safeClinicName}</strong>:</p>
+    <div class="info-box">
+      <p><strong>Total de agendamentos:</strong> ${stats.total}</p>
+      <p><strong>Concluídos:</strong> ${stats.completed}</p>
+      <p><strong>Cancelados:</strong> ${stats.cancelled}</p>
+      <p><strong>Faltas:</strong> ${stats.noShow}</p>
+    </div>
+  </div>
+  <div class="footer"><p>${safeClinicName} — Este é um email automático, não responda.</p></div>
+</div>
+</body>
+</html>`;
+
+        await this.provider.sendEmail({
+            to: email,
+            subject: `Relatório do dia ${dateLabel} — ${clinicName}`,
+            html,
+            text: `Olá ${recipientName}, resumo de ${dateLabel} em ${clinicName}: ${stats.total} agendamento(s), ${stats.completed} concluído(s), ${stats.cancelled} cancelado(s), ${stats.noShow} falta(s).`,
+        });
+    }
+
     /** Mensagem direta entre usuários da clínica */
     async sendDirectMessageEmail(
         email: string,

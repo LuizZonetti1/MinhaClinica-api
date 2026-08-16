@@ -1,16 +1,16 @@
 ﻿// ─── Re-exports para retrocompatibilidade ────────────────────────────────────
+export * from "./authEmailService";
 // Todos os 12 arquivos que importam de "../email/emailService" continuam funcionando
 // sem nenhuma alteração. A separação em arquivos foi feita de forma transparente.
 export * from "./emailProvider";
-export * from "./authEmailService";
 export * from "./notificationEmailService";
 
 // ─── EmailService (backward-compatible) ──────────────────────────────────────
 // Combina AuthEmailService + NotificationEmailService em uma única classe.
 // Mantido para não quebrar nenhum import existente.
 import { AuthEmailService } from "./authEmailService";
-import { NotificationEmailService } from "./notificationEmailService";
 import type { EmailProvider } from "./emailProvider";
+import { NotificationEmailService } from "./notificationEmailService";
 
 export class EmailService {
   private auth: AuthEmailService;
@@ -34,9 +34,8 @@ export class EmailService {
     ...args: Parameters<AuthEmailService["sendProfessionalInviteEmail"]>
   ) => this.auth.sendProfessionalInviteEmail(...args);
 
-  sendStaffInviteEmail = (
-    ...args: Parameters<AuthEmailService["sendStaffInviteEmail"]>
-  ) => this.auth.sendStaffInviteEmail(...args);
+  sendStaffInviteEmail = (...args: Parameters<AuthEmailService["sendStaffInviteEmail"]>) =>
+    this.auth.sendStaffInviteEmail(...args);
 
   sendReceptionWelcomeEmail = (
     ...args: Parameters<AuthEmailService["sendReceptionWelcomeEmail"]>
@@ -70,4 +69,7 @@ export class EmailService {
   sendAccountBlockedEmail = (
     ...args: Parameters<NotificationEmailService["sendAccountBlockedEmail"]>
   ) => this.notif.sendAccountBlockedEmail(...args);
+
+  sendDailyReportEmail = (...args: Parameters<NotificationEmailService["sendDailyReportEmail"]>) =>
+    this.notif.sendDailyReportEmail(...args);
 }
