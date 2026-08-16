@@ -1,6 +1,9 @@
 import { prisma } from "../../database/prisma";
+import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { Gender, NotificationChannel, NotificationType, UserRole } from "../../types/enums";
 import { generateAuthToken } from "../../utils/jwtUtils";
+
+const auditLogRepository = new AuditLogRepository();
 
 // Roles que cada role primário pode acumular além do seu próprio
 const ALLOWED_EXTRA_ROLES: Record<UserRole, UserRole[]> = {
@@ -44,6 +47,21 @@ export class UpdateUserRolesService {
             where: { id: userId },
             data: { roles: uniqueRoles },
         });
+
+        // Ação sempre self-service (rota /staff/me/roles) — sem clinicId (paciente
+        // puro) não há AuditLog possível, pois clinicId é obrigatório no modelo.
+        if (user.clinicId) {
+            await auditLogRepository.create({
+                clinicId: user.clinicId,
+                userId: user.id,
+                userName: user.name,
+                action: "UPDATE_USER_ROLES",
+                entity: "User",
+                entityId: user.id,
+                oldData: { roles: user.roles },
+                newData: { roles: uniqueRoles },
+            });
+        }
 
         // Gera novo token com roles atualizados
         const token = generateAuthToken(user.id, user.clinicId, user.role, user.name, {}, uniqueRoles);
