@@ -74,11 +74,8 @@ router.patch(
  * PROTEGIDO (PATIENT) — Detalhes de uma consulta do paciente
  * GET /api/patients/me/appointments/:id
  */
-router.get(
-  "/me/appointments/:id",
-  authMiddleware,
-  checkRole(UserRole.PATIENT),
-  (req, res) => patientDashboardController.getAppointmentDetail(req, res),
+router.get("/me/appointments/:id", authMiddleware, checkRole(UserRole.PATIENT), (req, res) =>
+  patientDashboardController.getAppointmentDetail(req, res),
 );
 
 /**
@@ -106,6 +103,17 @@ router.get(
  */
 router.get("/:id/details", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
   patientController.getDetails(req, res),
+);
+
+/**
+ * PROTEGIDO (ADMIN/RECEPTIONIST) — Reverter bloqueio automático por faltas
+ * PATCH /api/patients/:id/unblock
+ */
+router.patch(
+  "/:id/unblock",
+  authMiddleware,
+  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
+  (req, res) => patientController.unblock(req, res),
 );
 
 /**

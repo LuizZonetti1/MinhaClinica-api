@@ -9,7 +9,19 @@ import {
   RegisterPatientService,
 } from "../services/patients/patientRegistrationService";
 import { ReceptionPatientRegistrationService } from "../services/patients/receptionPatientRegistrationService";
+import { UnblockPatientService } from "../services/patients/unblockPatientService";
+import type { AuditContext } from "../types/document";
 import { handleControllerError } from "../utils/controllerUtils";
+
+function buildAuditContext(req: Request): AuditContext {
+  return {
+    userId: req.userId!,
+    userName: req.userName ?? "Desconhecido",
+    clinicId: req.clinicId!,
+    ipAddress: req.ip ?? req.socket?.remoteAddress ?? null,
+    userAgent: req.headers["user-agent"] ?? null,
+  };
+}
 
 export class PatientController {
   /**
@@ -162,6 +174,39 @@ export class PatientController {
         return;
       }
       handleControllerError(res, error, "Erro ao buscar detalhes do paciente");
+    }
+  }
+
+  /**
+   * PATCH /api/patients/:id/unblock
+   * Reverte o bloqueio automático por excesso de faltas (ADMIN | RECEPTIONIST)
+   */
+  async unblock(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId;
+      const paramPatientId = req.params.id;
+      const patientId = Array.isArray(paramPatientId) ? paramPatientId[0] : paramPatientId;
+
+      if (!clinicId) {
+        res.status(400).json({ error: "Clinica nao identificada no token" });
+        return;
+      }
+
+      if (!patientId?.trim()) {
+        res.status(400).json({ error: "Paciente nao identificado" });
+        return;
+      }
+
+      const service = new UnblockPatientService();
+      const result = await service.execute(clinicId, patientId, buildAuditContext(req));
+
+      res.status(200).json(result);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Paciente nao encontrado") {
+        res.status(404).json({ error: error.message });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao desbloquear paciente");
     }
   }
 }
