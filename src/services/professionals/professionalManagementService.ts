@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
+import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { UserRepository } from "../../repository/userRepository";
 import { AppointmentStatus, UserRole, UserStatus } from "../../types/enums";
 import type { ProfessionalDetails } from "../../types/professional";
@@ -135,6 +136,7 @@ export class GetProfessionalByIdService {
 export class UpdateProfessionalService {
   private userRepository = new UserRepository();
   private emailService = new EmailService(createEmailProvider());
+  private auditLogRepository = new AuditLogRepository();
 
   async execute(adminId: string, professionalId: string, data: UpdateProfessionalInput) {
     const admin = await this.userRepository.findById(adminId);
@@ -325,6 +327,19 @@ export class UpdateProfessionalService {
         });
       }
     });
+
+    if (emailChanged && normalizedData.email) {
+      await this.auditLogRepository.create({
+        clinicId,
+        userId: adminId,
+        userName: admin.name,
+        action: "CHANGE_EMAIL",
+        entity: "User",
+        entityId: professional.user.id,
+        oldData: { email: professional.user.email },
+        newData: { email: normalizedData.email },
+      });
+    }
 
     if (shouldResendInvite && verificationTokenToSend) {
       const clinic = await prisma.clinic.findUnique({

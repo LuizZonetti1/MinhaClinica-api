@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
+import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { UserRepository } from "../../repository/userRepository";
 import { AppointmentStatus, UserRole, UserStatus } from "../../types/enums";
 import type { ReceptionDetails } from "../../types/receptionist";
@@ -102,6 +103,7 @@ export class GetReceptionByIdService {
 export class UpdateReceptionService {
   private userRepository = new UserRepository();
   private emailService = new EmailService(createEmailProvider());
+  private auditLogRepository = new AuditLogRepository();
 
   async execute(adminId: string, receptionistId: string, data: UpdateReceptionInput) {
     const admin = await this.userRepository.findById(adminId);
@@ -192,6 +194,19 @@ export class UpdateReceptionService {
       where: { id: receptionist.id },
       data: userUpdateData,
     });
+
+    if (emailChanged && normalizedData.email) {
+      await this.auditLogRepository.create({
+        clinicId,
+        userId: adminId,
+        userName: admin.name,
+        action: "CHANGE_EMAIL",
+        entity: "User",
+        entityId: receptionist.id,
+        oldData: { email: receptionist.email },
+        newData: { email: normalizedData.email },
+      });
+    }
 
     if (shouldResendInvite && verificationTokenToSend) {
       const clinic = await prisma.clinic.findUnique({
