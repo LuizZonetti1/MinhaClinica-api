@@ -1,15 +1,24 @@
 ﻿import bcrypt from "bcryptjs";
 import { prisma } from "../../database/prisma";
+import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { UserRole, UserStatus } from "../../types/enums";
 import { generateAuthToken, generateTwoFactorPendingToken } from "../../utils/jwtUtils";
 import { SendOtpService } from "./twoFactorService";
+
+const auditLogRepository = new AuditLogRepository();
 
 /**
  * LOGIN - Autenticar usuário
  * Apenas email e senha (usuário já está vinculado à clínica)
  */
 export class LoginService {
-  async execute(data: { email: string; password: string; deviceToken?: string }) {
+  async execute(data: {
+    email: string;
+    password: string;
+    deviceToken?: string;
+    ipAddress?: string | null;
+    userAgent?: string | null;
+  }) {
     // Buscar usuário por email
     const user = await prisma.user.findFirst({
       where: {
@@ -98,6 +107,23 @@ export class LoginService {
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
+
+    // ClinicSettings.accessLogEnabled ("Log de acessos — Registrar todos os
+    // acessos ao sistema", default true) tinha tela real sem nenhum efeito —
+    // nenhum login era registrado em nenhum lugar. Só se aplica a staff
+    // (clinicId presente); paciente é global.
+    if (user.clinicId && user.clinic?.settings?.accessLogEnabled !== false) {
+      await auditLogRepository.create({
+        clinicId: user.clinicId,
+        userId: user.id,
+        userName: user.name,
+        action: "LOGIN",
+        entity: "User",
+        entityId: user.id,
+        ipAddress: data.ipAddress,
+        userAgent: data.userAgent,
+      });
+    }
 
     return {
       requires2FA: false,

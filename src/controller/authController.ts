@@ -19,7 +19,11 @@ export class AuthController {
   async login(req: Request, res: Response): Promise<void> {
     try {
       const service = new LoginService();
-      const result = await service.execute(req.body);
+      const result = await service.execute({
+        ...req.body,
+        ipAddress: req.ip ?? req.socket?.remoteAddress ?? null,
+        userAgent: req.headers["user-agent"] ?? null,
+      });
       res.status(200).json(result);
     } catch (error) {
       // LoginService lança Error puro (sem statusCode) para credenciais
