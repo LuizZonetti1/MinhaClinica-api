@@ -1,0 +1,161 @@
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+import { prisma } from "../../database/prisma";
+import { ClinicRepository } from "../../repository/clinicRepository";
+import { DayOfWeek } from "../../types/enums";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+// Espelham os @default do model ClinicSettings (prisma/schema.prisma) para
+// clínicas sem linha de settings ainda criada.
+const DEFAULT_MIN_ADVANCE_BOOKING_HOURS = 2;
+const DEFAULT_MAX_ADVANCE_BOOKING_DAYS = 60;
+
+const JS_DAY_TO_ENUM: Record<number, DayOfWeek> = {
+  0: DayOfWeek.SUNDAY,
+  1: DayOfWeek.MONDAY,
+  2: DayOfWeek.TUESDAY,
+  3: DayOfWeek.WEDNESDAY,
+  4: DayOfWeek.THURSDAY,
+  5: DayOfWeek.FRIDAY,
+  6: DayOfWeek.SATURDAY,
+};
+
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function bookingError(message: string) {
+  return Object.assign(new Error(message), { statusCode: 400 });
+}
+
+export interface AssertSlotIsBookableParams {
+  clinicId: string;
+  professionalId: string;
+  /** Data no formato YYYY-MM-DD (mesmo formato aceito em toda a Etapa 3 de agendamento). */
+  dateStr: string;
+  startTime: string;
+  endTime: string;
+  /** true quando o próprio paciente está criando/remarcando pelo portal (gate de allowOnlineBooking). */
+  isOnlineBooking: boolean;
+}
+
+/**
+ * Ponto único de validação das regras de agendamento que antes só existiam
+ * (parcialmente) em GetAvailableSlotsService, sem nenhuma ligação com os
+ * pontos de criação/reagendamento — dois caminhos de código desconectados.
+ * CreateAppointmentService/RescheduleAppointmentService só checavam conflito
+ * de horário e data passada; feriado, horário de trabalho,
+ * ProfessionalScheduleBlock, antecedência mínima/máxima e allowOnlineBooking
+ * nunca eram barrados no servidor. Ver V5 do PLANO_CORRECOES_RODADA5.md.
+ *
+ * Não cobre checagem de conflito de horário (fica no repository, perto do
+ * create/update em transação — ver hasConflict/hasConflictExcluding).
+ */
+export async function assertSlotIsBookable(params: AssertSlotIsBookableParams): Promise<void> {
+  const { clinicId, professionalId, dateStr, startTime, endTime, isOnlineBooking } = params;
+
+  const settings = await new ClinicRepository().findSettingsByClinicId(clinicId);
+
+  const dayjsDate = dayjs.tz(dateStr, DEFAULT_TIMEZONE);
+  const now = dayjs().tz(DEFAULT_TIMEZONE);
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = timeToMinutes(endTime);
+  const appointmentStart = dayjsDate
+    .hour(Math.floor(startMinutes / 60))
+    .minute(startMinutes % 60)
+    .second(0)
+    .millisecond(0);
+
+  // allowOnlineBooking — só se aplica quando o próprio paciente está agendando.
+  if (isOnlineBooking && settings?.allowOnlineBooking === false) {
+    throw bookingError(
+      "Agendamento online desativado para esta clínica. Entre em contato com a recepção.",
+    );
+  }
+
+  // minAdvanceBookingHours — subsume a checagem simples de "não pode ser no passado"
+  // quando o valor configurado é 0.
+  const minAdvanceHours = settings?.minAdvanceBookingHours ?? DEFAULT_MIN_ADVANCE_BOOKING_HOURS;
+  if (appointmentStart.isBefore(now.add(minAdvanceHours, "hour"))) {
+    throw bookingError(
+      minAdvanceHours > 0
+        ? `É necessário agendar com pelo menos ${minAdvanceHours} hora(s) de antecedência.`
+        : "Não é permitido agendar em horário já passado.",
+    );
+  }
+
+  // maxAdvanceBookingDays
+  const maxAdvanceDays = settings?.maxAdvanceBookingDays ?? DEFAULT_MAX_ADVANCE_BOOKING_DAYS;
+  const daysAhead = dayjsDate.startOf("day").diff(now.startOf("day"), "day");
+  if (daysAhead > maxAdvanceDays) {
+    throw bookingError(
+      `Não é possível agendar com mais de ${maxAdvanceDays} dia(s) de antecedência.`,
+    );
+  }
+
+  // Feriado (ClinicHoliday) — data fixa ou recorrente (mesmo dia/mês, ano livre).
+  const holidays = await prisma.clinicHoliday.findMany({
+    where: { clinicId },
+    select: { date: true, description: true, isRecurring: true },
+  });
+  const targetDateUtc = dayjs.utc(dateStr);
+  const holiday = holidays.find((h) => {
+    const hDate = dayjs.utc(h.date);
+    return h.isRecurring
+      ? hDate.month() === targetDateUtc.month() && hDate.date() === targetDateUtc.date()
+      : hDate.isSame(targetDateUtc, "day");
+  });
+  if (holiday) {
+    throw bookingError(`Data indisponível: feriado (${holiday.description}).`);
+  }
+
+  // Horário de trabalho / dia não trabalhado (ProfessionalWorkingHours)
+  const dayOfWeek = JS_DAY_TO_ENUM[dayjsDate.day()];
+  const workingHours = await prisma.professionalWorkingHours.findFirst({
+    where: { professionalId, dayOfWeek, isWorking: true },
+    select: { startTime: true, endTime: true, lunchBreakStart: true, lunchBreakEnd: true },
+  });
+  if (!workingHours) {
+    throw bookingError("O profissional não atende neste dia da semana.");
+  }
+  const workStart = timeToMinutes(workingHours.startTime);
+  const workEnd = timeToMinutes(workingHours.endTime);
+  if (startMinutes < workStart || endMinutes > workEnd) {
+    throw bookingError("Horário fora do expediente do profissional.");
+  }
+  if (workingHours.lunchBreakStart && workingHours.lunchBreakEnd) {
+    const lunchStart = timeToMinutes(workingHours.lunchBreakStart);
+    const lunchEnd = timeToMinutes(workingHours.lunchBreakEnd);
+    if (startMinutes < lunchEnd && endMinutes > lunchStart) {
+      throw bookingError("Horário conflita com o intervalo de almoço do profissional.");
+    }
+  }
+
+  // ProfessionalScheduleBlock (férias/folgas)
+  const startOfDay = dayjs.utc(dateStr).startOf("day").toDate();
+  const endOfDay = dayjs.utc(dateStr).endOf("day").toDate();
+  const blocks = await prisma.professionalScheduleBlock.findMany({
+    where: {
+      professionalId,
+      startDateTime: { lte: endOfDay },
+      endDateTime: { gte: startOfDay },
+    },
+    select: { startDateTime: true, endDateTime: true, isAllDay: true, reason: true },
+  });
+  const appointmentEnd = appointmentStart.add(endMinutes - startMinutes, "minute");
+  const block = blocks.find((b) => {
+    if (b.isAllDay) return true;
+    return (
+      appointmentStart.isBefore(dayjs(b.endDateTime)) &&
+      appointmentEnd.isAfter(dayjs(b.startDateTime))
+    );
+  });
+  if (block) {
+    throw bookingError(`Agenda bloqueada neste horário: ${block.reason}.`);
+  }
+}
