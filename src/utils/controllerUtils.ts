@@ -1,6 +1,24 @@
 import type { Response } from "express";
 
 /**
+ * Erros do SDK do Cloudinary carregam `http_code` (status HTTP retornado pela
+ * API do Cloudinary), não `.statusCode` — por isso não são reconhecidos como
+ * "erro intencional" e caem no fallback genérico de 500, mesmo quando a causa
+ * é o próprio usuário (ex.: arquivo com conteúdo inválido disfarçado).
+ */
+export const getCloudinaryHttpCode = (error: unknown): number | undefined => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "http_code" in error &&
+    typeof (error as { http_code: unknown }).http_code === "number"
+  ) {
+    return (error as { http_code: number }).http_code;
+  }
+  return undefined;
+};
+
+/**
  * Erros "esperados" carregam statusCode atribuído na origem
  * (Object.assign(new Error("..."), { statusCode: 400 })).
  * A mensagem desses é escrita para o usuário e pode ser exibida.
@@ -43,6 +61,20 @@ export const handleControllerError = (
 
     console.error("[ERRO INTERNO]", error);
     res.status(statusCode).json({ error: fallbackMessage });
+    return;
+  }
+
+  const cloudinaryStatus = getCloudinaryHttpCode(error);
+  if (cloudinaryStatus !== undefined) {
+    if (cloudinaryStatus >= 400 && cloudinaryStatus < 500) {
+      // Cloudinary rejeitou o conteúdo enviado (ex.: bytes inválidos disfarçados
+      // de imagem) — causa é do usuário, não vazamos o motivo interno do Cloudinary.
+      console.error("[ERRO CLOUDINARY]", error);
+      res.status(400).json({ error: "Não foi possível processar o arquivo enviado." });
+      return;
+    }
+    console.error("[ERRO INTERNO]", error);
+    res.status(500).json({ error: fallbackMessage });
     return;
   }
 

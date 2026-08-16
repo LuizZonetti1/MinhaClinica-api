@@ -3,6 +3,7 @@ import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 import routes from "./routes";
+import { getCloudinaryHttpCode } from "./utils/controllerUtils";
 
 const app = express();
 
@@ -24,6 +25,17 @@ app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 app.use("/api", routes);
 
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  const cloudinaryStatus = getCloudinaryHttpCode(err);
+  if (cloudinaryStatus !== undefined) {
+    if (cloudinaryStatus >= 400 && cloudinaryStatus < 500) {
+      res.status(400).json({ message: "Não foi possível processar o arquivo enviado." });
+      return;
+    }
+    console.error("[ERRO INTERNO]", err.message, err.stack);
+    res.status(500).json({ message: "Erro interno do servidor." });
+    return;
+  }
+
   const status = err.statusCode ?? 500;
   if (status >= 500) {
     console.error("[ERRO INTERNO]", err.message, err.stack);
