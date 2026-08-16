@@ -5,6 +5,7 @@ import { ProcedureController } from "../controller/procedureController";
 import { ProfessionalController } from "../controller/professionalController";
 import { ProfessionalDashboardController } from "../controller/professionalDashboardController";
 import { ProfileController } from "../controller/profileController";
+import { ScheduleBlockController } from "../controller/scheduleBlockController";
 import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
 import {
@@ -17,6 +18,7 @@ import {
   inviteProfessionalSchema,
   updateProfessionalSchema,
 } from "../schemas/professionalSchema";
+import { createScheduleBlockSchema } from "../schemas/scheduleBlockSchema";
 import { UserRole } from "../types/enums";
 
 const router = Router();
@@ -26,6 +28,7 @@ const patientCommentController = new PatientCommentController();
 const appointmentController = new AppointmentController();
 const profileController = new ProfileController();
 const procedureController = new ProcedureController();
+const scheduleBlockController = new ScheduleBlockController();
 
 const professionalAuth = [authMiddleware, checkRole(UserRole.PROFESSIONAL)];
 
@@ -111,6 +114,25 @@ router.put("/me/procedures", ...professionalAuth, validate(setMyProceduresSchema
 );
 
 /**
+ * PROTEGIDO (PROFESSIONAL) — Bloqueios de agenda do profissional autenticado (férias, folgas)
+ * GET    /api/professionals/me/schedule-blocks
+ * POST   /api/professionals/me/schedule-blocks
+ * DELETE /api/professionals/me/schedule-blocks/:blockId
+ */
+router.get("/me/schedule-blocks", ...professionalAuth, (req, res) =>
+  scheduleBlockController.listMine(req, res),
+);
+router.post(
+  "/me/schedule-blocks",
+  ...professionalAuth,
+  validate(createScheduleBlockSchema),
+  (req, res) => scheduleBlockController.createMine(req, res),
+);
+router.delete("/me/schedule-blocks/:blockId", ...professionalAuth, (req, res) =>
+  scheduleBlockController.deleteMine(req, res),
+);
+
+/**
  * PROTEGIDO (ADMIN/RECEPTIONIST) — Listar profissionais
  * GET /api/professionals
  */
@@ -154,11 +176,8 @@ router.post("/complete", tempRegistrationAuth, validate(completeProfessionalSche
  * PROTEGIDO (ADMIN) — Cancelar convite pendente
  * DELETE /api/professionals/invite/:userId
  */
-router.delete(
-  "/invite/:userId",
-  authMiddleware,
-  checkRole(UserRole.ADMIN),
-  (req, res) => professionalController.cancelInvite(req, res),
+router.delete("/invite/:userId", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  professionalController.cancelInvite(req, res),
 );
 
 /**
@@ -179,6 +198,32 @@ router.get(
   authMiddleware,
   checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
   (req, res) => procedureController.listForProfessional(req, res),
+);
+
+/**
+ * PROTEGIDO (ADMIN/RECEPTIONIST) — Bloqueios de agenda de um profissional (férias, folgas)
+ * GET    /api/professionals/:id/schedule-blocks
+ * POST   /api/professionals/:id/schedule-blocks
+ * DELETE /api/professionals/:id/schedule-blocks/:blockId
+ */
+router.get(
+  "/:id/schedule-blocks",
+  authMiddleware,
+  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
+  (req, res) => scheduleBlockController.list(req, res),
+);
+router.post(
+  "/:id/schedule-blocks",
+  authMiddleware,
+  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
+  validate(createScheduleBlockSchema),
+  (req, res) => scheduleBlockController.create(req, res),
+);
+router.delete(
+  "/:id/schedule-blocks/:blockId",
+  authMiddleware,
+  checkRole(UserRole.ADMIN, UserRole.RECEPTIONIST),
+  (req, res) => scheduleBlockController.delete(req, res),
 );
 
 /**
