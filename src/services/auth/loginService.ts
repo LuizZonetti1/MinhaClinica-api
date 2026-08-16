@@ -99,8 +99,23 @@ export class LoginService {
       }
     }
 
+    // ClinicSettings.sessionTimeoutMinutes tinha tela real sem nenhum efeito —
+    // expiração real era sempre "8h" hardcoded. Só se aplica a staff
+    // (clinicId presente); paciente é global, sem uma única clínica cujo
+    // valor faria sentido usar, mantém os 8h de sempre.
+    const sessionTimeoutMinutes = user.clinicId
+      ? user.clinic?.settings?.sessionTimeoutMinutes
+      : undefined;
+
     // Gerar token JWT (inclui todos os roles ativos)
-    const token = generateAuthToken(user.id, user.clinicId, user.role, user.name, {}, user.roles);
+    const token = generateAuthToken(
+      user.id,
+      user.clinicId,
+      user.role,
+      user.name,
+      sessionTimeoutMinutes ? { expiresIn: sessionTimeoutMinutes * 60 } : {},
+      user.roles,
+    );
 
     // Atualizar último login
     await prisma.user.update({
@@ -141,4 +156,3 @@ export class LoginService {
     };
   }
 }
-
