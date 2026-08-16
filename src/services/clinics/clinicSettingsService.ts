@@ -1,11 +1,13 @@
 import { ClinicRepository } from "../../repository/clinicRepository";
 import type {
   ClinicNotificationSettings,
+  ClinicPolicySettings,
   ClinicScheduleSettings,
   ClinicSecuritySettings,
   ClinicSettingsResponse,
   UpdateClinicInfoInput,
   UpdateClinicNotificationsInput,
+  UpdateClinicPolicyInput,
   UpdateClinicScheduleInput,
   UpdateClinicSecurityInput,
   WorkingDaysPreset,
@@ -49,6 +51,18 @@ export class GetClinicSettingsService {
       sessionTimeoutMinutes: s?.sessionTimeoutMinutes ?? 30,
     };
 
+    // Espelham os @default de ClinicSettings (prisma/schema.prisma) — mesmos
+    // valores usados como fallback em assertSlotIsBookable/autoNoShowService
+    // quando a clínica ainda não tem uma linha de settings salva.
+    const policy: ClinicPolicySettings = {
+      allowOnlineBooking: s?.allowOnlineBooking ?? true,
+      minAdvanceBookingHours: s?.minAdvanceBookingHours ?? 2,
+      maxAdvanceBookingDays: s?.maxAdvanceBookingDays ?? 60,
+      maxCancellationHours: s?.maxCancellationHours ?? 24,
+      maxConsecutiveNoShows: s?.maxConsecutiveNoShows ?? 3,
+      appointmentToleranceMinutes: s?.appointmentToleranceMinutes ?? 15,
+    };
+
     return {
       info: {
         id: clinic.id,
@@ -74,6 +88,7 @@ export class GetClinicSettingsService {
       schedule,
       notifications,
       security,
+      policy,
     };
   }
 }
@@ -191,6 +206,33 @@ export class UpdateClinicSecurityService {
       twoFactorEnabled: data.twoFactorEnabled,
       accessLogEnabled: data.accessLogEnabled,
       sessionTimeoutMinutes: data.sessionTimeoutMinutes,
+    });
+  }
+}
+
+// ── PATCH /api/clinics/settings/policy ───────────────────────────────────────
+
+export class UpdateClinicPolicyService {
+  private clinicRepository: ClinicRepository;
+
+  constructor() {
+    this.clinicRepository = new ClinicRepository();
+  }
+
+  async execute(clinicId: string, data: UpdateClinicPolicyInput) {
+    const existing = await this.clinicRepository.findById(clinicId);
+
+    if (!existing) {
+      throw new Error("Clínica não encontrada");
+    }
+
+    return this.clinicRepository.upsertSettings(clinicId, {
+      allowOnlineBooking: data.allowOnlineBooking,
+      minAdvanceBookingHours: data.minAdvanceBookingHours,
+      maxAdvanceBookingDays: data.maxAdvanceBookingDays,
+      maxCancellationHours: data.maxCancellationHours,
+      maxConsecutiveNoShows: data.maxConsecutiveNoShows,
+      appointmentToleranceMinutes: data.appointmentToleranceMinutes,
     });
   }
 }

@@ -119,6 +119,14 @@ clinicRoutes.patch("/settings/security", authMiddleware, checkRole(UserRole.ADMI
   clinicController.updateSecurity(req, res),
 );
 
+/**
+ * PATCH /api/clinics/settings/policy
+ * Atualiza regras de agendamento: antecedência min/max, cancelamento, faltas, online booking
+ */
+clinicRoutes.patch("/settings/policy", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  clinicController.updatePolicy(req, res),
+);
+
 // ── Consulta/atualização genérica por ID ─────────────────────────────────────
 
 // Rota para buscar clínica por ID

@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import {
   clinicInfoUpdateSchema,
   clinicNotificationsUpdateSchema,
+  clinicPolicyUpdateSchema,
   clinicRegisterCompleteSchema,
   clinicRegisterStartSchema,
   clinicScheduleUpdateSchema,
@@ -18,6 +19,7 @@ import {
   GetClinicSettingsService,
   UpdateClinicInfoService,
   UpdateClinicNotificationsService,
+  UpdateClinicPolicyService,
   UpdateClinicScheduleService,
   UpdateClinicSecurityService,
 } from "../services/clinics/clinicSettingsService";
@@ -387,6 +389,34 @@ export class ClinicController {
         return;
       }
       handleControllerError(res, error, "Erro ao atualizar configurações de segurança");
+    }
+  }
+
+  /**
+   * PATCH /api/clinics/settings/policy
+   * Atualiza as regras de agendamento (antecedência, cancelamento, faltas, online booking)
+   */
+  async updatePolicy(req: Request, res: Response): Promise<void> {
+    try {
+      const clinicId = req.clinicId as string;
+
+      const validatedData = await clinicPolicyUpdateSchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
+
+      const service = new UpdateClinicPolicyService();
+      const settings = await service.execute(clinicId, validatedData);
+
+      res
+        .status(200)
+        .json({ message: "Regras de agendamento atualizadas com sucesso", data: settings });
+    } catch (error: any) {
+      if (error.name === "ValidationError") {
+        res.status(400).json({ message: "Erro de validação", errors: error.errors });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao atualizar regras de agendamento");
     }
   }
 }

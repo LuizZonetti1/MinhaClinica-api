@@ -34,6 +34,12 @@ export class ClinicRepository {
       twoFactorEnabled?: boolean;
       accessLogEnabled?: boolean;
       sessionTimeoutMinutes?: number;
+      allowOnlineBooking?: boolean;
+      minAdvanceBookingHours?: number;
+      maxAdvanceBookingDays?: number;
+      maxCancellationHours?: number;
+      maxConsecutiveNoShows?: number;
+      appointmentToleranceMinutes?: number;
     },
   ) {
     return prisma.clinicSettings.upsert({

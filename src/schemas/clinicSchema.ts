@@ -1,7 +1,7 @@
 import * as yup from "yup";
 import { stripHtmlTags } from "../utils/sanitizeText";
-import { validateCPF } from "../utils/validateCPF";
 import { validateCep } from "../utils/validateCep";
+import { validateCPF } from "../utils/validateCPF";
 
 // Regex para validações
 const cnpjRegex = /^\d{14}$/;
@@ -293,5 +293,43 @@ export const clinicSecurityUpdateSchema = yup.object({
       [15, 30, 60, 120, 240],
       "Timeout de sessão inválido. Use: 15, 30, 60, 120 ou 240 minutos",
     )
+    .optional(),
+});
+
+/**
+ * Schema para atualização das regras de agendamento (política)
+ * PATCH /api/clinics/settings/policy
+ */
+export const clinicPolicyUpdateSchema = yup.object({
+  allowOnlineBooking: yup.boolean().optional(),
+  minAdvanceBookingHours: yup
+    .number()
+    .integer()
+    .min(0, "Antecedência mínima não pode ser negativa")
+    .max(168, "Antecedência mínima máxima é de 168 horas (7 dias)")
+    .optional(),
+  maxAdvanceBookingDays: yup
+    .number()
+    .integer()
+    .min(1, "Antecedência máxima mínima é de 1 dia")
+    .max(365, "Antecedência máxima é de 365 dias")
+    .optional(),
+  maxCancellationHours: yup
+    .number()
+    .integer()
+    .min(0, "Antecedência de cancelamento não pode ser negativa")
+    .max(168, "Antecedência de cancelamento máxima é de 168 horas (7 dias)")
+    .optional(),
+  maxConsecutiveNoShows: yup
+    .number()
+    .integer()
+    .min(1, "Limite de faltas mínimo é 1")
+    .max(20, "Limite de faltas máximo é 20")
+    .optional(),
+  appointmentToleranceMinutes: yup
+    .number()
+    .integer()
+    .min(0, "Tolerância não pode ser negativa")
+    .max(120, "Tolerância máxima é de 120 minutos")
     .optional(),
 });

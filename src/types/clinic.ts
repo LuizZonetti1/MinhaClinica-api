@@ -42,11 +42,27 @@ export interface ClinicSecuritySettings {
   sessionTimeoutMinutes: number;
 }
 
+/**
+ * Regras de agendamento consumidas por assertSlotIsBookable e
+ * autoNoShowService — antes tinham só GET (JSON) sem PATCH, então mesmo
+ * quando o backend passou a lê-las (V5/V1 do PLANO_CORRECOES_RODADA5.md),
+ * o admin não tinha como ajustá-las.
+ */
+export interface ClinicPolicySettings {
+  allowOnlineBooking: boolean;
+  minAdvanceBookingHours: number;
+  maxAdvanceBookingDays: number;
+  maxCancellationHours: number;
+  maxConsecutiveNoShows: number;
+  appointmentToleranceMinutes: number;
+}
+
 export interface ClinicSettingsResponse {
   info: ClinicInfo;
   schedule: ClinicScheduleSettings;
   notifications: ClinicNotificationSettings;
   security: ClinicSecuritySettings;
+  policy: ClinicPolicySettings;
 }
 
 // ── Presets de dias de atendimento ──────────────────────────────────────────
@@ -93,4 +109,13 @@ export interface UpdateClinicSecurityInput {
   twoFactorEnabled?: boolean;
   accessLogEnabled?: boolean;
   sessionTimeoutMinutes?: number;
+}
+
+export interface UpdateClinicPolicyInput {
+  allowOnlineBooking?: boolean;
+  minAdvanceBookingHours?: number;
+  maxAdvanceBookingDays?: number;
+  maxCancellationHours?: number;
+  maxConsecutiveNoShows?: number;
+  appointmentToleranceMinutes?: number;
 }
