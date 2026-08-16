@@ -16,7 +16,7 @@ export class LoginService {
         email: data.email,
       },
       include: {
-        clinic: true,
+        clinic: { include: { settings: true } },
         professional: true,
         patient: true,
       },
@@ -52,8 +52,15 @@ export class LoginService {
       throw new Error("Email ou senha incorretos");
     }
 
-    // Se 2FA estiver ativo, verificar se o dispositivo é confiável
-    if (user.twoFactorEnabled) {
+    // ClinicSettings.twoFactorEnabled é uma política de clínica: quando
+    // ligada, exige 2FA de todo mundo, mesmo quem não ligou o próprio
+    // User.twoFactorEnabled individualmente. Antes desse gate, o campo
+    // existia só no JSON de configurações, sem nenhum efeito.
+    const clinicRequires2FA = user.clinic?.settings?.twoFactorEnabled === true;
+
+    // Se 2FA estiver ativo (individual ou por política da clínica), verificar
+    // se o dispositivo é confiável
+    if (user.twoFactorEnabled || clinicRequires2FA) {
       let deviceTrusted = false;
 
       if (data.deviceToken) {
