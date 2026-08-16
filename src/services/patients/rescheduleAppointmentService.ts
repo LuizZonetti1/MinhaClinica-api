@@ -4,25 +4,15 @@ import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
 import { PatientDashboardRepository } from "../../repository/patientDashboardRepository";
 import { ProcedureRepository } from "../../repository/procedureRepository";
-import { AppointmentChannel, AppointmentStatus, DayOfWeek } from "../../types/enums";
+import { AppointmentChannel, AppointmentStatus } from "../../types/enums";
 import type { PatientRescheduleInput, PatientRescheduleResult } from "../../types/patient";
 import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDuration";
+import { assertSlotIsBookable } from "../appointments/appointmentBookingRules";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const DEFAULT_TIMEZONE = "America/Sao_Paulo";
-
-// Dias da semana: Date.getDay() → DayOfWeek (mesmo mapeamento de getAvailableSlotsService)
-const JS_DAY_TO_ENUM: Record<number, DayOfWeek> = {
-  0: DayOfWeek.SUNDAY,
-  1: DayOfWeek.MONDAY,
-  2: DayOfWeek.TUESDAY,
-  3: DayOfWeek.WEDNESDAY,
-  4: DayOfWeek.THURSDAY,
-  5: DayOfWeek.FRIDAY,
-  6: DayOfWeek.SATURDAY,
-};
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -90,25 +80,6 @@ export class RescheduleAppointmentService {
       });
     }
 
-    // O profissional precisa atender no dia da semana da nova data. Checagem
-    // mínima (não recalcula horários/blocks — isso é feito em
-    // getAvailableSlotsService, fora do escopo deste serviço).
-    const dayOfWeek = JS_DAY_TO_ENUM[dayjs.tz(input.appointmentDate, DEFAULT_TIMEZONE).day()];
-    const workingDay = await prisma.professionalWorkingHours.findFirst({
-      where: {
-        professionalId: input.professionalId,
-        dayOfWeek,
-        isWorking: true,
-      },
-      select: { id: true },
-    });
-
-    if (!workingDay) {
-      throw Object.assign(new Error("O profissional não atende neste dia da semana."), {
-        statusCode: 400,
-      });
-    }
-
     // Preserva a duração do procedimento original (se houver) também no reagendamento,
     // inclusive quando o novo profissional tem customDuration próprio para ele.
     const procedureData = original.procedureId
@@ -128,19 +99,17 @@ export class RescheduleAppointmentService {
     const startMinutes = timeToMinutes(input.startTime);
     const endTime = minutesToTime(startMinutes + duration);
 
-    // Valida que a nova data/hora é futura
-    const newDatetime = dayjs
-      .tz(input.appointmentDate, DEFAULT_TIMEZONE)
-      .hour(Math.floor(startMinutes / 60))
-      .minute(startMinutes % 60)
-      .second(0)
-      .millisecond(0);
-
-    if (newDatetime.isBefore(dayjs().tz(DEFAULT_TIMEZONE))) {
-      throw Object.assign(new Error("Não é permitido remarcar para um horário já passado"), {
-        statusCode: 400,
-      });
-    }
+    // Feriado, horário de trabalho, ProfessionalScheduleBlock, antecedência
+    // mínima/máxima e allowOnlineBooking (só quando o próprio paciente remarca
+    // pelo portal) — inclui a checagem de "não pode ser no passado".
+    await assertSlotIsBookable({
+      clinicId: input.clinicId,
+      professionalId: input.professionalId,
+      dateStr: input.appointmentDate,
+      startTime: input.startTime,
+      endTime,
+      isOnlineBooking: Boolean(ownerUserId),
+    });
 
     // appointmentDate é @db.Date → UTC midnight para comparação correta
     const startOfDay = dayjs.utc(input.appointmentDate).startOf("day").toDate();
@@ -188,6 +157,7 @@ export class RescheduleAppointmentService {
           channel: (original.channel as AppointmentChannel) ?? AppointmentChannel.IN_PERSON,
           notes: original.notes ?? undefined,
           createdBy: actorUserId,
+          rescheduledFrom: appointmentId,
         },
         select: { id: true, appointmentDate: true, startTime: true, endTime: true },
       });
