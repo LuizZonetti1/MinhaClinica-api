@@ -4,6 +4,7 @@ import utc from "dayjs/plugin/utc";
 import { Prisma } from "../../../generated/prisma";
 import { prisma } from "../../database/prisma";
 import { AppointmentRepository } from "../../repository/appointmentRepository";
+import { ClinicRepository } from "../../repository/clinicRepository";
 import { NotificationRepository } from "../../repository/notificationRepository";
 import { ProcedureRepository } from "../../repository/procedureRepository";
 import type { AppointmentCreatedResult, CreateAppointmentInput } from "../../types/appointment";
@@ -292,6 +293,33 @@ export class CreateAppointmentService {
             appointmentId: created.id,
           });
           await notifRepo.markAsSent(sNotif.id);
+        }
+
+        // sendNewPatientAlert (default false) — alerta a equipe quando este é
+        // o primeiro agendamento do paciente NESTA clínica. Antes tinha tela
+        // real (GET+PATCH) mas nenhum fluxo de cadastro/agendamento o lia.
+        const settings = await new ClinicRepository().findSettingsByClinicId(clinicId);
+        if (settings?.sendNewPatientAlert) {
+          const priorAppointments = await prisma.appointment.count({
+            where: { patientId: input.patientId, clinicId, id: { not: created.id } },
+          });
+          if (priorAppointments === 0) {
+            for (const staff of staffUsers) {
+              const newPatientNotif = await notifRepo.create({
+                clinicId,
+                recipientEmail: staff.email,
+                recipientPhone: staff.phone ?? undefined,
+                recipientName: staff.name,
+                recipientUserId: staff.id,
+                type: "SYSTEM_ALERT",
+                channel: "IN_APP",
+                subject: "Novo paciente na clínica",
+                message: `${patient.user.name} agendou pela primeira vez nesta clínica.`,
+                appointmentId: created.id,
+              });
+              await notifRepo.markAsSent(newPatientNotif.id);
+            }
+          }
         }
       } catch {
         // fire-and-forget: não propaga erro
