@@ -1,10 +1,24 @@
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
 import { prisma } from "../../database/prisma";
+import { AuditLogRepository } from "../../repository/auditLogRepository";
+import { ClinicRepository } from "../../repository/clinicRepository";
 import { PatientDashboardRepository } from "../../repository/patientDashboardRepository";
 import { AppointmentStatus, CancellationReason } from "../../types/enums";
-import { EmailService, createEmailProvider } from "../email/emailService";
+import { createEmailProvider, EmailService } from "../email/emailService";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+// Espelha o @default de ClinicSettings.maxCancellationHours (prisma/schema.prisma).
+const DEFAULT_MAX_CANCELLATION_HOURS = 24;
 
 export class CancelAppointmentService {
   private repository = new PatientDashboardRepository();
+  private clinicRepository = new ClinicRepository();
+  private auditLogRepository = new AuditLogRepository();
 
   async execute(appointmentId: string, userId: string) {
     const patient = await this.repository.findPatientByUserId(userId);
@@ -20,6 +34,7 @@ export class CancelAppointmentService {
       select: {
         id: true,
         status: true,
+        clinicId: true,
         appointmentDate: true,
         startTime: true,
         professional: {
@@ -48,6 +63,30 @@ export class CancelAppointmentService {
       );
     }
 
+    // maxCancellationHours — cancelamento pelo próprio paciente é bloqueado
+    // muito perto do horário da consulta. Recepção/admin não passam por aqui
+    // (cancelamento deles usa outro caminho, sem essa restrição).
+    const settings = await this.clinicRepository.findSettingsByClinicId(appointment.clinicId);
+    const maxCancellationHours = settings?.maxCancellationHours ?? DEFAULT_MAX_CANCELLATION_HOURS;
+    const datePart = dayjs.utc(appointment.appointmentDate).format("YYYY-MM-DD");
+    const appointmentStart = dayjs.tz(
+      `${datePart} ${appointment.startTime}`,
+      "YYYY-MM-DD HH:mm",
+      DEFAULT_TIMEZONE,
+    );
+    const now = dayjs().tz(DEFAULT_TIMEZONE);
+    if (
+      appointmentStart.isAfter(now) &&
+      appointmentStart.diff(now, "hour", true) < maxCancellationHours
+    ) {
+      throw Object.assign(
+        new Error(
+          `Cancelamentos só são permitidos com pelo menos ${maxCancellationHours} hora(s) de antecedência. Entre em contato com a clínica.`,
+        ),
+        { statusCode: 400 },
+      );
+    }
+
     const updated = await prisma.appointment.update({
       where: { id: appointment.id },
       data: {
@@ -62,12 +101,27 @@ export class CancelAppointmentService {
       },
     });
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true },
+    });
+
+    await this.auditLogRepository.create({
+      clinicId: appointment.clinicId,
+      userId,
+      userName: user?.name ?? "Paciente",
+      action: "CANCEL_APPOINTMENT",
+      entity: "Appointment",
+      entityId: appointment.id,
+      oldData: { status: appointment.status },
+      newData: {
+        status: AppointmentStatus.CANCELLED,
+        cancellationReason: CancellationReason.PATIENT_REQUEST,
+      },
+    });
+
     // Envia email de confirmação do cancelamento (fire-and-forget)
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { email: true, name: true },
-      });
       if (user) {
         const emailSvc = new EmailService(createEmailProvider());
         const appointmentDate = appointment.appointmentDate.toLocaleDateString("pt-BR");
