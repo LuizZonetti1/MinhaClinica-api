@@ -70,7 +70,7 @@ export class DashboardRepository {
 
   async countProfessionals(clinicId: string): Promise<number> {
     return prisma.professional.count({
-      where: { clinicId },
+      where: { clinicId, deletedAt: null },
     });
   }
 
