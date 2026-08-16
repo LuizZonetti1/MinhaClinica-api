@@ -1,3 +1,4 @@
+import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { ClinicHolidayRepository } from "../../repository/clinicHolidayRepository";
 import { ClinicRepository } from "../../repository/clinicRepository";
 import { ClinicWorkingHoursRepository } from "../../repository/clinicWorkingHoursRepository";
@@ -14,6 +15,7 @@ import type {
   UpdateClinicSecurityInput,
   WorkingDaysPreset,
 } from "../../types/clinic";
+import type { AuditContext } from "../../types/document";
 import type { DayOfWeek } from "../../types/enums";
 
 // ── GET /api/clinics/settings ────────────────────────────────────────────────
@@ -100,12 +102,13 @@ export class GetClinicSettingsService {
 
 export class UpdateClinicInfoService {
   private clinicRepository: ClinicRepository;
+  private auditLogRepository = new AuditLogRepository();
 
   constructor() {
     this.clinicRepository = new ClinicRepository();
   }
 
-  async execute(clinicId: string, data: UpdateClinicInfoInput) {
+  async execute(clinicId: string, data: UpdateClinicInfoInput, context: AuditContext) {
     const existing = await this.clinicRepository.findById(clinicId);
 
     if (!existing) {
@@ -113,7 +116,19 @@ export class UpdateClinicInfoService {
     }
 
     try {
-      return await this.clinicRepository.updateClinic(clinicId, data);
+      const updated = await this.clinicRepository.updateClinic(clinicId, data);
+      await this.auditLogRepository.create({
+        clinicId,
+        userId: context.userId,
+        userName: context.userName,
+        action: "UPDATE_CLINIC_INFO",
+        entity: "Clinic",
+        entityId: clinicId,
+        newData: data,
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+      });
+      return updated;
     } catch (error: any) {
       if (error.code === "P2002") {
         const field = error.meta?.target?.[0];
@@ -130,12 +145,13 @@ export class UpdateClinicInfoService {
 
 export class UpdateClinicScheduleService {
   private clinicRepository: ClinicRepository;
+  private auditLogRepository = new AuditLogRepository();
 
   constructor() {
     this.clinicRepository = new ClinicRepository();
   }
 
-  async execute(clinicId: string, data: UpdateClinicScheduleInput) {
+  async execute(clinicId: string, data: UpdateClinicScheduleInput, context: AuditContext) {
     const existing = await this.clinicRepository.findById(clinicId);
 
     if (!existing) {
@@ -155,12 +171,24 @@ export class UpdateClinicScheduleService {
       );
     }
 
-    return this.clinicRepository.upsertSettings(clinicId, {
+    const updated = await this.clinicRepository.upsertSettings(clinicId, {
       openTime: data.openTime,
       closeTime: data.closeTime,
       minIntervalBetweenAppointments: data.minIntervalBetweenAppointments,
       workingDaysPreset: data.workingDaysPreset,
     });
+    await this.auditLogRepository.create({
+      clinicId,
+      userId: context.userId,
+      userName: context.userName,
+      action: "UPDATE_CLINIC_SCHEDULE",
+      entity: "ClinicSettings",
+      entityId: clinicId,
+      newData: data,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
+    return updated;
   }
 }
 
@@ -168,24 +196,37 @@ export class UpdateClinicScheduleService {
 
 export class UpdateClinicNotificationsService {
   private clinicRepository: ClinicRepository;
+  private auditLogRepository = new AuditLogRepository();
 
   constructor() {
     this.clinicRepository = new ClinicRepository();
   }
 
-  async execute(clinicId: string, data: UpdateClinicNotificationsInput) {
+  async execute(clinicId: string, data: UpdateClinicNotificationsInput, context: AuditContext) {
     const existing = await this.clinicRepository.findById(clinicId);
 
     if (!existing) {
       throw new Error("Clínica não encontrada");
     }
 
-    return this.clinicRepository.upsertSettings(clinicId, {
+    const updated = await this.clinicRepository.upsertSettings(clinicId, {
       sendAppointmentReminder: data.sendAppointmentReminder,
       sendCancellationAlert: data.sendCancellationAlert,
       sendNewPatientAlert: data.sendNewPatientAlert,
       sendDailyReport: data.sendDailyReport,
     });
+    await this.auditLogRepository.create({
+      clinicId,
+      userId: context.userId,
+      userName: context.userName,
+      action: "UPDATE_CLINIC_NOTIFICATIONS",
+      entity: "ClinicSettings",
+      entityId: clinicId,
+      newData: data,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
+    return updated;
   }
 }
 
@@ -193,23 +234,36 @@ export class UpdateClinicNotificationsService {
 
 export class UpdateClinicSecurityService {
   private clinicRepository: ClinicRepository;
+  private auditLogRepository = new AuditLogRepository();
 
   constructor() {
     this.clinicRepository = new ClinicRepository();
   }
 
-  async execute(clinicId: string, data: UpdateClinicSecurityInput) {
+  async execute(clinicId: string, data: UpdateClinicSecurityInput, context: AuditContext) {
     const existing = await this.clinicRepository.findById(clinicId);
 
     if (!existing) {
       throw new Error("Clínica não encontrada");
     }
 
-    return this.clinicRepository.upsertSettings(clinicId, {
+    const updated = await this.clinicRepository.upsertSettings(clinicId, {
       twoFactorEnabled: data.twoFactorEnabled,
       accessLogEnabled: data.accessLogEnabled,
       sessionTimeoutMinutes: data.sessionTimeoutMinutes,
     });
+    await this.auditLogRepository.create({
+      clinicId,
+      userId: context.userId,
+      userName: context.userName,
+      action: "UPDATE_CLINIC_SECURITY",
+      entity: "ClinicSettings",
+      entityId: clinicId,
+      newData: data,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
+    return updated;
   }
 }
 
@@ -217,19 +271,20 @@ export class UpdateClinicSecurityService {
 
 export class UpdateClinicPolicyService {
   private clinicRepository: ClinicRepository;
+  private auditLogRepository = new AuditLogRepository();
 
   constructor() {
     this.clinicRepository = new ClinicRepository();
   }
 
-  async execute(clinicId: string, data: UpdateClinicPolicyInput) {
+  async execute(clinicId: string, data: UpdateClinicPolicyInput, context: AuditContext) {
     const existing = await this.clinicRepository.findById(clinicId);
 
     if (!existing) {
       throw new Error("Clínica não encontrada");
     }
 
-    return this.clinicRepository.upsertSettings(clinicId, {
+    const updated = await this.clinicRepository.upsertSettings(clinicId, {
       allowOnlineBooking: data.allowOnlineBooking,
       minAdvanceBookingHours: data.minAdvanceBookingHours,
       maxAdvanceBookingDays: data.maxAdvanceBookingDays,
@@ -237,6 +292,18 @@ export class UpdateClinicPolicyService {
       maxConsecutiveNoShows: data.maxConsecutiveNoShows,
       appointmentToleranceMinutes: data.appointmentToleranceMinutes,
     });
+    await this.auditLogRepository.create({
+      clinicId,
+      userId: context.userId,
+      userName: context.userName,
+      action: "UPDATE_CLINIC_POLICY",
+      entity: "ClinicSettings",
+      entityId: clinicId,
+      newData: data,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
+    return updated;
   }
 }
 
@@ -255,12 +322,26 @@ export class GetClinicWorkingHoursService {
 
 export class UpdateClinicWorkingHoursService {
   private repository = new ClinicWorkingHoursRepository();
+  private auditLogRepository = new AuditLogRepository();
 
   async execute(
     clinicId: string,
     days: { dayOfWeek: DayOfWeek; isOpen: boolean; openTime: string; closeTime: string }[],
+    context: AuditContext,
   ) {
-    return this.repository.upsertMany(clinicId, days);
+    const updated = await this.repository.upsertMany(clinicId, days);
+    await this.auditLogRepository.create({
+      clinicId,
+      userId: context.userId,
+      userName: context.userName,
+      action: "UPDATE_CLINIC_WORKING_HOURS",
+      entity: "ClinicWorkingHours",
+      entityId: clinicId,
+      newData: { days },
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
+    return updated;
   }
 }
 
@@ -279,20 +360,49 @@ export class GetClinicHolidaysService {
 
 export class CreateClinicHolidayService {
   private repository = new ClinicHolidayRepository();
+  private auditLogRepository = new AuditLogRepository();
 
-  async execute(clinicId: string, data: { date: Date; description: string; isRecurring: boolean }) {
-    return this.repository.create({ clinicId, ...data });
+  async execute(
+    clinicId: string,
+    data: { date: Date; description: string; isRecurring: boolean },
+    context: AuditContext,
+  ) {
+    const holiday = await this.repository.create({ clinicId, ...data });
+    await this.auditLogRepository.create({
+      clinicId,
+      userId: context.userId,
+      userName: context.userName,
+      action: "CREATE_CLINIC_HOLIDAY",
+      entity: "ClinicHoliday",
+      entityId: holiday.id,
+      newData: data,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
+    return holiday;
   }
 }
 
 export class DeleteClinicHolidayService {
   private repository = new ClinicHolidayRepository();
+  private auditLogRepository = new AuditLogRepository();
 
-  async execute(clinicId: string, holidayId: string): Promise<void> {
+  async execute(clinicId: string, holidayId: string, context: AuditContext): Promise<void> {
     const holiday = await this.repository.findById(holidayId);
     if (!holiday || holiday.clinicId !== clinicId) {
       throw Object.assign(new Error("Feriado não encontrado"), { statusCode: 404 });
     }
     await this.repository.delete(holidayId);
+    await this.auditLogRepository.create({
+      clinicId,
+      userId: context.userId,
+      userName: context.userName,
+      action: "DELETE_CLINIC_HOLIDAY",
+      entity: "ClinicHoliday",
+      entityId: holidayId,
+      oldData: { date: holiday.date, description: holiday.description },
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
   }
 }

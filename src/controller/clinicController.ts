@@ -34,9 +34,20 @@ import { DeleteClinicService } from "../services/clinics/deleteClinicService";
 import { GetClinicService } from "../services/clinics/getClinicService";
 import { UpdateClinicService } from "../services/clinics/updateClinicService";
 import type { WorkingDaysPreset } from "../types/clinic";
+import type { AuditContext } from "../types/document";
 import type { CompleteClinicOwnerInput } from "../types/user";
 import { handleControllerError } from "../utils/controllerUtils";
 import { resolveVerifyRedirect } from "../utils/verifyRedirectUtils";
+
+function buildAuditContext(req: Request): AuditContext {
+  return {
+    userId: req.userId!,
+    userName: req.userName ?? "Desconhecido",
+    clinicId: req.clinicId!,
+    ipAddress: req.ip ?? req.socket?.remoteAddress ?? null,
+    userAgent: req.headers["user-agent"] ?? null,
+  };
+}
 
 export class ClinicController {
   async updateClinic(req: Request, res: Response): Promise<void> {
@@ -300,7 +311,7 @@ export class ClinicController {
       });
 
       const service = new UpdateClinicInfoService();
-      const clinic = await service.execute(clinicId, validatedData);
+      const clinic = await service.execute(clinicId, validatedData, buildAuditContext(req));
 
       res.status(200).json({ message: "Informações atualizadas com sucesso", data: clinic });
     } catch (error: any) {
@@ -326,10 +337,14 @@ export class ClinicController {
       });
 
       const service = new UpdateClinicScheduleService();
-      const settings = await service.execute(clinicId, {
-        ...validatedData,
-        workingDaysPreset: validatedData.workingDaysPreset as WorkingDaysPreset | undefined,
-      });
+      const settings = await service.execute(
+        clinicId,
+        {
+          ...validatedData,
+          workingDaysPreset: validatedData.workingDaysPreset as WorkingDaysPreset | undefined,
+        },
+        buildAuditContext(req),
+      );
 
       res
         .status(200)
@@ -357,7 +372,7 @@ export class ClinicController {
       });
 
       const service = new UpdateClinicNotificationsService();
-      const settings = await service.execute(clinicId, validatedData);
+      const settings = await service.execute(clinicId, validatedData, buildAuditContext(req));
 
       res
         .status(200)
@@ -385,7 +400,7 @@ export class ClinicController {
       });
 
       const service = new UpdateClinicSecurityService();
-      const settings = await service.execute(clinicId, validatedData);
+      const settings = await service.execute(clinicId, validatedData, buildAuditContext(req));
 
       res
         .status(200)
@@ -413,7 +428,7 @@ export class ClinicController {
       });
 
       const service = new UpdateClinicPolicyService();
-      const settings = await service.execute(clinicId, validatedData);
+      const settings = await service.execute(clinicId, validatedData, buildAuditContext(req));
 
       res
         .status(200)
@@ -456,7 +471,11 @@ export class ClinicController {
       });
 
       const service = new UpdateClinicWorkingHoursService();
-      const items = await service.execute(clinicId, validatedData.days as never);
+      const items = await service.execute(
+        clinicId,
+        validatedData.days as never,
+        buildAuditContext(req),
+      );
 
       res
         .status(200)
@@ -502,6 +521,7 @@ export class ClinicController {
       const holiday = await service.execute(
         clinicId,
         validatedData as { date: Date; description: string; isRecurring: boolean },
+        buildAuditContext(req),
       );
 
       res.status(201).json({ message: "Feriado cadastrado com sucesso", data: holiday });
@@ -524,7 +544,7 @@ export class ClinicController {
       const holidayId = req.params.id as string;
 
       const service = new DeleteClinicHolidayService();
-      await service.execute(clinicId, holidayId);
+      await service.execute(clinicId, holidayId, buildAuditContext(req));
 
       res.status(204).send();
     } catch (error) {
