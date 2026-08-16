@@ -27,8 +27,8 @@ export class AuthController {
       res.status(200).json(result);
     } catch (error) {
       // LoginService lança Error puro (sem statusCode) para credenciais
-      // inválidas e conta inativa — sempre foi 401, preserva o status e a
-      // mensagem (inclui orientação para conta pendente de ativação).
+      // inválidas, conta inativa/bloqueada ou papel sem acesso — sempre foi
+      // 401, mensagem sempre genérica (evita enumeração do estado da conta).
       if (error instanceof Error) {
         res.status(401).json({ error: error.message });
         return;

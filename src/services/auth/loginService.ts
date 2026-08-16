@@ -36,7 +36,7 @@ export class LoginService {
 
     // Verificar se conta está ativa
     if (user.status !== UserStatus.ACTIVE) {
-      throw new Error("Conta não está ativa. Complete seu cadastro ou aguarde aprovação.");
+      throw new Error("Email ou senha incorretos");
     }
 
     // ADMIN/RECEPTIONIST não têm registro próprio de isActive (só User.status
@@ -51,7 +51,7 @@ export class LoginService {
     };
     const rolesToCheck = user.roles.length > 0 ? user.roles : [user.role];
     if (!rolesToCheck.some(isRoleUsable)) {
-      throw new Error("Conta não está ativa. Complete seu cadastro ou aguarde aprovação.");
+      throw new Error("Email ou senha incorretos");
     }
 
     // Verificar senha
