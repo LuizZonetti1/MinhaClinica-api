@@ -1,4 +1,6 @@
+import { Prisma } from "../../generated/prisma";
 import { prisma } from "../database/prisma";
+import type { AppointmentChannel, AppointmentType } from "../types/enums";
 import { AppointmentStatus } from "../types/enums";
 
 export class PatientDashboardRepository {
@@ -174,5 +176,88 @@ export class PatientDashboardRepository {
       },
     });
     return count > 0;
+  }
+
+  /**
+   * Marca o original como RESCHEDULED e cria o novo, com a checagem de
+   * conflito DENTRO da mesma transação Serializable — mesma proteção que
+   * AppointmentRepository.createIfNoConflict dá à criação. Sem isso, duas
+   * remarcações concorrentes para o mesmo slot passariam ambas (o check e o
+   * create eram dois awaits soltos).
+   *
+   * Em conflito de escrita real o Postgres aborta uma das transações (P2034);
+   * o chamador trata como o mesmo 409 de horário ocupado.
+   */
+  async rescheduleIfNoConflict(data: {
+    appointmentId: string;
+    clinicId: string;
+    patientId: string;
+    professionalId: string;
+    procedureId?: string;
+    appointmentDate: Date;
+    startTime: string;
+    endTime: string;
+    duration: number;
+    type: AppointmentType;
+    channel: AppointmentChannel;
+    notes?: string;
+    createdBy: string;
+    startOfDay: Date;
+    endOfDay: Date;
+  }) {
+    return prisma.$transaction(
+      async (tx) => {
+        const conflictCount = await tx.appointment.count({
+          where: {
+            id: { not: data.appointmentId },
+            professionalId: data.professionalId,
+            clinicId: data.clinicId,
+            appointmentDate: { gte: data.startOfDay, lte: data.endOfDay },
+            status: {
+              notIn: [
+                AppointmentStatus.CANCELLED,
+                AppointmentStatus.NO_SHOW,
+                AppointmentStatus.RESCHEDULED,
+              ],
+            },
+            AND: [{ startTime: { lt: data.endTime } }, { endTime: { gt: data.startTime } }],
+          },
+        });
+
+        if (conflictCount > 0) {
+          throw Object.assign(
+            new Error("Este horário já está ocupado. Por favor, escolha outro."),
+            {
+              statusCode: 409,
+            },
+          );
+        }
+
+        await tx.appointment.update({
+          where: { id: data.appointmentId },
+          data: { status: AppointmentStatus.RESCHEDULED },
+        });
+
+        return tx.appointment.create({
+          data: {
+            clinicId: data.clinicId,
+            patientId: data.patientId,
+            professionalId: data.professionalId,
+            procedureId: data.procedureId,
+            appointmentDate: data.appointmentDate,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            duration: data.duration,
+            type: data.type,
+            channel: data.channel,
+            notes: data.notes,
+            createdBy: data.createdBy,
+            rescheduledFrom: data.appointmentId,
+          },
+          select: { id: true, appointmentDate: true, startTime: true, endTime: true },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 }

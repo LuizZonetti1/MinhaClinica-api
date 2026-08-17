@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { Prisma } from "../../../generated/prisma";
 import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { PatientDashboardRepository } from "../../repository/patientDashboardRepository";
@@ -114,53 +115,40 @@ export class RescheduleAppointmentService {
     const startOfDay = dayjs.utc(input.appointmentDate).startOf("day").toDate();
     const endOfDay = dayjs.utc(input.appointmentDate).endOf("day").toDate();
 
-    const hasConflict = await this.repository.hasConflictExcluding(
-      appointmentId,
-      input.professionalId,
-      input.clinicId,
-      startOfDay,
-      endOfDay,
-      input.startTime,
-      endTime,
-    );
-
-    if (hasConflict) {
-      throw Object.assign(new Error("Este horário já está ocupado. Por favor, escolha outro."), {
-        statusCode: 409,
-      });
-    }
-
-    // Marca o original como RESCHEDULED e cria o novo em transação atômica
     const appointmentDate = dayjs
       .tz(input.appointmentDate, DEFAULT_TIMEZONE)
       .startOf("day")
       .toDate();
 
-    const newAppointment = await prisma.$transaction(async (tx) => {
-      await tx.appointment.update({
-        where: { id: appointmentId },
-        data: { status: AppointmentStatus.RESCHEDULED },
+    // Conflito + update + create numa única transação Serializable — duas
+    // remarcações concorrentes para o mesmo slot não passam mais ambas.
+    let newAppointment: Awaited<ReturnType<PatientDashboardRepository["rescheduleIfNoConflict"]>>;
+    try {
+      newAppointment = await this.repository.rescheduleIfNoConflict({
+        appointmentId,
+        clinicId: input.clinicId,
+        patientId: original.patientId,
+        professionalId: input.professionalId,
+        procedureId: original.procedureId ?? undefined,
+        appointmentDate,
+        startTime: input.startTime,
+        endTime,
+        duration,
+        type: original.type,
+        channel: (original.channel as AppointmentChannel) ?? AppointmentChannel.IN_PERSON,
+        notes: original.notes ?? undefined,
+        createdBy: actorUserId,
+        startOfDay,
+        endOfDay,
       });
-
-      return tx.appointment.create({
-        data: {
-          clinicId: input.clinicId,
-          patientId: original.patientId,
-          professionalId: input.professionalId,
-          procedureId: original.procedureId ?? undefined,
-          appointmentDate,
-          startTime: input.startTime,
-          endTime,
-          duration,
-          type: original.type,
-          channel: (original.channel as AppointmentChannel) ?? AppointmentChannel.IN_PERSON,
-          notes: original.notes ?? undefined,
-          createdBy: actorUserId,
-          rescheduledFrom: appointmentId,
-        },
-        select: { id: true, appointmentDate: true, startTime: true, endTime: true },
-      });
-    });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+        throw Object.assign(new Error("Este horário já está ocupado. Por favor, escolha outro."), {
+          statusCode: 409,
+        });
+      }
+      throw error;
+    }
 
     return {
       id: newAppointment.id,
