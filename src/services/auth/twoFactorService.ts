@@ -114,8 +114,13 @@ export class ValidateOtpService {
         status: true,
         // settings.twoFactorEnabled entra aqui junto do tradeName porque
         // a política da clínica também habilita o 2FA (isTwoFactorRequired).
+        // sessionTimeoutMinutes vai na resposta para o frontend aplicar o
+        // timeout de inatividade — mesmo contrato do LoginService.
         clinic: {
-          select: { tradeName: true, settings: { select: { twoFactorEnabled: true } } },
+          select: {
+            tradeName: true,
+            settings: { select: { twoFactorEnabled: true, sessionTimeoutMinutes: true } },
+          },
         },
         clinicId: true,
         role: true,
@@ -186,6 +191,9 @@ export class ValidateOtpService {
     return {
       token,
       deviceToken,
+      sessionTimeoutMinutes: user.clinicId
+        ? (user.clinic?.settings?.sessionTimeoutMinutes ?? null)
+        : null,
       user: {
         id: user.id,
         name: user.name,

@@ -95,23 +95,18 @@ export class LoginService {
       }
     }
 
-    // ClinicSettings.sessionTimeoutMinutes tinha tela real sem nenhum efeito —
-    // expiração real era sempre "8h" hardcoded. Só se aplica a staff
-    // (clinicId presente); paciente é global, sem uma única clínica cujo
-    // valor faria sentido usar, mantém os 8h de sempre.
+    // ClinicSettings.sessionTimeoutMinutes é "Encerrar sessão após
+    // INATIVIDADE" — quem aplica é o frontend (contador de inatividade), não
+    // o tempo de vida do token. Usar como expiresIn do JWT derrubaria o
+    // usuário no meio do trabalho mesmo digitando, e não existe refresh
+    // token no projeto para renovar. O token mantém as 8h de sempre e o
+    // valor vai na resposta para o cliente aplicar o timeout de verdade.
     const sessionTimeoutMinutes = user.clinicId
-      ? user.clinic?.settings?.sessionTimeoutMinutes
-      : undefined;
+      ? (user.clinic?.settings?.sessionTimeoutMinutes ?? null)
+      : null;
 
     // Gerar token JWT (inclui todos os roles ativos)
-    const token = generateAuthToken(
-      user.id,
-      user.clinicId,
-      user.role,
-      user.name,
-      sessionTimeoutMinutes ? { expiresIn: sessionTimeoutMinutes * 60 } : {},
-      user.roles,
-    );
+    const token = generateAuthToken(user.id, user.clinicId, user.role, user.name, {}, user.roles);
 
     // Atualizar último login
     await prisma.user.update({
@@ -145,6 +140,8 @@ export class LoginService {
     return {
       requires2FA: false,
       token,
+      /** null = sem política de inatividade (paciente/clínica sem settings). */
+      sessionTimeoutMinutes,
       user: {
         id: user.id,
         name: user.name,
