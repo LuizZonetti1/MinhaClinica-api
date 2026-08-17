@@ -9,6 +9,7 @@ import { AppointmentStatus, UserRole, UserStatus } from "../../types/enums";
 import type { ProfessionalDetails } from "../../types/professional";
 import type { UpdateProfessionalInput } from "../../types/user";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
+import { RequestEmailChangeService } from "../auth/emailChangeService";
 import { createEmailProvider, EmailService } from "../email/emailService";
 
 dayjs.extend(utc);
@@ -249,11 +250,16 @@ export class UpdateProfessionalService {
     let shouldResendInvite = false;
     let verificationTokenToSend: string | null = null;
 
-    // E-mail troca de login e controla reset de senha — exige reverificacao
-    // sempre, nao so quando o usuario ainda nao esta ACTIVE (antes disso
-    // deixava o ADMIN trocar o e-mail de um profissional ja ativo sem
-    // nenhuma confirmacao do dono da nova caixa de entrada).
-    if (emailChanged) {
+    // Convite pendente (ainda não ativo): o e-mail pode mudar direto, porque
+    // o próprio convite é reenviado para o endereço novo e não há conta em uso.
+    // Já ATIVO: não se troca o e-mail aqui — vai para o fluxo de confirmação
+    // (RequestEmailChangeService), que mantém o e-mail atual válido até o dono
+    // da nova caixa confirmar. Reusar o convite aqui quebrava: leva a
+    // CompleteProfessionalService, que faz professional.create() e viola o
+    // @unique de Professional.userId para quem já é profissional.
+    const isPendingInvite = professional.user.status !== UserStatus.ACTIVE;
+
+    if (emailChanged && isPendingInvite) {
       const verification = createVerificationData(48);
       userUpdateData.status = UserStatus.PENDING_ACTIVATION;
       userUpdateData.verificationToken = verification.hashedToken;
@@ -264,10 +270,17 @@ export class UpdateProfessionalService {
       userUpdateData.status = normalizedData.isActive ? UserStatus.ACTIVE : UserStatus.INACTIVE;
     }
 
+    // Usuário ativo: o e-mail NÃO entra no update direto.
+    const requiresEmailConfirmation = emailChanged && !isPendingInvite;
+    if (requiresEmailConfirmation) {
+      userUpdateData.email = undefined;
+    }
+
     const hasValidUpdate =
       hasAnyDefinedField(userUpdateData) ||
       hasAnyDefinedField(professionalUpdateData) ||
-      Boolean(normalizedData.specialty);
+      Boolean(normalizedData.specialty) ||
+      requiresEmailConfirmation;
 
     if (!hasValidUpdate) {
       throw new Error("Nenhuma alteracao valida foi encontrada para atualizar");
@@ -331,7 +344,8 @@ export class UpdateProfessionalService {
       }
     });
 
-    if (emailChanged && normalizedData.email) {
+    // Convite pendente: o e-mail já mudou de fato acima, só registra.
+    if (emailChanged && !requiresEmailConfirmation && normalizedData.email) {
       await this.auditLogRepository.create({
         clinicId,
         userId: adminId,
@@ -341,6 +355,23 @@ export class UpdateProfessionalService {
         entityId: professional.user.id,
         oldData: { email: professional.user.email },
         newData: { email: normalizedData.email },
+      });
+    }
+
+    // Usuário ativo: dispara a confirmação (audita lá dentro). O e-mail atual
+    // segue valendo até o dono da nova caixa clicar no link.
+    if (requiresEmailConfirmation && normalizedData.email) {
+      await new RequestEmailChangeService().execute({
+        targetUserId: professional.user.id,
+        newEmail: normalizedData.email,
+        requestedByName: admin.name,
+        context: {
+          userId: adminId,
+          userName: admin.name,
+          clinicId,
+          ipAddress: null,
+          userAgent: null,
+        },
       });
     }
 
@@ -365,8 +396,11 @@ export class UpdateProfessionalService {
     return {
       message: shouldResendInvite
         ? "Profissional atualizado e convite reenviado"
-        : "Profissional atualizado com sucesso",
+        : requiresEmailConfirmation
+          ? "Profissional atualizado. A troca de e-mail só vale após o profissional confirmar pelo link enviado ao novo endereço."
+          : "Profissional atualizado com sucesso",
       inviteResent: shouldResendInvite,
+      emailChangePending: requiresEmailConfirmation ? normalizedData.email : undefined,
     };
   }
 }

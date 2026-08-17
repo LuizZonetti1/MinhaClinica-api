@@ -9,6 +9,7 @@ import { AppointmentStatus, UserRole, UserStatus } from "../../types/enums";
 import type { ReceptionDetails } from "../../types/receptionist";
 import type { UpdateReceptionInput } from "../../types/user";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
+import { RequestEmailChangeService } from "../auth/emailChangeService";
 import { createEmailProvider, EmailService } from "../email/emailService";
 
 dayjs.extend(utc);
@@ -174,11 +175,14 @@ export class UpdateReceptionService {
     let shouldResendInvite = false;
     let verificationTokenToSend: string | null = null;
 
-    // E-mail troca de login e controla reset de senha — exige reverificacao
-    // sempre, nao so quando o usuario ainda nao esta ACTIVE (antes disso
-    // deixava o ADMIN trocar o e-mail de um recepcionista ja ativo sem
-    // nenhuma confirmacao do dono da nova caixa de entrada).
-    if (emailChanged) {
+    // Convite pendente (ainda não ativo): e-mail pode mudar direto, o convite
+    // é reenviado para o endereço novo. Já ATIVO: vai para o fluxo de
+    // confirmação, que mantém o e-mail atual válido até o dono da nova caixa
+    // confirmar — trocar direto seria tomada de conta silenciosa (o e-mail
+    // controla o reset de senha).
+    const isPendingInvite = receptionist.status !== UserStatus.ACTIVE;
+
+    if (emailChanged && isPendingInvite) {
       const verification = createVerificationData(48);
       userUpdateData.status = UserStatus.PENDING_ACTIVATION;
       userUpdateData.verificationToken = verification.hashedToken;
@@ -189,16 +193,25 @@ export class UpdateReceptionService {
       userUpdateData.status = normalizedData.isActive ? UserStatus.ACTIVE : UserStatus.INACTIVE;
     }
 
-    if (!hasAnyDefinedField(userUpdateData)) {
+    // Usuário ativo: o e-mail NÃO entra no update direto — só após confirmação.
+    const requiresEmailConfirmation = emailChanged && !isPendingInvite;
+    if (requiresEmailConfirmation) {
+      userUpdateData.email = undefined;
+    }
+
+    if (!hasAnyDefinedField(userUpdateData) && !requiresEmailConfirmation) {
       throw new Error("Nenhuma alteracao valida foi encontrada para atualizar");
     }
 
-    await prisma.user.update({
-      where: { id: receptionist.id },
-      data: userUpdateData,
-    });
+    if (hasAnyDefinedField(userUpdateData)) {
+      await prisma.user.update({
+        where: { id: receptionist.id },
+        data: userUpdateData,
+      });
+    }
 
-    if (emailChanged && normalizedData.email) {
+    // Convite pendente: o e-mail já mudou de fato acima, só registra.
+    if (emailChanged && !requiresEmailConfirmation && normalizedData.email) {
       await this.auditLogRepository.create({
         clinicId,
         userId: adminId,
@@ -208,6 +221,22 @@ export class UpdateReceptionService {
         entityId: receptionist.id,
         oldData: { email: receptionist.email },
         newData: { email: normalizedData.email },
+      });
+    }
+
+    // Usuário ativo: dispara a confirmação (audita lá dentro).
+    if (requiresEmailConfirmation && normalizedData.email) {
+      await new RequestEmailChangeService().execute({
+        targetUserId: receptionist.id,
+        newEmail: normalizedData.email,
+        requestedByName: admin.name,
+        context: {
+          userId: adminId,
+          userName: admin.name,
+          clinicId,
+          ipAddress: null,
+          userAgent: null,
+        },
       });
     }
 
@@ -233,8 +262,11 @@ export class UpdateReceptionService {
     return {
       message: shouldResendInvite
         ? "Recepcionista atualizado e convite reenviado"
-        : "Recepcionista atualizado com sucesso",
+        : requiresEmailConfirmation
+          ? "Recepcionista atualizado. A troca de e-mail só vale após a confirmação pelo link enviado ao novo endereço."
+          : "Recepcionista atualizado com sucesso",
       inviteResent: shouldResendInvite,
+      emailChangePending: requiresEmailConfirmation ? normalizedData.email : undefined,
     };
   }
 }

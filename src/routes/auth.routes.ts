@@ -89,12 +89,8 @@ const authController = new AuthController();
 /**
  * PÚBLICO — Login
  */
-router.post(
-  "/login",
-  ipFloodLimiter,
-  loginLimiter,
-  validate(loginSchema),
-  (req, res) => authController.login(req, res),
+router.post("/login", ipFloodLimiter, loginLimiter, validate(loginSchema), (req, res) =>
+  authController.login(req, res),
 );
 
 /**
@@ -149,11 +145,8 @@ router.get("/activate-account/:token", tokenLimiter, (req, res) =>
  * PÚBLICO — Ativar conta de paciente cadastrado pela recepção e definir a senha
  * POST /api/auth/activate-account
  */
-router.post(
-  "/activate-account",
-  tokenLimiter,
-  validate(activateAccountSchema),
-  (req, res) => authController.activateAccount(req, res),
+router.post("/activate-account", tokenLimiter, validate(activateAccountSchema), (req, res) =>
+  authController.activateAccount(req, res),
 );
 
 /**
@@ -179,11 +172,18 @@ router.post("/reset-password", passwordResetLimiter, validate(resetPasswordSchem
 );
 
 /**
+ * PÚBLICO — Confirmar troca de e-mail com o token enviado ao endereço NOVO
+ * POST /api/auth/confirm-email-change
+ * Até a confirmação, o e-mail antigo continua sendo o login válido.
+ */
+router.post("/confirm-email-change", tokenLimiter, (req, res) =>
+  authController.confirmEmailChange(req, res),
+);
+
+/**
  * PROTEGIDO — Registrar aceite de Termos/Privacidade (contas anteriores a este recurso)
  * POST /api/auth/accept-terms
  */
-router.post("/accept-terms", authMiddleware, (req, res) =>
-  authController.acceptTerms(req, res),
-);
+router.post("/accept-terms", authMiddleware, (req, res) => authController.acceptTerms(req, res));
 
 export default router;

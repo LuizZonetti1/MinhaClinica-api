@@ -344,6 +344,15 @@ model User {
   verificationToken   String? // Token hasheado para verificação de email
   verificationExpires DateTime? // Data de expiração do token
 
+  // Troca de e-mail (self-service ou feita por ADMIN).
+  // O e-mail atual continua valendo até o dono da NOVA caixa confirmar — o
+  // e-mail controla o reset de senha, então trocar direto seria tomada de
+  // conta silenciosa. Não reusa o fluxo de convite: aquele recria o registro
+  // de Professional (userId @unique) e quebra para usuário já ativo.
+  pendingEmail        String? // Novo e-mail, ainda não confirmado
+  pendingEmailToken   String? // Hash SHA-256 do token de confirmação
+  pendingEmailExpires DateTime? // Expiração do token
+
   // Redefinição de Senha
   passwordResetToken   String? // Token hasheado para redefinição de senha
   passwordResetExpires DateTime? // Data de expiração do token (15 minutos)

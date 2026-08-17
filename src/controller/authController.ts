@@ -1,6 +1,7 @@
 ﻿import type { Request, Response } from "express";
 import { AcceptTermsService } from "../services/auth/acceptTermsService";
 import { ActivateReceptionPatientService } from "../services/auth/activateReceptionPatientService";
+import { ConfirmEmailChangeService } from "../services/auth/emailChangeService";
 import { LoginService } from "../services/auth/loginService";
 import { ForgotPasswordService, ResetPasswordService } from "../services/auth/passwordResetService";
 import { ResendVerificationService } from "../services/auth/resendVerificationService";
@@ -180,6 +181,25 @@ export class AuthController {
       res.status(200).json({ message: "Senha redefinida com sucesso." });
     } catch (error) {
       handleControllerError(res, error, "Erro ao redefinir senha");
+    }
+  }
+
+  /**
+   * POST /api/auth/confirm-email-change
+   * Efetiva a troca de e-mail. Público: autenticado pelo token que foi
+   * enviado à caixa NOVA — é justamente essa posse que autoriza a troca.
+   */
+  async confirmEmailChange(req: Request, res: Response): Promise<void> {
+    try {
+      const { token } = req.body as { token?: string };
+      const service = new ConfirmEmailChangeService();
+      const result = await service.execute(token ?? "");
+      res.status(200).json({
+        message: "E-mail alterado com sucesso. Use o novo e-mail para entrar.",
+        email: result.email,
+      });
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao confirmar troca de e-mail");
     }
   }
 

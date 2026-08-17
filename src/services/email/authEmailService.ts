@@ -458,4 +458,66 @@ export class AuthEmailService {
             text: `Olá ${name}, seu código de verificação é: ${otp} (válido por ${expiresMinutes} minutos).`,
         });
     }
+
+    /**
+     * Confirmação de troca de e-mail — enviado para o e-mail NOVO.
+     * Só quem controla a nova caixa consegue efetivar a troca; até lá o
+     * e-mail antigo continua sendo o login válido.
+     */
+    async sendEmailChangeConfirmationEmail(
+        newEmail: string,
+        name: string,
+        requestedByName: string,
+        currentEmail: string,
+        confirmationToken: string,
+    ): Promise<void> {
+        const confirmUrl = `${process.env.FRONTEND_URL}/confirmar-email?token=${confirmationToken}`;
+        const safeName = escapeHtml(name);
+        const safeRequestedBy = escapeHtml(requestedByName);
+        const safeCurrentEmail = escapeHtml(currentEmail);
+        const safeNewEmail = escapeHtml(newEmail);
+
+        const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8">
+<style>
+body{font-family:Arial,sans-serif;line-height:1.6;color:#333}
+.container{max-width:600px;margin:0 auto;padding:20px}
+.header{background-color:#3B82F6;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0}
+.content{background-color:#f9f9f9;padding:30px;border-radius:0 0 8px 8px}
+.button{display:inline-block;padding:12px 30px;background-color:#3B82F6;color:white;text-decoration:none;border-radius:5px;margin:20px 0;font-weight:bold}
+.info-box{background:#EFF6FF;border-left:4px solid #3B82F6;padding:12px 16px;border-radius:4px;margin:16px 0}
+.warning{background:#FFF7ED;border-left:4px solid #F59E0B;padding:12px 16px;border-radius:4px;margin:20px 0;font-size:14px;color:#92400E}
+.footer{text-align:center;margin-top:20px;font-size:12px;color:#666}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header"><h1>✉️ Confirme seu novo e-mail</h1></div>
+  <div class="content">
+    <h2>Olá, ${safeName}!</h2>
+    <p><strong>${safeRequestedBy}</strong> solicitou a troca do e-mail de acesso da sua conta.</p>
+    <div class="info-box">
+      <p><strong>E-mail atual:</strong> ${safeCurrentEmail}</p>
+      <p><strong>Novo e-mail:</strong> ${safeNewEmail}</p>
+    </div>
+    <p>Enquanto você não confirmar, o acesso continua pelo e-mail atual — nada muda na sua conta.</p>
+    <center><a href="${confirmUrl}" class="button">Confirmar novo e-mail</a></center>
+    <div class="warning">
+      Não reconhece esta solicitação? Ignore este e-mail e avise a clínica: sem a confirmação
+      deste link, a troca não acontece. O link expira em 24 horas.
+    </div>
+  </div>
+  <div class="footer"><p>Minha Clínica — Este é um email automático, não responda.</p></div>
+</div>
+</body>
+</html>`;
+
+        await this.provider.sendEmail({
+            to: newEmail,
+            subject: "Confirme seu novo e-mail — Minha Clínica",
+            html,
+            text: `Olá ${name}, ${requestedByName} solicitou trocar o e-mail de acesso de ${currentEmail} para ${newEmail}. Confirme em: ${confirmUrl} (expira em 24h). Enquanto não confirmar, o e-mail atual continua valendo.`,
+        });
+    }
 }

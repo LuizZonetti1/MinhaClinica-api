@@ -41,6 +41,10 @@ export class EmailService {
     ...args: Parameters<AuthEmailService["sendReceptionWelcomeEmail"]>
   ) => this.auth.sendReceptionWelcomeEmail(...args);
 
+  sendEmailChangeConfirmationEmail = (
+    ...args: Parameters<AuthEmailService["sendEmailChangeConfirmationEmail"]>
+  ) => this.auth.sendEmailChangeConfirmationEmail(...args);
+
   // ─── Notificações ────────────────────────────────────────────────────────
   sendAppointmentConfirmationEmail = (
     ...args: Parameters<NotificationEmailService["sendAppointmentConfirmationEmail"]>
