@@ -79,6 +79,23 @@ export async function findDateLevelBlock(
   return null;
 }
 
+/**
+ * Regras que só valem para agendamento ONLINE (portal do paciente).
+ * Exposta para GetAvailableSlotsService aplicar as MESMAS regras que
+ * assertSlotIsBookable aplica na criação — sem isso o portal ofertava
+ * horário que o POST rejeitava.
+ */
+export async function getOnlineBookingPolicy(clinicId: string): Promise<{
+  allowOnlineBooking: boolean;
+  minAdvanceBookingHours: number;
+}> {
+  const settings = await new ClinicRepository().findSettingsByClinicId(clinicId);
+  return {
+    allowOnlineBooking: settings?.allowOnlineBooking !== false,
+    minAdvanceBookingHours: settings?.minAdvanceBookingHours ?? DEFAULT_MIN_ADVANCE_BOOKING_HOURS,
+  };
+}
+
 export interface AssertSlotIsBookableParams {
   clinicId: string;
   professionalId: string;

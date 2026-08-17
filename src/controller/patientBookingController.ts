@@ -59,7 +59,9 @@ export class PatientBookingController {
       }
 
       const service = new GetAvailableSlotsService();
-      const data = await service.execute(professionalId, clinicId, date);
+      // isOnlineBooking=true: aplica allowOnlineBooking e minAdvanceBookingHours,
+      // as mesmas regras que a criação pelo portal impõe.
+      const data = await service.execute(professionalId, clinicId, date, undefined, true);
 
       res.status(200).json({ data });
     } catch (error: unknown) {

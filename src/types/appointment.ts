@@ -42,7 +42,8 @@ export type SlotsUnavailableReason =
   | "FULLY_BOOKED" // todos os slots ocupados
   | "PAST_DATE" // data já passou
   | "HOLIDAY" // feriado cadastrado pela clínica (ClinicHoliday)
-  | "OUTSIDE_BOOKING_WINDOW"; // além de maxAdvanceBookingDays
+  | "OUTSIDE_BOOKING_WINDOW" // além de maxAdvanceBookingDays
+  | "ONLINE_BOOKING_DISABLED"; // clínica desligou allowOnlineBooking (só portal)
 
 export interface AvailableSlotsResult {
   date: string; // "YYYY-MM-DD"

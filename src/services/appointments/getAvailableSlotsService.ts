@@ -11,7 +11,7 @@ import type {
 } from "../../types/appointment";
 import { DayOfWeek } from "../../types/enums";
 import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDuration";
-import { findDateLevelBlock } from "./appointmentBookingRules";
+import { findDateLevelBlock, getOnlineBookingPolicy } from "./appointmentBookingRules";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -47,6 +47,13 @@ export class GetAvailableSlotsService {
     clinicId: string,
     dateStr: string,
     procedureId?: string,
+    /**
+     * true quando a consulta vem do portal do paciente. Ativa as mesmas
+     * regras de agendamento online que assertSlotIsBookable aplica na
+     * criação (allowOnlineBooking e minAdvanceBookingHours) — sem isso o
+     * portal ofertava horário que o POST recusava.
+     */
+    isOnlineBooking = false,
   ): Promise<AvailableSlotsResult> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       throw Object.assign(new Error("Data deve estar no formato YYYY-MM-DD"), { statusCode: 400 });
@@ -63,11 +70,20 @@ export class GetAvailableSlotsService {
     // antes disso, /slots oferecia horários em feriado que o POST rejeitava.
     const dateBlock = await findDateLevelBlock(clinicId, dateStr);
 
+    // Portal do paciente: allowOnlineBooking + antecedência mínima.
+    const onlinePolicy = isOnlineBooking ? await getOnlineBookingPolicy(clinicId) : null;
+
     const dayOfWeek = JS_DAY_TO_ENUM[dayjsDate.day()];
     const now = dayjs().tz(DEFAULT_TIMEZONE);
     const isPastDate = dayjsDate.isBefore(now, "day");
     const isToday = dayjsDate.isSame(now, "day");
     const nowMinutes = now.hour() * 60 + now.minute();
+
+    // Comparado como datetime (não só minutos do dia) para a janela poder
+    // atravessar a virada do dia — ex.: 23:00 + 2h alcança o dia seguinte.
+    const earliestOnlineStart = onlinePolicy
+      ? now.add(onlinePolicy.minAdvanceBookingHours, "hour")
+      : null;
 
     const { professional, workingHours, scheduleBlocks, appointments, activeWorkingDaysCount } =
       await this.repository.getProfessionalScheduleData(
@@ -105,6 +121,19 @@ export class GetAvailableSlotsService {
         bufferTime,
         slots: [],
         reason: dateBlock.reason,
+      };
+    }
+
+    // Clínica desligou o agendamento online: o portal não oferta nada, em vez
+    // de listar horários que o POST recusaria.
+    if (onlinePolicy && !onlinePolicy.allowOnlineBooking) {
+      return {
+        date: dateStr,
+        professionalId,
+        duration,
+        bufferTime,
+        slots: [],
+        reason: "ONLINE_BOOKING_DISABLED",
       };
     }
 
@@ -171,10 +200,21 @@ export class GetAvailableSlotsService {
       const isBlocked = blockedRanges.some((b) => current < b.end && slotEnd > b.start);
       const isPastTime = isPastDate || (isToday && current < nowMinutes);
 
+      // No portal, a antecedência mínima empurra o primeiro horário ofertável
+      // para frente — assertSlotIsBookable recusaria qualquer coisa antes disso.
+      const isTooSoonForOnline = earliestOnlineStart
+        ? dayjsDate
+            .hour(Math.floor(current / 60))
+            .minute(current % 60)
+            .second(0)
+            .millisecond(0)
+            .isBefore(earliestOnlineStart)
+        : false;
+
       slots.push({
         startTime: minutesToTime(current),
         endTime: minutesToTime(slotEnd),
-        available: !inLunch && !isBlocked && !isPastTime,
+        available: !inLunch && !isBlocked && !isPastTime && !isTooSoonForOnline,
       });
 
       current += step;
