@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { ReceptionDashboardRepository } from "../../repository/receptionDashboardRepository";
 import type { AgendaResponse, AgendaSlot, ProfessionalAgenda } from "../../types/dashboard";
 import { DayOfWeek } from "../../types/enums";
@@ -9,7 +10,6 @@ import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDurati
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 const DEFAULT_WORK_START = "08:00";
 const DEFAULT_WORK_END = "18:00";
 

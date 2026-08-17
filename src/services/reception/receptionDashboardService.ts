@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { ReceptionDashboardRepository } from "../../repository/receptionDashboardRepository";
 import type {
@@ -32,8 +33,6 @@ const APPOINTMENT_TYPE_LABELS: Record<AppointmentTypeType, string> = {
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
 export class ReceptionDashboardService {
   private repository = new ReceptionDashboardRepository();

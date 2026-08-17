@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { AppointmentStatus, TransactionType } from "../../types/enums";
 import { CONSULTATION_EXCLUDED_STATUSES } from "../../utils/appointmentStatusRules";
@@ -8,7 +9,6 @@ import { CONSULTATION_EXCLUDED_STATUSES } from "../../utils/appointmentStatusRul
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 const MAX_RANGE_DAYS = 366;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_LIST_ROWS = 220;

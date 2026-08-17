@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { UserRepository } from "../../repository/userRepository";
@@ -12,8 +13,6 @@ import { createEmailProvider, EmailService } from "../email/emailService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
 const ACTIVE_APPOINTMENT_STATUSES = [
   AppointmentStatus.SCHEDULED,

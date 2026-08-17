@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { ClinicRepository } from "../../repository/clinicRepository";
@@ -18,7 +19,6 @@ import { createEmailProvider, EmailService } from "../email/emailService";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 // Espelha o @default de ClinicSettings.maxCancellationHours (prisma/schema.prisma).
 const DEFAULT_MAX_CANCELLATION_HOURS = 24;
 

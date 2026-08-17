@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { UserRole, UserStatus } from "../../types/enums";
 import type { ProfessionalListItem } from "../../types/professional";
@@ -8,8 +9,6 @@ import { toRegistrationStatus } from "./professionalManagementService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
 export type { ProfessionalListItem };
 

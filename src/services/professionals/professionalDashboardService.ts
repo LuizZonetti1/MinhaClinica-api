@@ -1,19 +1,18 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { ProfessionalDashboardRepository } from "../../repository/professionalDashboardRepository";
-import { AutoNoShowService } from "../appointments/autoNoShowService";
 import type {
   ProfessionalAgendaItem,
   ProfessionalAgendaResponse,
   ProfessionalDashboardSummary,
 } from "../../types/dashboard";
 import { AppointmentType, type AppointmentType as AppointmentTypeType } from "../../types/enums";
+import { AutoNoShowService } from "../appointments/autoNoShowService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
 const APPOINTMENT_TYPE_LABELS: Record<AppointmentTypeType, string> = {
   [AppointmentType.CONSULTATION]: "Consulta",
@@ -39,7 +38,10 @@ export class ProfessionalDashboardService {
     const startOfDay = dayjs.utc(todayStr).startOf("day").toDate();
     const endOfDay = dayjs.utc(todayStr).endOf("day").toDate();
     const startOfMonth = dayjs.utc(now.format("YYYY-MM-01")).startOf("day").toDate();
-    const endOfMonth = dayjs.utc(now.format("YYYY-MM-") + now.daysInMonth()).endOf("day").toDate();
+    const endOfMonth = dayjs
+      .utc(now.format("YYYY-MM-") + now.daysInMonth())
+      .endOf("day")
+      .toDate();
 
     const [consultasHoje, confirmadas, pacientesDoMes] = await Promise.all([
       this.repository.countTodayAppointments(professional.id, startOfDay, endOfDay),

@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { TransactionRepository } from "../../repository/transactionRepository";
 import { TransactionType } from "../../types/enums";
@@ -8,8 +9,6 @@ import type { TransactionListResponse, TransactionPeriod } from "../../types/tra
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
 const PERIOD_MONTHS: Record<TransactionPeriod, number | null> = {
   "1m": null,

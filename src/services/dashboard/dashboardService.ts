@@ -1,15 +1,19 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { DashboardRepository } from "../../repository/dashboardRepository";
-import { AutoNoShowService } from "../appointments/autoNoShowService";
+import type {
+  DashboardHistoricalItem,
+  DashboardSummary,
+  MonthlyFinancials,
+} from "../../types/dashboard";
 import { AppointmentStatus, TransactionType } from "../../types/enums";
-import type { DashboardHistoricalItem, DashboardSummary, MonthlyFinancials } from "../../types/dashboard";
+import { AutoNoShowService } from "../appointments/autoNoShowService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 const PT_MONTHS: Record<number, string> = {
   1: "Jan",
   2: "Fev",
@@ -87,7 +91,9 @@ export class DashboardService {
   }
 
   async getHistorical(clinicId: string, months = 6): Promise<DashboardHistoricalItem[]> {
-    const normalizedMonths = Number.isFinite(months) ? Math.max(1, Math.min(24, Math.trunc(months))) : 6;
+    const normalizedMonths = Number.isFinite(months)
+      ? Math.max(1, Math.min(24, Math.trunc(months)))
+      : 6;
     const now = dayjs().tz(DEFAULT_TIMEZONE);
     const startDate = now
       .subtract(normalizedMonths - 1, "month")

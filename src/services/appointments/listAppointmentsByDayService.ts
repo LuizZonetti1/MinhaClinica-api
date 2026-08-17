@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { AppointmentRepository } from "../../repository/appointmentRepository";
 import type { AppointmentCalendarDay, AppointmentCalendarResult } from "../../types/appointment";
@@ -8,7 +9,6 @@ import type { AppointmentCalendarDay, AppointmentCalendarResult } from "../../ty
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 const MONTHS_RANGE = 6;
 
 export class ListAppointmentsByDayService {

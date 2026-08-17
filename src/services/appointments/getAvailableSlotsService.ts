@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { AppointmentRepository } from "../../repository/appointmentRepository";
 import { ProcedureRepository } from "../../repository/procedureRepository";
 import type {
@@ -13,8 +14,6 @@ import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDurati
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
 // Dias da semana: Date.getDay() → DayOfWeek
 const JS_DAY_TO_ENUM: Record<number, DayOfWeek> = {

@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { ClinicRepository } from "../../repository/clinicRepository";
@@ -12,7 +13,6 @@ import { createEmailProvider, EmailService } from "../email/emailService";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 // Espelham os @default do model ClinicSettings (prisma/schema.prisma) para
 // clínicas sem linha de settings ainda criada (upsert só roda ao salvar a tela).
 const DEFAULT_APPOINTMENT_TOLERANCE_MINUTES = 15;

@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { PatientDashboardRepository } from "../../repository/patientDashboardRepository";
 import { AppointmentStatus } from "../../types/enums";
 import type { PatientDashboardSummary } from "../../types/patient";
@@ -8,7 +9,6 @@ import type { PatientDashboardSummary } from "../../types/patient";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 const NO_SHOW_GRACE_MINUTES = 30;
 
 export class PatientDashboardService {

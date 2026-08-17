@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { Prisma } from "../../../generated/prisma";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { AppointmentRepository } from "../../repository/appointmentRepository";
 import { ClinicRepository } from "../../repository/clinicRepository";
@@ -15,8 +16,6 @@ import { assertSlotIsBookable } from "./appointmentBookingRules";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);

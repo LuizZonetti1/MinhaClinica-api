@@ -1,6 +1,7 @@
-﻿import dayjs from "dayjs";
+import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { AppointmentStatus } from "../../types/enums";
 import type {
@@ -13,8 +14,6 @@ import type {
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
-
 export type { PatientListItem, PatientSummary };
 
 export class GetPatientsService {
@@ -22,44 +21,45 @@ export class GetPatientsService {
     const startOfMonth = dayjs().tz(DEFAULT_TIMEZONE).startOf("month").toDate();
     const startOfNextMonth = dayjs().tz(DEFAULT_TIMEZONE).add(1, "month").startOf("month").toDate();
 
-    const [appointmentsByPatient, completedByPatient, completedThisMonthByPatient] = await Promise.all([
-      prisma.appointment.groupBy({
-        by: ["patientId"],
-        where: {
-          clinicId,
-        },
-        _max: {
-          appointmentDate: true,
-        },
-      }),
-      prisma.appointment.groupBy({
-        by: ["patientId"],
-        where: {
-          clinicId,
-          status: AppointmentStatus.COMPLETED,
-        },
-        _count: {
-          _all: true,
-        },
-        _max: {
-          appointmentDate: true,
-        },
-      }),
-      prisma.appointment.groupBy({
-        by: ["patientId"],
-        where: {
-          clinicId,
-          status: AppointmentStatus.COMPLETED,
-          appointmentDate: {
-            gte: startOfMonth,
-            lt: startOfNextMonth,
+    const [appointmentsByPatient, completedByPatient, completedThisMonthByPatient] =
+      await Promise.all([
+        prisma.appointment.groupBy({
+          by: ["patientId"],
+          where: {
+            clinicId,
           },
-        },
-        _count: {
-          _all: true,
-        },
-      }),
-    ]);
+          _max: {
+            appointmentDate: true,
+          },
+        }),
+        prisma.appointment.groupBy({
+          by: ["patientId"],
+          where: {
+            clinicId,
+            status: AppointmentStatus.COMPLETED,
+          },
+          _count: {
+            _all: true,
+          },
+          _max: {
+            appointmentDate: true,
+          },
+        }),
+        prisma.appointment.groupBy({
+          by: ["patientId"],
+          where: {
+            clinicId,
+            status: AppointmentStatus.COMPLETED,
+            appointmentDate: {
+              gte: startOfMonth,
+              lt: startOfNextMonth,
+            },
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+      ]);
 
     if (appointmentsByPatient.length === 0) return [];
 
@@ -86,7 +86,9 @@ export class GetPatientsService {
     const appointmentsByPatientId = new Map(
       appointmentsByPatient.map((entry) => [entry.patientId, entry]),
     );
-    const completedByPatientId = new Map(completedByPatient.map((entry) => [entry.patientId, entry]));
+    const completedByPatientId = new Map(
+      completedByPatient.map((entry) => [entry.patientId, entry]),
+    );
     const completedThisMonthCountByPatientId = new Map(
       completedThisMonthByPatient.map((entry) => [entry.patientId, entry._count._all]),
     );

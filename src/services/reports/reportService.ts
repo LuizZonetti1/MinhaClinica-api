@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { ReportRepository } from "../../repository/reportRepository";
 import { AppointmentStatus, TransactionType } from "../../types/enums";
 import type { ReportData, ReportPeriod } from "../../types/report";
@@ -8,8 +9,6 @@ import { CONSULTATION_EXCLUDED_STATUSES } from "../../utils/appointmentStatusRul
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
 const PT_MONTHS: Record<number, string> = {
   1: "Jan",

@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { ClinicRepository } from "../../repository/clinicRepository";
 import { DayOfWeek } from "../../types/enums";
@@ -8,7 +9,6 @@ import { DayOfWeek } from "../../types/enums";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 // Espelham os @default do model ClinicSettings (prisma/schema.prisma) para
 // clínicas sem linha de settings ainda criada.
 const DEFAULT_MIN_ADVANCE_BOOKING_HOURS = 2;
