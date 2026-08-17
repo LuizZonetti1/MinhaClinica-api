@@ -11,6 +11,7 @@ import type {
 } from "../../types/appointment";
 import { DayOfWeek } from "../../types/enums";
 import { resolveAppointmentDuration } from "../../utils/resolveAppointmentDuration";
+import { findDateLevelBlock } from "./appointmentBookingRules";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -57,6 +58,11 @@ export class GetAvailableSlotsService {
     const startOfDay = dayjs.utc(dateStr).startOf("day").toDate();
     const endOfDay = dayjs.utc(dateStr).endOf("day").toDate();
 
+    // Feriado / fora da janela de antecedência valem para o dia inteiro e são
+    // avaliados pela MESMA função que a criação usa (findDateLevelBlock) —
+    // antes disso, /slots oferecia horários em feriado que o POST rejeitava.
+    const dateBlock = await findDateLevelBlock(clinicId, dateStr);
+
     const dayOfWeek = JS_DAY_TO_ENUM[dayjsDate.day()];
     const now = dayjs().tz(DEFAULT_TIMEZONE);
     const isPastDate = dayjsDate.isBefore(now, "day");
@@ -89,6 +95,18 @@ export class GetAvailableSlotsService {
       customDuration: procedureData?.professionals[0]?.customDuration,
     });
     const bufferTime = professional.bufferTime;
+
+    // Feriado / fora da janela: dia inteiro indisponível, nenhum slot ofertado
+    if (dateBlock) {
+      return {
+        date: dateStr,
+        professionalId,
+        duration,
+        bufferTime,
+        slots: [],
+        reason: dateBlock.reason,
+      };
+    }
 
     // Profissional não trabalha nesse dia da semana (ou nunca configurou horários) → sem slots
     if (!workingHours) {

@@ -33,6 +33,52 @@ function bookingError(message: string) {
   return Object.assign(new Error(message), { statusCode: 400 });
 }
 
+/**
+ * Regras que valem para o DIA inteiro (não dependem do horário escolhido):
+ * feriado e janela máxima de antecedência.
+ *
+ * Compartilhado entre GetAvailableSlotsService e assertSlotIsBookable de
+ * propósito: quando só a criação conhecia essas regras, /slots oferecia
+ * horários em feriado que o POST rejeitava — o paciente clicava num horário
+ * "disponível" e tomava erro. É o mesmo defeito de "camadas desconectadas"
+ * que o V5 se propôs a corrigir, só que na direção oposta.
+ */
+export async function findDateLevelBlock(
+  clinicId: string,
+  dateStr: string,
+): Promise<{ reason: "HOLIDAY" | "OUTSIDE_BOOKING_WINDOW"; message: string } | null> {
+  const settings = await new ClinicRepository().findSettingsByClinicId(clinicId);
+  const dayjsDate = dayjs.tz(dateStr, DEFAULT_TIMEZONE);
+  const now = dayjs().tz(DEFAULT_TIMEZONE);
+
+  const maxAdvanceDays = settings?.maxAdvanceBookingDays ?? DEFAULT_MAX_ADVANCE_BOOKING_DAYS;
+  const daysAhead = dayjsDate.startOf("day").diff(now.startOf("day"), "day");
+  if (daysAhead > maxAdvanceDays) {
+    return {
+      reason: "OUTSIDE_BOOKING_WINDOW",
+      message: `Não é possível agendar com mais de ${maxAdvanceDays} dia(s) de antecedência.`,
+    };
+  }
+
+  // Feriado (ClinicHoliday) — data fixa ou recorrente (mesmo dia/mês, ano livre).
+  const holidays = await prisma.clinicHoliday.findMany({
+    where: { clinicId },
+    select: { date: true, description: true, isRecurring: true },
+  });
+  const targetDateUtc = dayjs.utc(dateStr);
+  const holiday = holidays.find((h) => {
+    const hDate = dayjs.utc(h.date);
+    return h.isRecurring
+      ? hDate.month() === targetDateUtc.month() && hDate.date() === targetDateUtc.date()
+      : hDate.isSame(targetDateUtc, "day");
+  });
+  if (holiday) {
+    return { reason: "HOLIDAY", message: `Data indisponível: feriado (${holiday.description}).` };
+  }
+
+  return null;
+}
+
 export interface AssertSlotIsBookableParams {
   clinicId: string;
   professionalId: string;
@@ -78,40 +124,28 @@ export async function assertSlotIsBookable(params: AssertSlotIsBookableParams): 
     );
   }
 
-  // minAdvanceBookingHours — subsume a checagem simples de "não pode ser no passado"
-  // quando o valor configurado é 0.
-  const minAdvanceHours = settings?.minAdvanceBookingHours ?? DEFAULT_MIN_ADVANCE_BOOKING_HOURS;
-  if (appointmentStart.isBefore(now.add(minAdvanceHours, "hour"))) {
-    throw bookingError(
-      minAdvanceHours > 0
-        ? `É necessário agendar com pelo menos ${minAdvanceHours} hora(s) de antecedência.`
-        : "Não é permitido agendar em horário já passado.",
-    );
+  // minAdvanceBookingHours é política de agendamento ONLINE ("agende com X
+  // horas de antecedência"). Aplicá-la ao staff quebraria o balcão: a
+  // recepção precisa conseguir encaixar o paciente que está ali agora.
+  // Para staff vale só a regra de sempre: não agendar no passado.
+  if (isOnlineBooking) {
+    const minAdvanceHours = settings?.minAdvanceBookingHours ?? DEFAULT_MIN_ADVANCE_BOOKING_HOURS;
+    if (appointmentStart.isBefore(now.add(minAdvanceHours, "hour"))) {
+      throw bookingError(
+        minAdvanceHours > 0
+          ? `É necessário agendar com pelo menos ${minAdvanceHours} hora(s) de antecedência.`
+          : "Não é permitido agendar em horário já passado.",
+      );
+    }
+  } else if (appointmentStart.isBefore(now)) {
+    throw bookingError("Não é permitido agendar em horário já passado.");
   }
 
-  // maxAdvanceBookingDays
-  const maxAdvanceDays = settings?.maxAdvanceBookingDays ?? DEFAULT_MAX_ADVANCE_BOOKING_DAYS;
-  const daysAhead = dayjsDate.startOf("day").diff(now.startOf("day"), "day");
-  if (daysAhead > maxAdvanceDays) {
-    throw bookingError(
-      `Não é possível agendar com mais de ${maxAdvanceDays} dia(s) de antecedência.`,
-    );
-  }
-
-  // Feriado (ClinicHoliday) — data fixa ou recorrente (mesmo dia/mês, ano livre).
-  const holidays = await prisma.clinicHoliday.findMany({
-    where: { clinicId },
-    select: { date: true, description: true, isRecurring: true },
-  });
-  const targetDateUtc = dayjs.utc(dateStr);
-  const holiday = holidays.find((h) => {
-    const hDate = dayjs.utc(h.date);
-    return h.isRecurring
-      ? hDate.month() === targetDateUtc.month() && hDate.date() === targetDateUtc.date()
-      : hDate.isSame(targetDateUtc, "day");
-  });
-  if (holiday) {
-    throw bookingError(`Data indisponível: feriado (${holiday.description}).`);
+  // maxAdvanceBookingDays + feriado — mesma função consumida por
+  // GetAvailableSlotsService, para os dois caminhos nunca divergirem.
+  const dateBlock = await findDateLevelBlock(clinicId, dateStr);
+  if (dateBlock) {
+    throw bookingError(dateBlock.message);
   }
 
   // Horário de trabalho / dia não trabalhado (ProfessionalWorkingHours)

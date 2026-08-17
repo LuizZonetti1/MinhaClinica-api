@@ -40,7 +40,9 @@ export type SlotsUnavailableReason =
   | "DAY_OFF" // não atende neste dia da semana
   | "DATE_BLOCKED" // bloqueio de agenda cobrindo o dia
   | "FULLY_BOOKED" // todos os slots ocupados
-  | "PAST_DATE"; // data já passou
+  | "PAST_DATE" // data já passou
+  | "HOLIDAY" // feriado cadastrado pela clínica (ClinicHoliday)
+  | "OUTSIDE_BOOKING_WINDOW"; // além de maxAdvanceBookingDays
 
 export interface AvailableSlotsResult {
   date: string; // "YYYY-MM-DD"
