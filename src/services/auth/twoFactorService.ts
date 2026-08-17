@@ -1,7 +1,7 @@
 ﻿import crypto from "crypto";
 import { prisma } from "../../database/prisma";
-import { AuthEmailService, createEmailProvider } from "../email/emailService";
 import { generateAuthToken, verifyTwoFactorPendingToken } from "../../utils/jwtUtils";
+import { AuthEmailService, createEmailProvider } from "../email/emailService";
 
 const OTP_EXPIRES_MINUTES = 10;
 const DEVICE_TRUSTED_DAYS = 7;
@@ -9,226 +9,259 @@ const RESEND_COOLDOWN_SECONDS = 60;
 const MAX_OTP_ATTEMPTS = 5;
 
 function hashOtp(otp: string): string {
-    return crypto.createHash("sha256").update(otp).digest("hex");
+  return crypto.createHash("sha256").update(otp).digest("hex");
 }
+
+/**
+ * 2FA é exigido quando o próprio usuário ativou (User.twoFactorEnabled) OU
+ * quando a clínica impõe a política (ClinicSettings.twoFactorEnabled).
+ *
+ * LoginService decide mandar o OTP por este mesmo critério — se Send/Resend/
+ * Validate checassem só o campo individual, toda clínica que ligasse a
+ * política trancaria os próprios usuários para fora (inclusive o admin que
+ * ligou, que então não conseguiria desligar).
+ */
+export type TwoFactorGateUser = {
+  twoFactorEnabled: boolean;
+  clinic?: { settings?: { twoFactorEnabled: boolean } | null } | null;
+};
+
+export const isTwoFactorRequired = (user: TwoFactorGateUser): boolean =>
+  user.twoFactorEnabled || user.clinic?.settings?.twoFactorEnabled === true;
+
+/** Select do Prisma que alimenta isTwoFactorRequired. */
+export const TWO_FACTOR_GATE_SELECT = {
+  twoFactorEnabled: true,
+  clinic: { select: { settings: { select: { twoFactorEnabled: true } } } },
+} as const;
 
 // â”€â”€ 1. Enviar OTP por email â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export class SendOtpService {
-    async execute(userId: string) {
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { id: true, email: true, name: true, twoFactorEnabled: true },
-        });
+  async execute(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, ...TWO_FACTOR_GATE_SELECT },
+    });
 
-        if (!user) throw new Error("Usuário não encontrado");
-        if (!user.twoFactorEnabled) throw new Error("Autenticação em dois fatores não está ativa");
-
-        // Gera OTP de 6 dígitos
-        const otp = crypto.randomInt(100000, 1000000).toString();
-        const expiresAt = new Date(Date.now() + OTP_EXPIRES_MINUTES * 60 * 1000);
-
-        await prisma.user.update({
-            where: { id: userId },
-            data: {
-                twoFactorOtp: hashOtp(otp),
-                twoFactorOtpExpires: expiresAt,
-                twoFactorOtpAttempts: 0,
-            },
-        });
-
-        const emailSvc = new AuthEmailService(createEmailProvider());
-        await emailSvc.send2FAOtpEmail(user.email, user.name, otp, OTP_EXPIRES_MINUTES);
-
-        return { message: "Código enviado para seu email" };
+    if (!user) throw new Error("Usuário não encontrado");
+    if (!isTwoFactorRequired(user)) {
+      throw new Error("Autenticação em dois fatores não está ativa");
     }
+
+    // Gera OTP de 6 dígitos
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const expiresAt = new Date(Date.now() + OTP_EXPIRES_MINUTES * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        twoFactorOtp: hashOtp(otp),
+        twoFactorOtpExpires: expiresAt,
+        twoFactorOtpAttempts: 0,
+      },
+    });
+
+    const emailSvc = new AuthEmailService(createEmailProvider());
+    await emailSvc.send2FAOtpEmail(user.email, user.name, otp, OTP_EXPIRES_MINUTES);
+
+    return { message: "Código enviado para seu email" };
+  }
 }
 
 // ── 1b. Reenviar OTP (aceita tempToken, aplica cooldown de 60s) ─────────────
 export class ResendOtpService {
-    async execute(pendingToken: string) {
-        const payload = verifyTwoFactorPendingToken(pendingToken);
+  async execute(pendingToken: string) {
+    const payload = verifyTwoFactorPendingToken(pendingToken);
 
-        const user = await prisma.user.findUnique({
-            where: { id: payload.userId },
-            select: { id: true, twoFactorEnabled: true, twoFactorOtpExpires: true },
-        });
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, twoFactorOtpExpires: true, ...TWO_FACTOR_GATE_SELECT },
+    });
 
-        if (!user) throw new Error("Usuário não encontrado");
-        if (!user.twoFactorEnabled) throw new Error("Autenticação em dois fatores não está ativa");
-
-        // Cooldown de 60s: bloqueia se o OTP atual foi enviado há menos de 60s
-        if (user.twoFactorOtpExpires) {
-            const secondsRemaining = (user.twoFactorOtpExpires.getTime() - Date.now()) / 1000;
-            const cooldownThreshold = OTP_EXPIRES_MINUTES * 60 - RESEND_COOLDOWN_SECONDS;
-            if (secondsRemaining > cooldownThreshold) {
-                const waitSeconds = Math.ceil(secondsRemaining - cooldownThreshold);
-                throw new Error(`Aguarde ${waitSeconds} segundos antes de reenviar o código.`);
-            }
-        }
-
-        const sendOtp = new SendOtpService();
-        return sendOtp.execute(payload.userId);
+    if (!user) throw new Error("Usuário não encontrado");
+    if (!isTwoFactorRequired(user)) {
+      throw new Error("Autenticação em dois fatores não está ativa");
     }
+
+    // Cooldown de 60s: bloqueia se o OTP atual foi enviado há menos de 60s
+    if (user.twoFactorOtpExpires) {
+      const secondsRemaining = (user.twoFactorOtpExpires.getTime() - Date.now()) / 1000;
+      const cooldownThreshold = OTP_EXPIRES_MINUTES * 60 - RESEND_COOLDOWN_SECONDS;
+      if (secondsRemaining > cooldownThreshold) {
+        const waitSeconds = Math.ceil(secondsRemaining - cooldownThreshold);
+        throw new Error(`Aguarde ${waitSeconds} segundos antes de reenviar o código.`);
+      }
+    }
+
+    const sendOtp = new SendOtpService();
+    return sendOtp.execute(payload.userId);
+  }
 }
 
 //2. Validar OTP e registrar dispositivo confiável â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export class ValidateOtpService {
-    async execute(pendingToken: string, code: string, userAgent?: string) {
-        const payload = verifyTwoFactorPendingToken(pendingToken);
+  async execute(pendingToken: string, code: string, userAgent?: string) {
+    const payload = verifyTwoFactorPendingToken(pendingToken);
 
-        const user = await prisma.user.findUnique({
-            where: { id: payload.userId },
-            select: {
-                id: true,
-                twoFactorOtp: true,
-                twoFactorOtpExpires: true,
-                twoFactorOtpAttempts: true,
-                twoFactorEnabled: true,
-                status: true,
-                clinic: { select: { tradeName: true } },
-                clinicId: true,
-                role: true,
-                roles: true,
-                name: true,
-                email: true,
-            },
-        });
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        twoFactorOtp: true,
+        twoFactorOtpExpires: true,
+        twoFactorOtpAttempts: true,
+        twoFactorEnabled: true,
+        status: true,
+        // settings.twoFactorEnabled entra aqui junto do tradeName porque
+        // a política da clínica também habilita o 2FA (isTwoFactorRequired).
+        clinic: {
+          select: { tradeName: true, settings: { select: { twoFactorEnabled: true } } },
+        },
+        clinicId: true,
+        role: true,
+        roles: true,
+        name: true,
+        email: true,
+      },
+    });
 
-        if (!user) throw new Error("Usuário não encontrado");
-        if (!user.twoFactorEnabled) throw new Error("Autenticação em dois fatores não está configurada");
-        if (!user.twoFactorOtp || !user.twoFactorOtpExpires) {
-            throw new Error("Nenhum código foi solicitado. Tente fazer login novamente.");
-        }
-        if (new Date() > user.twoFactorOtpExpires) {
-            throw new Error("Código expirado. Tente fazer login novamente.");
-        }
-        if (hashOtp(code) !== user.twoFactorOtp) {
-            const attempts = user.twoFactorOtpAttempts + 1;
-
-            if (attempts >= MAX_OTP_ATTEMPTS) {
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: { twoFactorOtp: null, twoFactorOtpExpires: null, twoFactorOtpAttempts: 0 },
-                });
-                throw Object.assign(new Error("Código inválido. Faça login novamente."), {
-                    statusCode: 401,
-                });
-            }
-
-            await prisma.user.update({
-                where: { id: user.id },
-                data: { twoFactorOtpAttempts: attempts },
-            });
-            throw new Error("Código inválido.");
-        }
-
-        // Gera token de dispositivo confiável (7 dias)
-        const deviceToken = crypto.randomUUID();
-        const deviceExpiresAt = new Date(Date.now() + DEVICE_TRUSTED_DAYS * 24 * 60 * 60 * 1000);
-
-        await prisma.$transaction([
-            // Limpa OTP
-            prisma.user.update({
-                where: { id: user.id },
-                data: {
-                    twoFactorOtp: null,
-                    twoFactorOtpExpires: null,
-                    twoFactorOtpAttempts: 0,
-                    lastLoginAt: new Date(),
-                },
-            }),
-            // Cria dispositivo confiável
-            prisma.trustedDevice.create({
-                data: {
-                    userId: user.id,
-                    deviceToken,
-                    userAgent: userAgent ?? null,
-                    expiresAt: deviceExpiresAt,
-                },
-            }),
-        ]);
-
-        const token = generateAuthToken(user.id, user.clinicId, user.role, user.name, {}, user.roles);
-
-        return {
-            token,
-            deviceToken,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                roles: user.roles.length > 0 ? user.roles : [user.role],
-                clinicId: user.clinicId,
-                clinicName: user.clinic?.tradeName ?? null,
-            },
-        };
+    if (!user) throw new Error("Usuário não encontrado");
+    if (!isTwoFactorRequired(user)) {
+      throw new Error("Autenticação em dois fatores não está configurada");
     }
+    if (!user.twoFactorOtp || !user.twoFactorOtpExpires) {
+      throw new Error("Nenhum código foi solicitado. Tente fazer login novamente.");
+    }
+    if (new Date() > user.twoFactorOtpExpires) {
+      throw new Error("Código expirado. Tente fazer login novamente.");
+    }
+    if (hashOtp(code) !== user.twoFactorOtp) {
+      const attempts = user.twoFactorOtpAttempts + 1;
+
+      if (attempts >= MAX_OTP_ATTEMPTS) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { twoFactorOtp: null, twoFactorOtpExpires: null, twoFactorOtpAttempts: 0 },
+        });
+        throw Object.assign(new Error("Código inválido. Faça login novamente."), {
+          statusCode: 401,
+        });
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { twoFactorOtpAttempts: attempts },
+      });
+      throw new Error("Código inválido.");
+    }
+
+    // Gera token de dispositivo confiável (7 dias)
+    const deviceToken = crypto.randomUUID();
+    const deviceExpiresAt = new Date(Date.now() + DEVICE_TRUSTED_DAYS * 24 * 60 * 60 * 1000);
+
+    await prisma.$transaction([
+      // Limpa OTP
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          twoFactorOtp: null,
+          twoFactorOtpExpires: null,
+          twoFactorOtpAttempts: 0,
+          lastLoginAt: new Date(),
+        },
+      }),
+      // Cria dispositivo confiável
+      prisma.trustedDevice.create({
+        data: {
+          userId: user.id,
+          deviceToken,
+          userAgent: userAgent ?? null,
+          expiresAt: deviceExpiresAt,
+        },
+      }),
+    ]);
+
+    const token = generateAuthToken(user.id, user.clinicId, user.role, user.name, {}, user.roles);
+
+    return {
+      token,
+      deviceToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        roles: user.roles.length > 0 ? user.roles : [user.role],
+        clinicId: user.clinicId,
+        clinicName: user.clinic?.tradeName ?? null,
+      },
+    };
+  }
 }
 
-//3. Consultar status 
+//3. Consultar status
 export class Get2FAStatusService {
-    async execute(userId: string) {
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-                twoFactorEnabled: true,
-                _count: { select: { trustedDevices: true } },
-            },
-        });
+  async execute(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        twoFactorEnabled: true,
+        _count: { select: { trustedDevices: true } },
+      },
+    });
 
-        if (!user) throw new Error("Usuário não encontrado");
+    if (!user) throw new Error("Usuário não encontrado");
 
-        return {
-            enabled: user.twoFactorEnabled,
-            trustedDeviceCount: user._count.trustedDevices,
-        };
-    }
+    return {
+      enabled: user.twoFactorEnabled,
+      trustedDeviceCount: user._count.trustedDevices,
+    };
+  }
 }
 
 // â”€â”€ 4. Ativar 2FA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export class Enable2FAService {
-    async execute(userId: string) {
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { twoFactorEnabled: true },
-        });
+  async execute(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { twoFactorEnabled: true },
+    });
 
-        if (!user) throw new Error("Usuário não encontrado");
-        if (user.twoFactorEnabled) throw new Error("Autenticação em dois fatores já está ativa");
+    if (!user) throw new Error("Usuário não encontrado");
+    if (user.twoFactorEnabled) throw new Error("Autenticação em dois fatores já está ativa");
 
-        await prisma.user.update({
-            where: { id: userId },
-            data: { twoFactorEnabled: true },
-        });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { twoFactorEnabled: true },
+    });
 
-        return { message: "Autenticação em dois fatores ativada com sucesso" };
-    }
+    return { message: "Autenticação em dois fatores ativada com sucesso" };
+  }
 }
 
 // â”€â”€ 5. Desativar 2FA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export class Disable2FAService {
-    async execute(userId: string) {
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { twoFactorEnabled: true },
-        });
+  async execute(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { twoFactorEnabled: true },
+    });
 
-        if (!user) throw new Error("Usuário não encontrado");
-        if (!user.twoFactorEnabled) throw new Error("Autenticação em dois fatores não está ativa");
+    if (!user) throw new Error("Usuário não encontrado");
+    if (!user.twoFactorEnabled) throw new Error("Autenticação em dois fatores não está ativa");
 
-        await prisma.$transaction([
-            prisma.user.update({
-                where: { id: userId },
-                data: {
-                    twoFactorEnabled: false,
-                    twoFactorOtp: null,
-                    twoFactorOtpExpires: null,
-                },
-            }),
-            prisma.trustedDevice.deleteMany({ where: { userId } }),
-        ]);
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          twoFactorEnabled: false,
+          twoFactorOtp: null,
+          twoFactorOtpExpires: null,
+        },
+      }),
+      prisma.trustedDevice.deleteMany({ where: { userId } }),
+    ]);
 
-        return { message: "Autenticação em dois fatores desativada" };
-    }
+    return { message: "Autenticação em dois fatores desativada" };
+  }
 }

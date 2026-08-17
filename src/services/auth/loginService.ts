@@ -3,7 +3,7 @@ import { prisma } from "../../database/prisma";
 import { AuditLogRepository } from "../../repository/auditLogRepository";
 import { UserRole, UserStatus } from "../../types/enums";
 import { generateAuthToken, generateTwoFactorPendingToken } from "../../utils/jwtUtils";
-import { SendOtpService } from "./twoFactorService";
+import { isTwoFactorRequired, SendOtpService } from "./twoFactorService";
 
 const auditLogRepository = new AuditLogRepository();
 
@@ -61,15 +61,11 @@ export class LoginService {
       throw new Error("Email ou senha incorretos");
     }
 
-    // ClinicSettings.twoFactorEnabled é uma política de clínica: quando
-    // ligada, exige 2FA de todo mundo, mesmo quem não ligou o próprio
-    // User.twoFactorEnabled individualmente. Antes desse gate, o campo
-    // existia só no JSON de configurações, sem nenhum efeito.
-    const clinicRequires2FA = user.clinic?.settings?.twoFactorEnabled === true;
-
-    // Se 2FA estiver ativo (individual ou por política da clínica), verificar
-    // se o dispositivo é confiável
-    if (user.twoFactorEnabled || clinicRequires2FA) {
+    // 2FA individual (User.twoFactorEnabled) ou por política da clínica
+    // (ClinicSettings.twoFactorEnabled). Mesmo critério usado por
+    // Send/Resend/ValidateOtp — os dois lados PRECISAM concordar, senão a
+    // clínica que liga a política tranca os próprios usuários para fora.
+    if (isTwoFactorRequired(user)) {
       let deviceTrusted = false;
 
       if (data.deviceToken) {
@@ -127,17 +123,23 @@ export class LoginService {
     // acessos ao sistema", default true) tinha tela real sem nenhum efeito —
     // nenhum login era registrado em nenhum lugar. Só se aplica a staff
     // (clinicId presente); paciente é global.
+    // Falha ao gravar auditoria não pode derrubar o login (o handler do
+    // controller transforma qualquer Error em 401) — registra e segue.
     if (user.clinicId && user.clinic?.settings?.accessLogEnabled !== false) {
-      await auditLogRepository.create({
-        clinicId: user.clinicId,
-        userId: user.id,
-        userName: user.name,
-        action: "LOGIN",
-        entity: "User",
-        entityId: user.id,
-        ipAddress: data.ipAddress,
-        userAgent: data.userAgent,
-      });
+      try {
+        await auditLogRepository.create({
+          clinicId: user.clinicId,
+          userId: user.id,
+          userName: user.name,
+          action: "LOGIN",
+          entity: "User",
+          entityId: user.id,
+          ipAddress: data.ipAddress,
+          userAgent: data.userAgent,
+        });
+      } catch (err) {
+        console.error("[LoginService] Falha ao registrar acesso em AuditLog:", err);
+      }
     }
 
     return {
