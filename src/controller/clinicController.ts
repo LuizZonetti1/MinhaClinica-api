@@ -100,16 +100,26 @@ export class ClinicController {
     }
   }
 
-  // Listar todas as clínicas
+  // Listar as clínicas visíveis ao usuário autenticado.
+  // ADMIN é dono de uma única clínica, então o resultado tem no máximo um
+  // item — sempre o clinicId do token, nunca um id vindo da requisição.
+  // Antes chamava getAll() e devolvia a base inteira para quem pedisse.
   async listClinics(req: Request, res: Response): Promise<void> {
     try {
+      const clinicId = req.clinicId;
+
+      if (!clinicId) {
+        res.status(403).json({ message: "Acesso negado" });
+        return;
+      }
+
       const getClinicService = new GetClinicService();
-      const clinics = await getClinicService.getAll();
+      const clinic = await getClinicService.getById(clinicId);
 
       res.status(200).json({
         message: "Clínicas listadas com sucesso",
-        total: clinics.length,
-        data: clinics,
+        total: 1,
+        data: [clinic],
       });
     } catch (error) {
       handleControllerError(res, error, "Erro ao listar clínicas");

@@ -111,6 +111,34 @@ export const checkRole = (...allowedRoles: UserRole[]) => {
 };
 
 /**
+ * Garante que o recurso endereçado pela URL pertence à clínica do token.
+ *
+ * O `clinicId` do JWT é a única fonte de verdade sobre o tenant do usuário —
+ * o id que vem no path é entrada do cliente e não pode ser confiado. Sem esta
+ * checagem, qualquer usuário autenticado alcança a clínica de outro tenant só
+ * trocando o UUID da URL.
+ *
+ * Usar sempre DEPOIS de `authMiddleware`. PATIENT é usuário global e não tem
+ * `clinicId` no token, portanto nunca passa por aqui; o acesso do paciente a
+ * dados de clínica é o `/api/clinic-directory`.
+ */
+export const checkSameClinic = (paramName = "id") => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.clinicId) {
+      res.status(403).json({ error: "Acesso negado" });
+      return;
+    }
+
+    if (req.params[paramName] !== req.clinicId) {
+      res.status(403).json({ error: "Acesso negado" });
+      return;
+    }
+
+    next();
+  };
+};
+
+/**
  * Middleware para o token temporário de registro (Etapa 3)
  * Aceita apenas tokens com scope "register_complete"
  */

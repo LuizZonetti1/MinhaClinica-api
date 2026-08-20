@@ -1,7 +1,12 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { ClinicController } from "../controller/clinicController";
-import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
+import {
+  authMiddleware,
+  checkRole,
+  checkSameClinic,
+  tempRegistrationAuth,
+} from "../middlewares/auth";
 import { UserRole } from "../types/enums";
 
 const clinicRoutes = Router();
@@ -70,8 +75,19 @@ clinicRoutes.get("/verify-email/:token", (req, res) => clinicController.verifyEm
 
 // ── Gestão de clínicas (autenticado) ────────────────────────────────────────
 
-// Rota para listar todas as clínicas
-clinicRoutes.get("/list", (req, res) => clinicController.listClinics(req, res));
+/**
+ * PROTEGIDO (ADMIN) — Retorna a clínica do admin autenticado
+ * GET /api/clinics/list
+ *
+ * Não existe papel de super-admin no produto: ADMIN é dono de UMA clínica, e
+ * portanto a lista tem no máximo um item. Antes esta rota era pública e
+ * devolvia todas as clínicas da base (CNPJ, e-mail, telefone e endereço de
+ * todas), servindo de bandeja de UUIDs para as rotas /:id abaixo.
+ * A busca de clínicas pelo paciente é o /api/clinic-directory.
+ */
+clinicRoutes.get("/list", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
+  clinicController.listClinics(req, res),
+);
 
 // ── Configurações da clínica (página de Configurações — apenas ADMIN) ─────────
 // IMPORTANTE: estas rotas devem ficar antes de /:id para não serem capturadas como parâmetro
@@ -158,13 +174,42 @@ clinicRoutes.delete(
 
 // ── Consulta/atualização genérica por ID ─────────────────────────────────────
 
-// Rota para buscar clínica por ID
-clinicRoutes.get("/:id", (req, res) => clinicController.getClinicById(req, res));
+/**
+ * PROTEGIDO — Busca a clínica por ID (qualquer papel da própria clínica)
+ * GET /api/clinics/:id
+ */
+clinicRoutes.get("/:id", authMiddleware, checkSameClinic(), (req, res) =>
+  clinicController.getClinicById(req, res),
+);
 
-// Rota para atualizar uma clínica
-clinicRoutes.put("/:id", (req, res) => clinicController.updateClinic(req, res));
+/**
+ * PROTEGIDO (ADMIN da própria clínica) — Atualiza a clínica
+ * PUT /api/clinics/:id
+ */
+clinicRoutes.put(
+  "/:id",
+  authMiddleware,
+  checkRole(UserRole.ADMIN),
+  checkSameClinic(),
+  (req, res) => clinicController.updateClinic(req, res),
+);
 
-// Rota para deletar uma clínica
-clinicRoutes.delete("/:id", (req, res) => clinicController.deleteClinic(req, res));
+/**
+ * PROTEGIDO (ADMIN da própria clínica) — Exclui a clínica
+ * DELETE /api/clinics/:id
+ *
+ * ATENÇÃO: DeleteClinicService faz `prisma.clinic.delete()` — exclusão física.
+ * O schema tem 14 relações `onDelete: Cascade` saindo de Clinic, então isto
+ * apaga consultas, pacientes, profissionais, documentos clínicos, transações
+ * e auditoria junto, sem volta. Nenhum cliente (web ou mobile) chama esta
+ * rota hoje; ela existe apenas como operação administrativa manual.
+ */
+clinicRoutes.delete(
+  "/:id",
+  authMiddleware,
+  checkRole(UserRole.ADMIN),
+  checkSameClinic(),
+  (req, res) => clinicController.deleteClinic(req, res),
+);
 
 export default clinicRoutes;
