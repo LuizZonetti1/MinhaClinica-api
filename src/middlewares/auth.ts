@@ -53,7 +53,20 @@ export const authMiddleware = async (
     }
 
     // Verifica e decodifica o token
-    const decoded = jwt.verify(token, secret) as JwtPayload;
+    const decoded = jwt.verify(token, secret) as JwtPayload & { type?: string };
+
+    // Token de acesso não carrega `type`; os temporários (temp_registration,
+    // two_factor_pending) carregam. Se JWT_ACCESS_SECRET e JWT_TEMP_SECRET
+    // forem iguais — configuração que a validação de ambiente agora recusa em
+    // produção — a assinatura de um token temporário confere aqui e ele
+    // passaria como sessão completa. O token de cadastro é emitido logo após a
+    // verificação de e-mail, antes de a conta existir, e traz `role`: seria
+    // sessão de ADMIN sem senha. A checagem de escopo abaixo fecha isso
+    // independentemente de como os segredos estejam configurados.
+    if (decoded.type) {
+      res.status(401).json({ error: "Token inválido" });
+      return;
+    }
 
     // Verifica se a senha foi alterada após a emissão do token (revogação implícita)
     if (decoded.iat) {
