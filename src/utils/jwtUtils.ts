@@ -160,8 +160,13 @@ export const generateTempRegistrationToken = (
  * @returns Payload decodificado ou lança erro
  */
 export const verifyTempRegistrationToken = (token: string): TempRegistrationPayload => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error("JWT_SECRET não está configurado");
+  // Precisa ser o MESMO fallback de generateTempRegistrationToken. Enquanto
+  // aqui lia só JWT_SECRET, qualquer ambiente que seguisse o .env.example
+  // (que define JWT_TEMP_SECRET e nem cita JWT_SECRET) assinava com um
+  // segredo e verificava com outro: a etapa 3 de todos os fluxos de cadastro
+  // respondia 401. Só funcionava com os três segredos iguais no .env.
+  const secret = process.env.JWT_TEMP_SECRET ?? process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_TEMP_SECRET não está configurado");
 
   const decoded = jwt.verify(token, secret) as TempRegistrationPayload;
 
