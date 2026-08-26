@@ -99,7 +99,7 @@ async function main() {
     data: {
       legalName: "Clínica Saúde Mais LTDA",
       tradeName: "Clínica Saúde Mais",
-      cnpj: "12345678000190",
+      cnpj: "12345678000195",
       email: "contato@saudemais.com.br",
       phone: "11987654321",
       website: "https://www.saudemais.com.br",
@@ -1475,7 +1475,7 @@ async function main() {
     data: {
       legalName: "OdontoPrime Clínica Odontológica LTDA",
       tradeName: "OdontoPrime",
-      cnpj: "98765432000110",
+      cnpj: "98765432000198",
       email: "contato@odontoprime.com.br",
       phone: "21987654321",
       subdomain: "odontoprime",
@@ -1847,7 +1847,7 @@ async function main() {
     data: {
       legalName: "Saúde Total Serviços Médicos LTDA",
       tradeName: "Saúde Total Clínica Médica",
-      cnpj: "11222333000144",
+      cnpj: "11222333000181",
       email: "contato@saudetotal.com.br",
       phone: "11933001100",
       website: "https://www.saudetotal.com.br",
@@ -2407,7 +2407,7 @@ async function main() {
     data: {
       legalName: "Saúde e Vida Centro Médico LTDA",
       tradeName: "Clínica Saúde & Vida",
-      cnpj: "22333444000155",
+      cnpj: "22333444000181",
       email: "contato@saudevida.com.br",
       phone: "11944002200",
       subdomain: "saudevida",
@@ -2929,7 +2929,7 @@ async function main() {
     data: {
       legalName: "Clínica Saúde Integrada S/S LTDA",
       tradeName: "Clínica Saúde Integrada",
-      cnpj: "33444555000166",
+      cnpj: "33444555000181",
       email: "contato@saudeintegrada.com.br",
       phone: "41933003300",
       subdomain: "saudeintegrada",
@@ -3492,7 +3492,7 @@ async function main() {
     data: {
       legalName: "OdontoVita Odontologia Avançada LTDA",
       tradeName: "OdontoVita",
-      cnpj: "44555666000177",
+      cnpj: "44555666000181",
       email: "contato@odontovita.com.br",
       phone: "21933004400",
       subdomain: "odontovita",
@@ -3926,7 +3926,7 @@ async function main() {
     data: {
       legalName: "Centro Médico Bem Estar LTDA",
       tradeName: "Centro Médico Bem Estar",
-      cnpj: "55666777000188",
+      cnpj: "55666777000181",
       email: "contato@bemestarcm.com.br",
       phone: "31933005500",
       subdomain: "bemestarcm",
@@ -4398,7 +4398,7 @@ async function main() {
     data: {
       legalName: "VitaSaúde Clínica de Saúde e Esporte LTDA",
       tradeName: "VitaSaúde Clínica",
-      cnpj: "66777888000199",
+      cnpj: "66777888000181",
       email: "contato@vitasaude.com.br",
       phone: "41933006600",
       subdomain: "vitasaude",

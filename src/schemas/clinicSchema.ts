@@ -2,6 +2,7 @@ import * as yup from "yup";
 import { DayOfWeek } from "../types/enums";
 import { stripHtmlTags } from "../utils/sanitizeText";
 import { validateCep } from "../utils/validateCep";
+import { validateCNPJ } from "../utils/validateCNPJ";
 import { validateCPF } from "../utils/validateCPF";
 
 // Regex para validações
@@ -37,6 +38,9 @@ export const clinicRegisterStartSchema = yup.object({
     .required("CNPJ é obrigatório")
     .matches(cnpjRegex, "CNPJ deve conter exatamente 14 dígitos")
     .length(14, "CNPJ deve ter 14 dígitos")
+    .test("cnpj-valido", "CNPJ inválido: verifique os dígitos.", (value) =>
+      value ? validateCNPJ(value) : true,
+    )
     .transform((v) => v?.replace(/\D/g, "")),
 
   // E-mail de contato da clínica (pode ser diferente do e-mail do dono)
@@ -215,6 +219,9 @@ export const clinicInfoUpdateSchema = yup.object({
     .string()
     .matches(cnpjRegex, "CNPJ deve conter exatamente 14 dígitos")
     .length(14)
+    .test("cnpj-valido", "CNPJ inválido: verifique os dígitos.", (value) =>
+      value ? validateCNPJ(value) : true,
+    )
     .transform((v) => v?.replace(/\D/g, ""))
     .optional(),
   phone: yup
