@@ -21,6 +21,7 @@
     "db:reset": "prisma migrate reset",
     "db:seed": "tsx src/database/seed.ts",
     "db:migrate-procedures": "tsx src/database/migrateDefaultProcedures.ts",
+    "db:limpeza-r6": "tsx src/database/limpezaAuditoriaR6.ts",
     "db:studio": "prisma studio",
     "erd": "prisma generate"
   },
