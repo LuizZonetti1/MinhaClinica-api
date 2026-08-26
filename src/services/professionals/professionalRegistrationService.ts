@@ -3,8 +3,12 @@ import { prisma } from "../../database/prisma";
 import { UserRepository } from "../../repository/userRepository";
 import { UserRole, UserStatus } from "../../types/enums";
 import type { CompleteProfessionalInput, InviteProfessionalInput } from "../../types/user";
-import { createVerificationData } from "../../utils/verificationTokenUtils";
+import {
+  createVerificationData,
+  INVITE_EXPIRATION_MINUTES,
+} from "../../utils/verificationTokenUtils";
 import { createEmailProvider, EmailService } from "../email/emailService";
+import { IssueSessionService } from "../auth/issueSessionService";
 
 /**
  * CONVIDAR PROFISSIONAL - ETAPA 1
@@ -58,7 +62,7 @@ export class InviteProfessionalService {
     });
 
     // Criar token de verificação
-    const verification = createVerificationData(48); // 48 horas
+    const verification = createVerificationData(INVITE_EXPIRATION_MINUTES);
 
     // Buscar ou criar a especialidade na clínica
     const specialtyRecord = await prisma.specialty.upsert({
@@ -124,9 +128,13 @@ export class InviteProfessionalService {
 
 /**
  * CANCELAR CONVITE - remove o User pendente, liberando o e-mail para um novo convite.
- * Só atua sobre convites de fato pendentes (PENDING_ACTIVATION, sem Professional
- * vinculado) — depois que o convidado completa o cadastro, isso não é mais
- * "cancelamento de convite", é remoção de profissional (outro fluxo).
+ * Só atua sobre convites de fato pendentes (sem Professional vinculado) — depois
+ * que o convidado completa o cadastro, isso não é mais "cancelamento de convite",
+ * é remoção de profissional (outro fluxo).
+ *
+ * Aceita PENDING_ACTIVATION e EMAIL_VERIFIED: o convidado que clicou no link mas
+ * não concluiu a Etapa 3 fica no segundo status, e limitar ao primeiro deixava
+ * esse registro impossível de cancelar — com o e-mail travado por ele.
  */
 export class CancelProfessionalInviteService {
   private userRepository = new UserRepository();
@@ -146,7 +154,7 @@ export class CancelProfessionalInviteService {
         id: userId,
         clinicId: admin.clinicId,
         role: UserRole.PROFESSIONAL,
-        status: UserStatus.PENDING_ACTIVATION,
+        status: { in: [UserStatus.PENDING_ACTIVATION, UserStatus.EMAIL_VERIFIED] },
         professional: { is: null },
       },
     });
@@ -246,12 +254,16 @@ export class CompleteProfessionalService {
       });
     }
 
+    // Cadastro concluído = sessão aberta (ver IssueSessionService).
+    const sessao = await new IssueSessionService().execute(user.id);
+
     return {
       userId: user.id,
       professionalId: professional.id,
       name: user.name,
       email: user.email,
       message: "Cadastro completado com sucesso!",
+      ...sessao,
     };
   }
 }

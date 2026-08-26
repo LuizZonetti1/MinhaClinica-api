@@ -4,9 +4,9 @@ import { PatientRepository } from "../../repository/patientRepository";
 import { UserRepository } from "../../repository/userRepository";
 import { UserRole, UserStatus } from "../../types/enums";
 import type { CompletePatientInput, RegisterPatientInput } from "../../types/user";
-import { generateTempRegistrationToken } from "../../utils/jwtUtils";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
 import { createEmailProvider, EmailService } from "../email/emailService";
+import { IssueSessionService } from "../auth/issueSessionService";
 
 /**
  * Valida dígitos verificadores do CPF
@@ -30,28 +30,24 @@ export class RegisterPatientService {
     const existingUser = await this.userRepository.findByEmail(data.email);
 
     if (existingUser) {
-      // Verificou o email mas não finalizou o cadastro → gerar novo token e ir direto para etapa 3
-      if (existingUser.status === UserStatus.EMAIL_VERIFIED) {
-        const tempToken = generateTempRegistrationToken(
-          existingUser.id,
-          existingUser.clinicId,
-          existingUser.role as (typeof UserRole)[keyof typeof UserRole],
-        );
-        return {
-          message: "Email já verificado. Continue para completar seu cadastro.",
-          email: existingUser.email,
-          tempToken,
-          redirectToComplete: true,
-        };
-      }
-
-      // Ainda não verificou o email → reenviar link
-      if (existingUser.status === UserStatus.PENDING_ACTIVATION) {
+      // Cadastro em aberto — link ainda não clicado (PENDING_ACTIVATION) ou
+      // clicado sem concluir a Etapa 3 (EMAIL_VERIFIED). Mesmo percurso nos dois
+      // casos: link novo por e-mail e volta para a tela de verificação.
+      //
+      // O atalho que existia para EMAIL_VERIFIED pulava direto para a Etapa 3 sem
+      // enviar e-mail nenhum, o que parecia envio quebrado e tirava a tela de
+      // verificação do caminho. Ver o mesmo ajuste em RegisterClinicService.
+      if (
+        existingUser.status === UserStatus.PENDING_ACTIVATION ||
+        existingUser.status === UserStatus.EMAIL_VERIFIED
+      ) {
         const verification = createVerificationData(25);
         await prisma.user.update({
           where: { id: existingUser.id },
           data: {
             name: data.name,
+            // VerifyEmailService só aceita o link em PENDING_ACTIVATION.
+            status: UserStatus.PENDING_ACTIVATION,
             verificationToken: verification.hashedToken,
             verificationExpires: verification.expiresAt,
           },
@@ -206,12 +202,16 @@ export class CompletePatientService {
       },
     });
 
+    // Cadastro concluído = sessão aberta (ver IssueSessionService).
+    const sessao = await new IssueSessionService().execute(user.id);
+
     return {
       userId: user.id,
       patientId: patient.id,
       name: user.name,
       email: user.email,
       message: "Cadastro completado com sucesso!",
+      ...sessao,
     };
   }
 }

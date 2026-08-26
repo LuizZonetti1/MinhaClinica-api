@@ -1,6 +1,9 @@
 import { prisma } from "../../database/prisma";
 import { UserRole, UserStatus } from "../../types/enums";
-import { createVerificationData } from "../../utils/verificationTokenUtils";
+import {
+  createVerificationData,
+  INVITE_EXPIRATION_MINUTES,
+} from "../../utils/verificationTokenUtils";
 import { createEmailProvider, EmailService } from "../email/emailService";
 
 /**
@@ -11,11 +14,13 @@ export class ResendVerificationService {
   private emailService = new EmailService(createEmailProvider());
 
   async execute(data: { email: string }) {
-    // Buscar usuário pendente (busca global — paciente não tem clínica)
+    // Buscar usuário com cadastro em aberto (busca global — paciente não tem clínica).
+    // EMAIL_VERIFIED entra junto: é quem clicou no link mas não concluiu a Etapa 3,
+    // e sem ele o "Reenviar convite" do admin não tinha efeito nenhum nesse estado.
     const user = await prisma.user.findFirst({
       where: {
         email: data.email,
-        status: UserStatus.PENDING_ACTIVATION,
+        status: { in: [UserStatus.PENDING_ACTIVATION, UserStatus.EMAIL_VERIFIED] },
       },
     });
 
@@ -27,13 +32,20 @@ export class ResendVerificationService {
       };
     }
 
-    // Gerar novo token (25 minutos)
-    const verification = createVerificationData(25);
+    // A validade acompanha o template que será enviado logo abaixo: convite de
+    // profissional promete 48h, verificação de paciente promete 25 minutos.
+    const verification = createVerificationData(
+      user.role === UserRole.PROFESSIONAL ? INVITE_EXPIRATION_MINUTES : 25,
+    );
 
-    // Invalidar token anterior e salvar novo
+    // Invalidar token anterior e salvar novo. O status volta para
+    // PENDING_ACTIVATION porque é o que VerifyEmailService exige para aceitar o
+    // link — reenviar para quem já estava em EMAIL_VERIFIED geraria um link que
+    // falharia. Nada se perde: a conta ainda não existe de fato nesse estágio.
     await prisma.user.update({
       where: { id: user.id },
       data: {
+        status: UserStatus.PENDING_ACTIVATION,
         verificationToken: verification.hashedToken,
         verificationExpires: verification.expiresAt,
       },

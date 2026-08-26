@@ -3,8 +3,12 @@ import { prisma } from "../../database/prisma";
 import { UserRepository } from "../../repository/userRepository";
 import { UserRole, UserStatus } from "../../types/enums";
 import type { CompleteStaffInput, InviteStaffInput } from "../../types/user";
-import { createVerificationData } from "../../utils/verificationTokenUtils";
+import {
+  createVerificationData,
+  INVITE_EXPIRATION_MINUTES,
+} from "../../utils/verificationTokenUtils";
 import { createEmailProvider, EmailService } from "../email/emailService";
+import { IssueSessionService } from "../auth/issueSessionService";
 
 /**
  * CONVIDAR STAFF (Recepcionista/Admin) - ETAPA 1
@@ -58,7 +62,7 @@ export class InviteStaffService {
     });
 
     // Criar token de verificação
-    const verification = createVerificationData(48); // 48 horas
+    const verification = createVerificationData(INVITE_EXPIRATION_MINUTES);
 
     // Criar usuário com status pendente
     const user = await this.userRepository.createUser({
@@ -158,12 +162,16 @@ export class CompleteStaffService {
       },
     });
 
+    // Cadastro concluído = sessão aberta (ver IssueSessionService).
+    const sessao = await new IssueSessionService().execute(user.id);
+
     return {
       userId: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
       message: "Cadastro completado com sucesso!",
+      ...sessao,
     };
   }
 }

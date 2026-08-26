@@ -77,6 +77,15 @@ export const verifyTokenHash = (token: string, hashedToken: string): boolean => 
  * @param expirationMinutes - Minutos até expiração (padrão: 25)
  * @returns Objeto com token, hash e data de expiração
  */
+/**
+ * Validade dos convites de equipe (profissional, recepção, admin) e da ativação
+ * de paciente cadastrado pela recepção — 48 horas, que é o que os e-mails
+ * prometem. Existe como constante porque quatro chamadas passavam `48` direto
+ * para createVerificationData achando que o parâmetro era em horas: o link
+ * morria em 48 MINUTOS enquanto o e-mail dizia 48 horas.
+ */
+export const INVITE_EXPIRATION_MINUTES = 48 * 60;
+
 export const createVerificationData = (expirationMinutes = 25) => {
   const token = generateVerificationToken();
 

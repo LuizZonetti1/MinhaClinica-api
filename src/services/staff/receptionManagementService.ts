@@ -8,7 +8,10 @@ import { UserRepository } from "../../repository/userRepository";
 import { AppointmentStatus, UserRole, UserStatus } from "../../types/enums";
 import type { ReceptionDetails } from "../../types/receptionist";
 import type { UpdateReceptionInput } from "../../types/user";
-import { createVerificationData } from "../../utils/verificationTokenUtils";
+import {
+  createVerificationData,
+  INVITE_EXPIRATION_MINUTES,
+} from "../../utils/verificationTokenUtils";
 import { RequestEmailChangeService } from "../auth/emailChangeService";
 import { createEmailProvider, EmailService } from "../email/emailService";
 
@@ -183,7 +186,7 @@ export class UpdateReceptionService {
     const isPendingInvite = receptionist.status !== UserStatus.ACTIVE;
 
     if (emailChanged && isPendingInvite) {
-      const verification = createVerificationData(48);
+      const verification = createVerificationData(INVITE_EXPIRATION_MINUTES);
       userUpdateData.status = UserStatus.PENDING_ACTIVATION;
       userUpdateData.verificationToken = verification.hashedToken;
       userUpdateData.verificationExpires = verification.expiresAt;

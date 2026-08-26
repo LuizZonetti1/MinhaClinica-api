@@ -56,11 +56,16 @@ export class GetProfessionalsService {
       // Convites enviados (Etapa 1) que ainda não viraram Professional (Etapa 3).
       // O registro de Professional só nasce em CompleteProfessionalService — até
       // lá, o convidado existe apenas como User e não aparecia em lugar nenhum.
+      //
+      // Os DOIS status intermediários entram: clicar no link do convite move o
+      // usuário de PENDING_ACTIVATION para EMAIL_VERIFIED, e filtrar só o
+      // primeiro fazia o convidado sumir da lista no exato momento em que ele
+      // aceitava o convite — sem ter virado Professional ainda.
       prisma.user.findMany({
         where: {
           clinicId,
           role: UserRole.PROFESSIONAL,
-          status: UserStatus.PENDING_ACTIVATION,
+          status: { in: [UserStatus.PENDING_ACTIVATION, UserStatus.EMAIL_VERIFIED] },
           professional: { is: null },
         },
       }),

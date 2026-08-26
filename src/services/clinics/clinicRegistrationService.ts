@@ -3,16 +3,71 @@ import { prisma } from "../../database/prisma";
 import { UserRepository } from "../../repository/userRepository";
 import { UserRole, UserStatus } from "../../types/enums";
 import type { CompleteClinicOwnerInput, RegisterClinicInput } from "../../types/user";
-import { generateTempRegistrationToken } from "../../utils/jwtUtils";
 import { createVerificationData } from "../../utils/verificationTokenUtils";
 import { createEmailProvider, EmailService } from "../email/emailService";
+import { IssueSessionService } from "../auth/issueSessionService";
 
 // ============================================================
 // ETAPA 1 — Cadastrar clínica e iniciar verificação de e-mail
 // ============================================================
+
+/** Minutos de validade do link de verificação do dono — o e-mail promete 25. */
+const CLINIC_VERIFICATION_MINUTES = 25;
+
 export class RegisterClinicService {
   private userRepository = new UserRepository();
   private emailService = new EmailService(createEmailProvider());
+
+  /**
+   * Regrava a clínica de um cadastro ainda em aberto com o que o responsável
+   * acabou de preencher. Sem isto, reenviar o formulário com o CNPJ ou o endereço
+   * corrigidos não teria efeito nenhum: a clínica ficaria com os dados da
+   * primeira tentativa e o responsável não teria como saber.
+   */
+  private async atualizarClinicaEmCadastro(
+    clinicId: string | null,
+    dados: Omit<RegisterClinicInput, "ownerEmail" | "ownerName" | "clinicEmail"> & {
+      email: string;
+    },
+  ): Promise<void> {
+    if (!clinicId) return;
+
+    // cnpj e email são @unique: só recusa se pertencerem a OUTRA clínica.
+    const cnpjEmOutra = await prisma.clinic.findFirst({
+      where: { cnpj: dados.cnpj, id: { not: clinicId } },
+      select: { id: true },
+    });
+    if (cnpjEmOutra) {
+      throw Object.assign(new Error("CNPJ já cadastrado"), { statusCode: 409 });
+    }
+
+    const emailEmOutra = await prisma.clinic.findFirst({
+      where: { email: dados.email, id: { not: clinicId } },
+      select: { id: true },
+    });
+    if (emailEmOutra) {
+      throw Object.assign(new Error("E-mail da clínica já cadastrado"), { statusCode: 409 });
+    }
+
+    await prisma.clinic.update({
+      where: { id: clinicId },
+      data: {
+        legalName: dados.legalName,
+        tradeName: dados.tradeName,
+        cnpj: dados.cnpj,
+        email: dados.email,
+        phone: dados.phone,
+        zipCode: dados.zipCode,
+        street: dados.street,
+        number: dados.number,
+        complement: dados.complement,
+        neighborhood: dados.neighborhood,
+        city: dados.city,
+        state: dados.state,
+        website: dados.website,
+      },
+    });
+  }
 
   async execute(data: RegisterClinicInput) {
     const { ownerEmail, ownerName, clinicEmail, ...clinicFields } = data;
@@ -21,33 +76,35 @@ export class RegisterClinicService {
     const existingUser = await this.userRepository.findByEmail(ownerEmail);
 
     if (existingUser) {
-      // E-mail verificado mas cadastro não concluído → manda direto para etapa 3
-      if (existingUser.status === UserStatus.EMAIL_VERIFIED) {
-        const tempToken = generateTempRegistrationToken(
-          existingUser.id,
-          existingUser.clinicId,
-          existingUser.role as (typeof UserRole)[keyof typeof UserRole],
-        );
-        return {
-          message: "E-mail já verificado. Continue para completar seus dados de acesso.",
-          email: ownerEmail,
-          tempToken,
-          redirectToComplete: true,
-        };
-      }
+      // Cadastro em aberto — seja porque o link nunca foi clicado
+      // (PENDING_ACTIVATION) ou porque foi clicado mas a Etapa 3 não terminou
+      // (EMAIL_VERIFIED). Nos dois casos o percurso é o mesmo: regravar os dados
+      // da clínica, mandar um link novo e devolver o responsável para a tela de
+      // "verifique seu e-mail".
+      //
+      // Havia aqui um atalho só para EMAIL_VERIFIED que pulava direto para a
+      // Etapa 3: não enviava e-mail nenhum (parecia que o envio tinha quebrado),
+      // sumia com a tela de verificação do percurso e, pior, descartava em
+      // silêncio a clínica recém-preenchida — o tempToken apontava para a clínica
+      // antiga. Reverificar custa um clique e mantém o fluxo sempre igual.
+      if (
+        existingUser.status === UserStatus.PENDING_ACTIVATION ||
+        existingUser.status === UserStatus.EMAIL_VERIFIED
+      ) {
+        const verification = createVerificationData(CLINIC_VERIFICATION_MINUTES);
 
-      // Pendente → reenviar link
-      if (existingUser.status === UserStatus.PENDING_ACTIVATION) {
-        const verification = createVerificationData(25);
-        // Atualiza a clínica vinculada se existir
-        const clinic = existingUser.clinicId
-          ? await prisma.clinic.findUnique({ where: { id: existingUser.clinicId } })
-          : null;
+        await this.atualizarClinicaEmCadastro(existingUser.clinicId, {
+          ...clinicFields,
+          email: clinicEmail,
+        });
 
         await prisma.user.update({
           where: { id: existingUser.id },
           data: {
             name: ownerName,
+            // Volta para PENDING_ACTIVATION: é o status que VerifyEmailService
+            // exige para aceitar o link novo.
+            status: UserStatus.PENDING_ACTIVATION,
             verificationToken: verification.hashedToken,
             verificationExpires: verification.expiresAt,
           },
@@ -56,7 +113,7 @@ export class RegisterClinicService {
         await this.emailService.sendClinicOwnerVerificationEmail(
           ownerEmail,
           ownerName,
-          clinic?.tradeName ?? clinicFields.tradeName,
+          clinicFields.tradeName,
           verification.token,
         );
 
@@ -113,7 +170,7 @@ export class RegisterClinicService {
     });
 
     // 5. Criar usuário admin (pendente) vinculado à clínica
-    const verification = createVerificationData(25);
+    const verification = createVerificationData(CLINIC_VERIFICATION_MINUTES);
 
     const owner = await this.userRepository.createUser({
       clinicId: clinic.id,
@@ -214,12 +271,17 @@ export class CompleteClinicOwnerService {
       data: { isActive: true },
     });
 
+    // Cadastro concluído = sessão aberta. Sem isto a tela mandava para
+    // /dashboard sem token e PrivateRoutes devolvia a pessoa para /login.
+    const sessao = await new IssueSessionService().execute(user.id);
+
     return {
       userId: user.id,
       clinicId: user.clinicId,
       name: user.name,
       email: user.email,
       message: "Cadastro da clínica concluído com sucesso! Bem-vindo ao Minha Clínica.",
+      ...sessao,
     };
   }
 }
@@ -250,7 +312,7 @@ export class ResendClinicVerificationService {
       };
     }
 
-    const verification = createVerificationData(25);
+    const verification = createVerificationData(CLINIC_VERIFICATION_MINUTES);
 
     await prisma.user.update({
       where: { id: user.id },
