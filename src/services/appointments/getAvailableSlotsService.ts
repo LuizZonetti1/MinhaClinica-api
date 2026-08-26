@@ -161,17 +161,19 @@ export class GetAvailableSlotsService {
     const lunchEnd =
       workingHours.lunchBreakEnd != null ? timeToMinutes(workingHours.lunchBreakEnd) : null;
 
-    // Converter bloqueios de agenda para ranges de minutos do dia
-    const blockedRanges: { start: number; end: number }[] = [];
+    // Converter bloqueios de agenda para ranges de minutos do dia.
+    // Ficam separados dos agendamentos porque a origem da indisponibilidade
+    // muda a mensagem: bloqueio tem motivo declarado, horário ocupado não.
+    const scheduleBlockRanges: { start: number; end: number }[] = [];
 
     for (const block of scheduleBlocks) {
       if (block.isAllDay) {
         // Dia inteiro bloqueado — bloqueia todo o workRange
-        blockedRanges.push({ start: 0, end: 24 * 60 });
+        scheduleBlockRanges.push({ start: 0, end: 24 * 60 });
       } else {
         const blockStart = dayjs(block.startDateTime).tz(DEFAULT_TIMEZONE);
         const blockEnd = dayjs(block.endDateTime).tz(DEFAULT_TIMEZONE);
-        blockedRanges.push({
+        scheduleBlockRanges.push({
           start: blockStart.hour() * 60 + blockStart.minute(),
           end: blockEnd.hour() * 60 + blockEnd.minute(),
         });
@@ -179,17 +181,20 @@ export class GetAvailableSlotsService {
     }
 
     // Converter agendamentos existentes para ranges de minutos
-    for (const apt of appointments) {
-      blockedRanges.push({
-        start: timeToMinutes(apt.startTime),
-        end: timeToMinutes(apt.endTime),
-      });
-    }
+    const appointmentRanges = appointments.map((apt) => ({
+      start: timeToMinutes(apt.startTime),
+      end: timeToMinutes(apt.endTime),
+    }));
 
     // Gerar todos os slots do dia
     const slots: TimeSlot[] = [];
     const step = duration + bufferTime;
     let current = workStart;
+
+    // Para escolher o motivo depois: se nenhum slot sobrou e tudo que caiu foi
+    // por bloqueio de agenda, o dia está bloqueado — não "lotado".
+    let hasAvailableSlot = false;
+    let everyUnavailableSlotIsBlocked = true;
 
     while (current + duration <= workEnd) {
       const slotEnd = current + duration;
@@ -197,7 +202,8 @@ export class GetAvailableSlotsService {
       const inLunch =
         lunchStart !== null && lunchEnd !== null && current < lunchEnd && slotEnd > lunchStart;
 
-      const isBlocked = blockedRanges.some((b) => current < b.end && slotEnd > b.start);
+      const isBlocked = scheduleBlockRanges.some((b) => current < b.end && slotEnd > b.start);
+      const isTaken = appointmentRanges.some((b) => current < b.end && slotEnd > b.start);
       const isPastTime = isPastDate || (isToday && current < nowMinutes);
 
       // No portal, a antecedência mínima empurra o primeiro horário ofertável
@@ -211,24 +217,47 @@ export class GetAvailableSlotsService {
             .isBefore(earliestOnlineStart)
         : false;
 
+      const available = !inLunch && !isBlocked && !isTaken && !isPastTime && !isTooSoonForOnline;
+      if (available) {
+        hasAvailableSlot = true;
+      } else if (!isBlocked) {
+        everyUnavailableSlotIsBlocked = false;
+      }
+
       slots.push({
         startTime: minutesToTime(current),
         endTime: minutesToTime(slotEnd),
-        available: !inLunch && !isBlocked && !isPastTime && !isTooSoonForOnline,
+        available,
       });
 
       current += step;
     }
 
-    const isDateBlocked = scheduleBlocks.some((block) => block.isAllDay);
+    // Um bloqueio marcado isAllDay derruba o dia inteiro; um bloqueio por
+    // intervalo pode derrubar o expediente todo sem ser isAllDay (foi o caso das
+    // "férias" da auditoria). Nos dois casos o motivo é o bloqueio, não lotação.
+    const isDateBlocked =
+      scheduleBlocks.some((block) => block.isAllDay) ||
+      (scheduleBlockRanges.length > 0 &&
+        slots.length > 0 &&
+        !hasAvailableSlot &&
+        everyUnavailableSlotIsBlocked);
+
     let reason: SlotsUnavailableReason | undefined;
     if (isDateBlocked) {
       reason = "DATE_BLOCKED";
     } else if (isPastDate) {
       reason = "PAST_DATE";
-    } else if (slots.length > 0 && !slots.some((slot) => slot.available)) {
+    } else if (slots.length > 0 && !hasAvailableSlot) {
       reason = "FULLY_BOOKED";
     }
+
+    // Motivos declarados nos bloqueios que tocam a data, sem repetir.
+    const blockReason =
+      scheduleBlocks.length > 0
+        ? [...new Set(scheduleBlocks.map((block) => block.reason).filter(Boolean))].join(" · ") ||
+          undefined
+        : undefined;
 
     return {
       date: dateStr,
@@ -237,6 +266,7 @@ export class GetAvailableSlotsService {
       bufferTime,
       slots,
       reason,
+      blockReason,
     };
   }
 }

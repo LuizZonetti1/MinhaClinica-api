@@ -52,6 +52,12 @@ export interface AvailableSlotsResult {
   bufferTime: number; // minutos de intervalo
   slots: TimeSlot[];
   reason?: SlotsUnavailableReason;
+  /**
+   * Motivo declarado no ProfessionalScheduleBlock que cobre a data (férias,
+   * congresso, folga). Vem junto com DATE_BLOCKED para a tela poder dizer POR QUE
+   * os horários estão indisponíveis, em vez de só exibi-los em cinza.
+   */
+  blockReason?: string;
 }
 
 // ── Criação do agendamento (Etapa 3) ──────────────────────────────────────────

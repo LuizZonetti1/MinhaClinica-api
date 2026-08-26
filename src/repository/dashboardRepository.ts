@@ -1,5 +1,5 @@
 import { prisma } from "../database/prisma";
-import { AppointmentStatus, TransactionType, UserRole, UserStatus } from "../types/enums";
+import { AppointmentStatus, TransactionType, UserStatus } from "../types/enums";
 import { CONSULTATION_EXCLUDED_STATUSES } from "../utils/appointmentStatusRules";
 
 export class DashboardRepository {
@@ -68,18 +68,19 @@ export class DashboardRepository {
     });
   }
 
-  async countProfessionals(clinicId: string): Promise<number> {
-    return prisma.professional.count({
-      where: { clinicId, deletedAt: null },
-    });
-  }
-
+  /**
+   * "Profissionais Ativos" do dashboard: exige as três condições juntas —
+   * registro de Professional vivo, `isActive` ligado e usuário ACTIVE. Contar só
+   * por `user.status` (ou só por Professional não deletado, como fazia o KPI)
+   * inflava o número com convites, desligados e removidos.
+   */
   async countActiveProfessionals(clinicId: string): Promise<number> {
-    return prisma.user.count({
+    return prisma.professional.count({
       where: {
         clinicId,
-        role: UserRole.PROFESSIONAL,
-        status: UserStatus.ACTIVE,
+        deletedAt: null,
+        isActive: true,
+        user: { status: UserStatus.ACTIVE },
       },
     });
   }

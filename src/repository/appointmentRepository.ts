@@ -95,6 +95,7 @@ export class AppointmentRepository {
             startDateTime: true,
             endDateTime: true,
             isAllDay: true,
+            reason: true,
           },
         }),
         prisma.appointment.findMany({

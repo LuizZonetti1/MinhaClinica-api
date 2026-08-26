@@ -58,7 +58,7 @@ export class DashboardService {
       this.repository.countPatients(clinicId),
       this.repository.countAppointmentsToday(clinicId, todayStart, tomorrowStart),
       this.repository.countAppointmentsThisMonth(clinicId, firstDayOfMonth, firstDayOfNextMonth),
-      this.repository.countProfessionals(clinicId),
+      this.repository.countActiveProfessionals(clinicId),
       this.repository.getMonthlyIncome(clinicId, firstDayOfMonth, firstDayOfNextMonth),
       this.repository.getMonthlyExpense(clinicId, firstDayOfMonth, firstDayOfNextMonth),
     ]);
