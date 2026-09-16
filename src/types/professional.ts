@@ -7,7 +7,7 @@ export interface ProfessionalListItem {
   email: string;
   phone: string | null;
   status: UserStatus;
-  /** "INVITE_SENT" | "EMAIL_VERIFIED" | "COMPLETED" | "INACTIVE" | "BLOCKED" | "UNKNOWN" */
+  /** "INVITE_SENT" | "INVITE_EXPIRED" | "COMPLETED" | "INACTIVE" | "BLOCKED" | "UNKNOWN" */
   registrationStatus: string;
   avatarUrl: string | null;
   lastLoginAt: Date | null;

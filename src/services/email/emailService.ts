@@ -37,6 +37,14 @@ export class EmailService {
   sendStaffInviteEmail = (...args: Parameters<AuthEmailService["sendStaffInviteEmail"]>) =>
     this.auth.sendStaffInviteEmail(...args);
 
+  sendClinicExistingAccountEmail = (
+    ...args: Parameters<AuthEmailService["sendClinicExistingAccountEmail"]>
+  ) => this.auth.sendClinicExistingAccountEmail(...args);
+
+  sendClinicRegistrationAccountInactiveEmail = (
+    ...args: Parameters<AuthEmailService["sendClinicRegistrationAccountInactiveEmail"]>
+  ) => this.auth.sendClinicRegistrationAccountInactiveEmail(...args);
+
   sendReceptionWelcomeEmail = (
     ...args: Parameters<AuthEmailService["sendReceptionWelcomeEmail"]>
   ) => this.auth.sendReceptionWelcomeEmail(...args);

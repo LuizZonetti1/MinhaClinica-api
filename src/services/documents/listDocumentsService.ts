@@ -2,13 +2,17 @@ import { prisma } from "../../database/prisma";
 import { DocumentRepository } from "../../repository/documentRepository";
 import type { AuditContext } from "../../types/document";
 import { DocumentStatus, UserRole } from "../../types/enums";
+import { resolveAppointmentRole } from "../../utils/appointmentAccess";
 import { AuditService } from "../audit/auditService";
 
 const documentRepository = new DocumentRepository();
 const auditService = new AuditService();
 
 export class ListDocumentsService {
-  async execute(appointmentId: string, context: AuditContext & { userRole: string }) {
+  async execute(
+    appointmentId: string,
+    context: AuditContext & { userRole: string; userRoles?: string[] },
+  ) {
     // Buscar consulta para validar acesso
     const appointment = await prisma.appointment.findUnique({
       where: { id: appointmentId },
@@ -22,16 +26,27 @@ export class ListDocumentsService {
       throw Object.assign(new Error("Consulta não encontrada"), { statusCode: 404 });
     }
 
-    // Paciente não possui clinicId no token — acesso validado por ownership abaixo
-    if (context.userRole !== UserRole.PATIENT && appointment.clinicId !== context.clinicId) {
+    // Papel com que a conta acessa ESTA consulta: equipe se for da clínica
+    // ativa, paciente se for a própria consulta (em qualquer clínica).
+    const role = resolveAppointmentRole(
+      {
+        userId: context.userId,
+        clinicId: context.clinicId,
+        roles: context.userRoles ?? [context.userRole],
+      },
+      {
+        clinicId: appointment.clinicId,
+        patientUserId: appointment.patient.userId,
+        professionalUserId: appointment.professional.userId,
+      },
+    );
+    if (!role) {
       throw Object.assign(new Error("Acesso negado a esta consulta"), { statusCode: 403 });
     }
 
-    // Enriquecer contexto com clinicId da consulta (necessário para PATIENT sem clinicId no token)
-    const enrichedContext = { ...context, clinicId: context.clinicId ?? appointment.clinicId };
-
-    // Validar permissões por papel
-    const role = context.userRole;
+    // Auditoria vai para a clínica da consulta (quem acessa como paciente pode
+    // estar sem clínica ativa, ou com outra clínica ativa)
+    const enrichedContext = { ...context, clinicId: appointment.clinicId };
 
     if (role === UserRole.PATIENT) {
       // Paciente só vê documentos da própria consulta

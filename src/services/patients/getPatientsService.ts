@@ -3,7 +3,7 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
-import { AppointmentStatus } from "../../types/enums";
+import { AppointmentStatus, UserStatus } from "../../types/enums";
 import type {
   PatientAuditDetails,
   PatientAuditReportItem,
@@ -109,7 +109,8 @@ export class GetPatientsService {
         cpf: patient.cpf,
         dateOfBirth: patient.dateOfBirth,
         gender: patient.gender,
-        status: patient.user.status,
+        // Bloqueio por faltas vive no papel de paciente (Patient.blockedAt).
+        status: patient.blockedAt ? UserStatus.BLOCKED : patient.user.status,
         avatarUrl: patient.user.avatarUrl,
         lastLoginAt: patient.user.lastLoginAt,
         isActive: patient.isActive,
@@ -346,7 +347,8 @@ export class GetPatientDetailsService {
         email: patient.user.email,
         phone: patient.user.phone,
         avatarUrl: patient.user.avatarUrl,
-        status: patient.user.status,
+        // Bloqueio por faltas vive no papel de paciente (Patient.blockedAt).
+        status: patient.blockedAt ? UserStatus.BLOCKED : patient.user.status,
         isActive: patient.isActive,
         cpf: patient.cpf,
         rg: patient.rg,

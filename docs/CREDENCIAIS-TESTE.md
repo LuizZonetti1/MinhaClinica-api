@@ -24,6 +24,18 @@
 
 ---
 
+## 🔗 Conta unificada (paciente + equipe em várias clínicas)
+
+| Conta | O que ela é | Senha |
+|---|---|---|
+| `conta.unificada@email.com` | Paciente + `ADMIN` da **Centro Médico Bem Estar** (#7) + `PROFESSIONAL` da **OdontoPrime** (#2). Use o seletor "Clínica" no menu para trocar. | `Senha123!` |
+
+**Convite pendente para uma conta de paciente já existente:** `roberto.ferreira@email.com` foi convidado como `RECEPTIONIST` da **Saúde Total** (#3). Abra `http://localhost:5173/convite?token=convite-demo-roberto`, entre com a conta dele e aceite.
+
+**Cadastrar clínica com um e-mail de paciente:** use o formulário público (`/clinica/registro/inicial`) com o e-mail de qualquer paciente do seed; o link de confirmação chega no e-mail (em dev sem SMTP, aparece no console da API).
+
+---
+
 ## 🏥 Clínica 1 — Saúde Mais (São Paulo / SP)
 
 **Subdomínio:** `saudemais`

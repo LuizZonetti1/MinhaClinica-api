@@ -102,3 +102,11 @@ export const resetPasswordSchema = yup.object({
     .required("Confirmação de senha é obrigatória")
     .oneOf([yup.ref("password")], "As senhas não coincidem"),
 });
+
+/**
+ * Schema para trocar a clínica ativa da sessão
+ * POST /auth/session/clinic — clinicId null volta para a área de paciente
+ */
+export const switchClinicSchema = yup.object({
+  clinicId: yup.string().uuid("Clínica inválida").nullable().defined("Informe a clínica"),
+});

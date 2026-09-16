@@ -28,6 +28,21 @@ enum UserStatus {
   EMAIL_VERIFIED
 }
 
+// Situação do vínculo de uma conta com uma clínica (ver ClinicMembership)
+enum MembershipStatus {
+  PENDING // Cadastro de clínica ainda não confirmado pelo dono
+  ACTIVE
+  INACTIVE // Desligado ou desativado nesta clínica — não afeta a conta nem outras clínicas
+}
+
+// Situação de um convite de equipe (ver ClinicInvite)
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
 enum Gender {
   MALE
   FEMALE
@@ -202,7 +217,9 @@ model Clinic {
   updatedAt DateTime @updatedAt
 
   // Relacionamentos
-  users            User[]
+  memberships      ClinicMembership[]
+  invites          ClinicInvite[]
+  activeUsers      User[]               @relation("UserActiveClinic")
   settings         ClinicSettings?
   workingHours     ClinicWorkingHours[]
   holidays         ClinicHoliday[]
@@ -311,9 +328,15 @@ model ClinicHoliday {
 // ========================================
 
 model User {
-  id       String  @id @default(uuid())
-  clinicId String?
-  clinic   Clinic? @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  id String @id @default(uuid())
+
+  // Uma conta por e-mail, que pode ter vários papéis: paciente (global, via
+  // Patient) e equipe em quantas clínicas quiser (via ClinicMembership).
+  // activeClinicId é só a preferência de qual clínica abrir no login — nunca
+  // prova vínculo. SetNull: excluir a clínica não pode apagar a conta, que
+  // pode ser paciente em outras clínicas.
+  activeClinicId String?
+  activeClinic   Clinic? @relation("UserActiveClinic", fields: [activeClinicId], references: [id], onDelete: SetNull)
 
   // Dados pessoais
   name  String
@@ -323,8 +346,10 @@ model User {
 
   // Autenticação
   password String // Hash bcrypt
+  // Tipo de conta na origem (como a conta nasceu). NÃO é usado para
+  // autorização: os papéis de verdade são derivados de ClinicMembership (da
+  // clínica ativa) + Patient — ver services/auth/sessionContext.ts.
   role     UserRole
-  roles    UserRole[] // Todos os papéis ativos do usuário (multi-role)
   status   UserStatus @default(ACTIVE)
 
   // Controle de acesso
@@ -360,33 +385,88 @@ model User {
 
   // Autenticação em dois fatores (via email OTP + dispositivo confiável)
   twoFactorEnabled     Boolean   @default(false)
-  twoFactorOtp         String?   // Código OTP temporário (hash SHA-256)
+  twoFactorOtp         String? // Código OTP temporário (hash SHA-256)
   twoFactorOtpExpires  DateTime? // Expiração do OTP
   twoFactorOtpAttempts Int       @default(0) // Tentativas de validação desde o último OTP gerado
-
-  // Especialidade pendente (para profissionais em processo de convite)
-  pendingSpecialtyId String?
 
   // Metadata
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  // Preenchido ao remover uma recepcionista (soft delete + anonimização) —
-  // não há model dedicado para recepcionista como há Professional, então o
-  // tombstone é marcado aqui mesmo. Não usado para ADMIN/PROFESSIONAL/PATIENT.
+  // Preenchido só quando a CONTA é anonimizada — ao desligar da equipe alguém
+  // que não tem mais nenhum outro vínculo nem papel de paciente. Desligar de
+  // uma clínica, por si só, marca ClinicMembership.deletedAt.
   deletedAt DateTime?
 
   // Relacionamentos
-  professional          Professional?
+  memberships           ClinicMembership[]
+  professionals         Professional[]
   patient               Patient?
   trustedDevices        TrustedDevice[]
-  createdAuditLogs      AuditLog[]     @relation("AuditLogUser")
-  receivedNotifications Notification[] @relation("NotificationRecipient")
-  sentNotifications     Notification[] @relation("NotificationSender")
+  createdAuditLogs      AuditLog[]         @relation("AuditLogUser")
+  receivedNotifications Notification[]     @relation("NotificationRecipient")
+  sentNotifications     Notification[]     @relation("NotificationSender")
 
-  @@unique([email]) // Email globalmente único
-  @@unique([clinicId, email]) // Email único por clínica (staff/admin)
-  @@index([clinicId, role])
+  @@unique([email]) // Email globalmente único — uma conta por e-mail
   @@map("users")
+}
+
+// ========================================
+// VÍNCULOS COM CLÍNICAS E CONVITES
+// ========================================
+
+// Vínculo de uma conta com uma clínica. Uma mesma conta pode ser equipe em
+// várias clínicas; os papéis valem só dentro da clínica do vínculo.
+model ClinicMembership {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  // Apenas papéis de equipe (ADMIN, RECEPTIONIST, PROFESSIONAL). PATIENT é
+  // global e vive em Patient.
+  roles  UserRole[]
+  status MembershipStatus @default(ACTIVE)
+
+  // Aceite dos termos como equipe desta clínica — separado do aceite como
+  // paciente (User.termsAcceptedAt).
+  termsAcceptedAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Desligado desta clínica
+
+  @@unique([userId, clinicId])
+  @@index([clinicId, status])
+  @@map("clinic_memberships")
+}
+
+// Convite para entrar na equipe de uma clínica. Não cria conta: quem já tem
+// conta aceita logado; quem não tem cria a conta ao aceitar.
+model ClinicInvite {
+  id       String @id @default(uuid())
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  email       String // Sempre minúsculo
+  name        String
+  role        UserRole // ADMIN, RECEPTIONIST ou PROFESSIONAL
+  specialtyId String? // Especialidade primária (convite de profissional)
+
+  tokenHash String       @unique // SHA-256 do token enviado por e-mail
+  expiresAt DateTime
+  status    InviteStatus @default(PENDING)
+
+  invitedById      String? // userId do ADMIN que convidou
+  acceptedByUserId String?
+  acceptedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clinicId, status])
+  @@index([email])
+  @@map("clinic_invites")
 }
 
 // ========================================
@@ -440,7 +520,8 @@ model Professional {
   clinicId String
   clinic   Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 
-  userId String @unique
+  // Um registro por clínica: a mesma conta pode ser profissional em várias.
+  userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Dados profissionais
@@ -482,6 +563,7 @@ model Professional {
   medicalRecords  MedicalRecord[]
   patientComments PatientComment[]
 
+  @@unique([userId, clinicId])
   @@unique([clinicId, professionalCouncil, registrationNumber])
   @@map("professionals")
 }
@@ -591,9 +673,12 @@ model Patient {
   // especificamente (setado por reconcilePatient ao adicionar/remover o
   // papel), não o estado de login da conta. Ver comentário análogo em
   // Professional.isActive e updateUserRolesService.ts.
-  isActive          Boolean @default(true)
-  noShowCount       Int     @default(0)
-  totalAppointments Int     @default(0)
+  isActive          Boolean   @default(true)
+  // Bloqueio por faltas (AutoNoShowService). Vale só para o papel de paciente:
+  // quem também é equipe continua entrando nas clínicas onde trabalha.
+  blockedAt         DateTime?
+  noShowCount       Int       @default(0)
+  totalAppointments Int       @default(0)
 
   // Metadata
   createdAt DateTime @default(now())

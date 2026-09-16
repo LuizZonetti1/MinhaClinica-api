@@ -1,7 +1,9 @@
 ﻿import crypto from "crypto";
 import { prisma } from "../../database/prisma";
-import { generateAuthToken, verifyTwoFactorPendingToken } from "../../utils/jwtUtils";
+import { MembershipStatus, UserStatus } from "../../types/enums";
+import { verifyTwoFactorPendingToken } from "../../utils/jwtUtils";
 import { AuthEmailService, createEmailProvider } from "../email/emailService";
+import { IssueSessionService } from "./issueSessionService";
 
 const OTP_EXPIRES_MINUTES = 10;
 const DEVICE_TRUSTED_DAYS = 7;
@@ -14,7 +16,9 @@ function hashOtp(otp: string): string {
 
 /**
  * 2FA é exigido quando o próprio usuário ativou (User.twoFactorEnabled) OU
- * quando a clínica impõe a política (ClinicSettings.twoFactorEnabled).
+ * quando QUALQUER clínica em que a conta trabalha impõe a política
+ * (ClinicSettings.twoFactorEnabled) — a sessão pode trocar de clínica sem novo
+ * login. Espelha SessionContext.twoFactorRequired.
  *
  * LoginService decide mandar o OTP por este mesmo critério — se Send/Resend/
  * Validate checassem só o campo individual, toda clínica que ligasse a
@@ -23,16 +27,20 @@ function hashOtp(otp: string): string {
  */
 export type TwoFactorGateUser = {
   twoFactorEnabled: boolean;
-  clinic?: { settings?: { twoFactorEnabled: boolean } | null } | null;
+  memberships?: { clinic: { settings?: { twoFactorEnabled: boolean } | null } }[];
 };
 
 export const isTwoFactorRequired = (user: TwoFactorGateUser): boolean =>
-  user.twoFactorEnabled || user.clinic?.settings?.twoFactorEnabled === true;
+  user.twoFactorEnabled ||
+  (user.memberships ?? []).some((m) => m.clinic.settings?.twoFactorEnabled === true);
 
 /** Select do Prisma que alimenta isTwoFactorRequired. */
 export const TWO_FACTOR_GATE_SELECT = {
   twoFactorEnabled: true,
-  clinic: { select: { settings: { select: { twoFactorEnabled: true } } } },
+  memberships: {
+    where: { status: MembershipStatus.ACTIVE, deletedAt: null },
+    select: { clinic: { select: { settings: { select: { twoFactorEnabled: true } } } } },
+  },
 } as const;
 
 // â”€â”€ 1. Enviar OTP por email â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -110,27 +118,17 @@ export class ValidateOtpService {
         twoFactorOtp: true,
         twoFactorOtpExpires: true,
         twoFactorOtpAttempts: true,
-        twoFactorEnabled: true,
         status: true,
-        // settings.twoFactorEnabled entra aqui junto do tradeName porque
-        // a política da clínica também habilita o 2FA (isTwoFactorRequired).
-        // sessionTimeoutMinutes vai na resposta para o frontend aplicar o
-        // timeout de inatividade — mesmo contrato do LoginService.
-        clinic: {
-          select: {
-            tradeName: true,
-            settings: { select: { twoFactorEnabled: true, sessionTimeoutMinutes: true } },
-          },
-        },
-        clinicId: true,
-        role: true,
-        roles: true,
-        name: true,
-        email: true,
+        ...TWO_FACTOR_GATE_SELECT,
       },
     });
 
     if (!user) throw new Error("Usuário não encontrado");
+    // Conta bloqueada ou desativada entre o login e o código (janela de 5 min)
+    // não pode sair daqui com sessão.
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new Error("Conta inativa. Faça login novamente.");
+    }
     if (!isTwoFactorRequired(user)) {
       throw new Error("Autenticação em dois fatores não está configurada");
     }
@@ -172,7 +170,6 @@ export class ValidateOtpService {
           twoFactorOtp: null,
           twoFactorOtpExpires: null,
           twoFactorOtpAttempts: 0,
-          lastLoginAt: new Date(),
         },
       }),
       // Cria dispositivo confiável
@@ -186,23 +183,17 @@ export class ValidateOtpService {
       }),
     ]);
 
-    const token = generateAuthToken(user.id, user.clinicId, user.role, user.name, {}, user.roles);
+    // Mesma sessão do login (papéis efetivos recalculados agora), abrindo na
+    // clínica escolhida quando o código foi pedido.
+    const session = await new IssueSessionService().execute(user.id, {
+      clinicId: payload.clinicId,
+    });
 
     return {
-      token,
+      token: session.accessToken,
       deviceToken,
-      sessionTimeoutMinutes: user.clinicId
-        ? (user.clinic?.settings?.sessionTimeoutMinutes ?? null)
-        : null,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        roles: user.roles.length > 0 ? user.roles : [user.role],
-        clinicId: user.clinicId,
-        clinicName: user.clinic?.tradeName ?? null,
-      },
+      sessionTimeoutMinutes: session.sessionTimeoutMinutes,
+      user: session.user,
     };
   }
 }

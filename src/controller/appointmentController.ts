@@ -151,17 +151,12 @@ export class AppointmentController {
    */
   async getById(req: Request, res: Response): Promise<void> {
     try {
-      const clinicId = req.clinicId;
-      if (!clinicId) {
-        res.status(401).json({ error: "Não autenticado" });
-        return;
-      }
-
       const appointmentId = req.params.id as string;
       const service = new GetAppointmentByIdService();
-      const result = await service.execute(appointmentId, clinicId, {
+      const result = await service.execute(appointmentId, req.clinicId ?? null, {
         userId: req.userId,
         userRole: req.userRole,
+        userRoles: req.userRoles,
       });
       res.status(200).json(result);
     } catch (error) {

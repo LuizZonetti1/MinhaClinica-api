@@ -1,5 +1,8 @@
 import { prisma } from "../database/prisma";
+import { ROLE_PRIORITY } from "../utils/roles";
+import type { UserRole } from "../types/enums";
 import type { CreateNotificationInput, NotificationItem } from "../types/notification";
+import { activeMemberOf } from "./membershipRepository";
 import type { NotificationChannel, NotificationStatus, NotificationType } from "../../generated/prisma";
 
 export class NotificationRepository {
@@ -22,10 +25,14 @@ export class NotificationRepository {
         });
     }
 
-    async listForUser(userId: string, clinicId: string | null): Promise<NotificationItem[]> {
+    /**
+     * Notificações endereçadas à conta, de TODAS as clínicas. Filtrar pela
+     * clínica ativa escondia de quem é paciente e equipe os lembretes e avisos
+     * das consultas em outras clínicas — recipientUserId já garante a posse.
+     */
+    async listForUser(userId: string): Promise<NotificationItem[]> {
         const rows = await prisma.notification.findMany({
             where: {
-                ...(clinicId ? { clinicId } : {}),
                 recipientUserId: userId,
             },
             orderBy: { createdAt: "desc" },
@@ -60,10 +67,9 @@ export class NotificationRepository {
         }));
     }
 
-    async countUnread(userId: string, clinicId: string | null): Promise<number> {
+    async countUnread(userId: string): Promise<number> {
         return prisma.notification.count({
             where: {
-                ...(clinicId ? { clinicId } : {}),
                 recipientUserId: userId,
                 readAt: null,
                 status: { not: "FAILED" },
@@ -78,10 +84,9 @@ export class NotificationRepository {
         });
     }
 
-    async markAllRead(userId: string, clinicId: string | null) {
+    async markAllRead(userId: string) {
         return prisma.notification.updateMany({
             where: {
-                ...(clinicId ? { clinicId } : {}),
                 recipientUserId: userId,
                 readAt: null,
             },
@@ -89,15 +94,15 @@ export class NotificationRepository {
         });
     }
 
-    /** Retorna todos os usuários ativos de uma clínica para envio de comunicados */
+    /**
+     * Equipe ativa de uma clínica (vínculo ativo), opcionalmente filtrada por
+     * papel — vale para quem acumula papéis, não só pelo papel de origem.
+     */
     async findActiveClinicUsers(clinicId: string, roleFilter?: string[]) {
         return prisma.user.findMany({
             where: {
-                clinicId,
                 status: "ACTIVE",
-                ...(roleFilter && roleFilter.length > 0
-                    ? { role: { in: roleFilter as never[] } }
-                    : {}),
+                ...activeMemberOf(clinicId, roleFilter as UserRole[] | undefined),
             },
             select: {
                 id: true,
@@ -210,15 +215,30 @@ export class NotificationRepository {
     }
 
     async searchClinicUsers(clinicId: string, q: string) {
-        return prisma.user.findMany({
+        const users = await prisma.user.findMany({
             where: {
-                clinicId,
                 status: "ACTIVE",
                 name: { contains: q, mode: "insensitive" },
+                ...activeMemberOf(clinicId),
             },
-            select: { id: true, name: true, email: true, phone: true, role: true },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                memberships: { where: { clinicId }, select: { roles: true } },
+            },
             take: 10,
         });
+
+        // `role` = papel de maior prioridade NESTA clínica.
+        return users.map(({ memberships, ...u }) => ({
+            ...u,
+            role:
+                ROLE_PRIORITY.find((r) => memberships[0]?.roles.includes(r)) ??
+                memberships[0]?.roles[0] ??
+                null,
+        }));
     }
 
     async deleteById(id: string, userId: string) {

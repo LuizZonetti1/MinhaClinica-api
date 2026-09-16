@@ -14,6 +14,8 @@ import {
   UserRole,
   UserStatus,
 } from "../types/enums";
+import type { Prisma } from "../../generated/prisma";
+import { hashToken } from "../utils/verificationTokenUtils";
 import { prisma } from "./prisma";
 
 // ---------------------------------------------------------------------------
@@ -56,6 +58,36 @@ function today(): Date {
   return d;
 }
 
+/**
+ * Cria a conta e, para equipe, o vínculo com a clínica (ClinicMembership).
+ * Paciente é global: o `clinicId` informado para ele só indica em qual bloco
+ * do seed ele nasce e é descartado — igual à produção.
+ */
+async function createSeedUser(args: {
+  data: Omit<Prisma.UserUncheckedCreateInput, "activeClinicId"> & { clinicId?: string };
+}) {
+  const { clinicId, ...data } = args.data;
+  const isStaff = data.role !== UserRole.PATIENT;
+
+  const user = await prisma.user.create({
+    data: { ...data, activeClinicId: clinicId && isStaff ? clinicId : null },
+  });
+
+  if (clinicId && isStaff) {
+    await prisma.clinicMembership.create({
+      data: {
+        userId: user.id,
+        clinicId,
+        roles: [data.role],
+        status: data.status === UserStatus.ACTIVE ? "ACTIVE" : "INACTIVE",
+        termsAcceptedAt: (data.termsAcceptedAt as Date | undefined) ?? null,
+      },
+    });
+  }
+
+  return user;
+}
+
 async function main() {
   console.log("🌱 Iniciando seed do banco de dados...\n");
 
@@ -76,6 +108,8 @@ async function main() {
   await prisma.patientComment.deleteMany({});
   await prisma.professional.deleteMany({});
   await prisma.patient.deleteMany({});
+  await prisma.clinicInvite.deleteMany({});
+  await prisma.clinicMembership.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.specialty.deleteMany({});
   await prisma.clinicHoliday.deleteMany({});
@@ -285,7 +319,7 @@ async function main() {
   console.log("\n👥 Criando usuários da Clínica 1...");
 
   // Admin
-  const admin1 = await prisma.user.create({
+  const admin1 = await createSeedUser({
     data: {
       clinicId: clinic1.id,
       name: "Dr. Carlos Silva",
@@ -304,7 +338,7 @@ async function main() {
   });
 
   // Recepcionistas
-  const recep1 = await prisma.user.create({
+  const recep1 = await createSeedUser({
     data: {
       clinicId: clinic1.id,
       name: "Ana Paula Santos",
@@ -320,7 +354,7 @@ async function main() {
       privacyAcceptedAt: new Date(),
     },
   });
-  const recep2 = await prisma.user.create({
+  const recep2 = await createSeedUser({
     data: {
       clinicId: clinic1.id,
       name: "Marcos Ferreira",
@@ -338,7 +372,7 @@ async function main() {
   });
 
   // Profissional 1 — Cardiologista
-  const profUser1 = await prisma.user.create({
+  const profUser1 = await createSeedUser({
     data: {
       clinicId: clinic1.id,
       name: "Dra. Maria Oliveira",
@@ -410,7 +444,7 @@ async function main() {
   });
 
   // Profissional 2 — Ortodontista
-  const profUser2 = await prisma.user.create({
+  const profUser2 = await createSeedUser({
     data: {
       clinicId: clinic1.id,
       name: "Dr. João Mendes",
@@ -472,7 +506,7 @@ async function main() {
   });
 
   // Profissional 3 — Fisioterapeuta
-  const profUser3 = await prisma.user.create({
+  const profUser3 = await createSeedUser({
     data: {
       clinicId: clinic1.id,
       name: "Dra. Fernanda Lima",
@@ -665,7 +699,7 @@ async function main() {
       totalAppointments?: number;
     },
   ) => {
-    const user = await prisma.user.create({
+    const user = await createSeedUser({
       data: {
         clinicId: clinic1.id,
         name: userData.name,
@@ -1589,7 +1623,7 @@ async function main() {
     }),
   ]);
 
-  const admin2 = await prisma.user.create({
+  const admin2 = await createSeedUser({
     data: {
       clinicId: clinic2.id,
       name: "Dr. Ricardo Alves",
@@ -1606,7 +1640,7 @@ async function main() {
     },
   });
 
-  const c2ProfUser = await prisma.user.create({
+  const c2ProfUser = await createSeedUser({
     data: {
       clinicId: clinic2.id,
       name: "Dra. Beatriz Nunes",
@@ -1704,7 +1738,7 @@ async function main() {
   });
 
   // Pacientes Clínica 2
-  const c2PatUser1 = await prisma.user.create({
+  const c2PatUser1 = await createSeedUser({
     data: {
       clinicId: clinic2.id,
       name: "Gustavo Ribeiro",
@@ -1738,7 +1772,7 @@ async function main() {
     },
   });
 
-  const c2PatUser2 = await prisma.user.create({
+  const c2PatUser2 = await createSeedUser({
     data: {
       clinicId: clinic2.id,
       name: "Sofia Martins",
@@ -1962,7 +1996,7 @@ async function main() {
     }),
   ]);
 
-  const c3Admin = await prisma.user.create({
+  const c3Admin = await createSeedUser({
     data: {
       clinicId: clinic3.id,
       name: "Dr. Carlos Drummond",
@@ -1979,7 +2013,7 @@ async function main() {
       lastLoginAt: new Date(),
     },
   });
-  const c3RecepUser = await prisma.user.create({
+  const c3RecepUser = await createSeedUser({
     data: {
       clinicId: clinic3.id,
       name: "Luana Borges",
@@ -1996,7 +2030,7 @@ async function main() {
     },
   });
 
-  const c3ProfUser1 = await prisma.user.create({
+  const c3ProfUser1 = await createSeedUser({
     data: {
       clinicId: clinic3.id,
       name: "Dr. Paulo Vieira",
@@ -2067,7 +2101,7 @@ async function main() {
     ],
   });
 
-  const c3ProfUser2 = await prisma.user.create({
+  const c3ProfUser2 = await createSeedUser({
     data: {
       clinicId: clinic3.id,
       name: "Dra. Renata Campos",
@@ -2163,7 +2197,7 @@ async function main() {
   });
 
   // Pacientes Clínica 3
-  const c3PatUser1 = await prisma.user.create({
+  const c3PatUser1 = await createSeedUser({
     data: {
       clinicId: clinic3.id,
       name: "Carla Moura",
@@ -2197,7 +2231,7 @@ async function main() {
     },
   });
 
-  const c3PatUser2 = await prisma.user.create({
+  const c3PatUser2 = await createSeedUser({
     data: {
       clinicId: clinic3.id,
       name: "Thiago Xavier",
@@ -2231,7 +2265,7 @@ async function main() {
     },
   });
 
-  const c3PatUser3 = await prisma.user.create({
+  const c3PatUser3 = await createSeedUser({
     data: {
       clinicId: clinic3.id,
       name: "Patrícia Rocha",
@@ -2521,7 +2555,7 @@ async function main() {
     }),
   ]);
 
-  const c4Admin = await prisma.user.create({
+  const c4Admin = await createSeedUser({
     data: {
       clinicId: clinic4.id,
       name: "Dra. Alice Nunes",
@@ -2539,7 +2573,7 @@ async function main() {
     },
   });
 
-  const c4ProfUser1 = await prisma.user.create({
+  const c4ProfUser1 = await createSeedUser({
     data: {
       clinicId: clinic4.id,
       name: "Dra. Alice Nunes",
@@ -2602,7 +2636,7 @@ async function main() {
     ],
   });
 
-  const c4ProfUser2 = await prisma.user.create({
+  const c4ProfUser2 = await createSeedUser({
     data: {
       clinicId: clinic4.id,
       name: "Dr. Marcos Pereira",
@@ -2687,7 +2721,7 @@ async function main() {
     ],
   });
 
-  const c4PatUser1 = await prisma.user.create({
+  const c4PatUser1 = await createSeedUser({
     data: {
       clinicId: clinic4.id,
       name: "Lúcia Fonseca",
@@ -2721,7 +2755,7 @@ async function main() {
     },
   });
 
-  const c4PatUser2 = await prisma.user.create({
+  const c4PatUser2 = await createSeedUser({
     data: {
       clinicId: clinic4.id,
       name: "Diego Santos",
@@ -2756,7 +2790,7 @@ async function main() {
     },
   });
 
-  const c4PatUser3 = await prisma.user.create({
+  const c4PatUser3 = await createSeedUser({
     data: {
       clinicId: clinic4.id,
       name: "Mariana Duarte",
@@ -3043,7 +3077,7 @@ async function main() {
     }),
   ]);
 
-  const c5Admin = await prisma.user.create({
+  const c5Admin = await createSeedUser({
     data: {
       clinicId: clinic5.id,
       name: "Dra. Elaine Braga",
@@ -3061,7 +3095,7 @@ async function main() {
     },
   });
 
-  const c5ProfUser1 = await prisma.user.create({
+  const c5ProfUser1 = await createSeedUser({
     data: {
       clinicId: clinic5.id,
       name: "Dr. Rafael Moreira",
@@ -3142,7 +3176,7 @@ async function main() {
     ],
   });
 
-  const c5ProfUser2 = await prisma.user.create({
+  const c5ProfUser2 = await createSeedUser({
     data: {
       clinicId: clinic5.id,
       name: "Dra. Natália Aquino",
@@ -3230,7 +3264,7 @@ async function main() {
     ],
   });
 
-  const c5PatUser1 = await prisma.user.create({
+  const c5PatUser1 = await createSeedUser({
     data: {
       clinicId: clinic5.id,
       name: "Elisa Brunetti",
@@ -3265,7 +3299,7 @@ async function main() {
     },
   });
 
-  const c5PatUser2 = await prisma.user.create({
+  const c5PatUser2 = await createSeedUser({
     data: {
       clinicId: clinic5.id,
       name: "Gabriel Nogueira",
@@ -3299,7 +3333,7 @@ async function main() {
     },
   });
 
-  const c5PatUser3 = await prisma.user.create({
+  const c5PatUser3 = await createSeedUser({
     data: {
       clinicId: clinic5.id,
       name: "Ana Lima",
@@ -3606,7 +3640,7 @@ async function main() {
     }),
   ]);
 
-  const c6Admin = await prisma.user.create({
+  const c6Admin = await createSeedUser({
     data: {
       clinicId: clinic6.id,
       name: "Dr. Henrique Ramos",
@@ -3624,7 +3658,7 @@ async function main() {
     },
   });
 
-  const c6ProfUser1 = await prisma.user.create({
+  const c6ProfUser1 = await createSeedUser({
     data: {
       clinicId: clinic6.id,
       name: "Dra. Isabela Cunha",
@@ -3739,7 +3773,7 @@ async function main() {
     ],
   });
 
-  const c6PatUser1 = await prisma.user.create({
+  const c6PatUser1 = await createSeedUser({
     data: {
       clinicId: clinic6.id,
       name: "Henrique Carvalho",
@@ -3773,7 +3807,7 @@ async function main() {
     },
   });
 
-  const c6PatUser2 = await prisma.user.create({
+  const c6PatUser2 = await createSeedUser({
     data: {
       clinicId: clinic6.id,
       name: "Vanessa Teixeira",
@@ -4040,7 +4074,7 @@ async function main() {
     }),
   ]);
 
-  const c7Admin = await prisma.user.create({
+  const c7Admin = await createSeedUser({
     data: {
       clinicId: clinic7.id,
       name: "Dr. Fábio Monteiro",
@@ -4058,7 +4092,7 @@ async function main() {
     },
   });
 
-  const c7ProfUser1 = await prisma.user.create({
+  const c7ProfUser1 = await createSeedUser({
     data: {
       clinicId: clinic7.id,
       name: "Dr. Fábio Monteiro",
@@ -4115,7 +4149,7 @@ async function main() {
     ],
   });
 
-  const c7ProfUser2 = await prisma.user.create({
+  const c7ProfUser2 = await createSeedUser({
     data: {
       clinicId: clinic7.id,
       name: "Dra. Silvana Prado",
@@ -4203,7 +4237,7 @@ async function main() {
     ],
   });
 
-  const c7PatUser1 = await prisma.user.create({
+  const c7PatUser1 = await createSeedUser({
     data: {
       clinicId: clinic7.id,
       name: "Wellington Brito",
@@ -4238,7 +4272,7 @@ async function main() {
     },
   });
 
-  const c7PatUser2 = await prisma.user.create({
+  const c7PatUser2 = await createSeedUser({
     data: {
       clinicId: clinic7.id,
       name: "Flávia Sousa",
@@ -4512,7 +4546,7 @@ async function main() {
     }),
   ]);
 
-  const c8Admin = await prisma.user.create({
+  const c8Admin = await createSeedUser({
     data: {
       clinicId: clinic8.id,
       name: "Dr. Igor Pinheiro",
@@ -4530,7 +4564,7 @@ async function main() {
     },
   });
 
-  const c8ProfUser1 = await prisma.user.create({
+  const c8ProfUser1 = await createSeedUser({
     data: {
       clinicId: clinic8.id,
       name: "Dr. Igor Pinheiro",
@@ -4608,7 +4642,7 @@ async function main() {
     ],
   });
 
-  const c8ProfUser2 = await prisma.user.create({
+  const c8ProfUser2 = await createSeedUser({
     data: {
       clinicId: clinic8.id,
       name: "Dra. Camila Whitfield",
@@ -4696,7 +4730,7 @@ async function main() {
     ],
   });
 
-  const c8PatUser1 = await prisma.user.create({
+  const c8PatUser1 = await createSeedUser({
     data: {
       clinicId: clinic8.id,
       name: "Igor Pinheiro Jr",
@@ -4730,7 +4764,7 @@ async function main() {
     },
   });
 
-  const c8PatUser2 = await prisma.user.create({
+  const c8PatUser2 = await createSeedUser({
     data: {
       clinicId: clinic8.id,
       name: "Camila Silva Porto",
@@ -4881,6 +4915,90 @@ async function main() {
   );
 
   // ========================================
+  // CONTA UNIFICADA (paciente + equipe em várias clínicas)
+  // ========================================
+  console.log("🔗 Criando conta unificada de demonstração...");
+
+  // Uma só conta (um e-mail): paciente, dona da Bem Estar (#7) e profissional
+  // da OdontoPrime (#2). Serve para testar o seletor de clínica e o menu
+  // mesclado.
+  const unifiedUser = await prisma.user.create({
+    data: {
+      name: "Luiza Conta Unificada",
+      cpf: "52998224725",
+      email: "conta.unificada@email.com",
+      phone: "31988887777",
+      password: hashedPassword,
+      role: UserRole.PATIENT,
+      status: UserStatus.ACTIVE,
+      mustChangePassword: false,
+      termsAcceptedAt: new Date(),
+      privacyAcceptedAt: new Date(),
+      activeClinicId: clinic7.id,
+    },
+  });
+  await prisma.patient.create({
+    data: {
+      userId: unifiedUser.id,
+      cpf: "52998224725",
+      dateOfBirth: new Date("1988-04-12"),
+      gender: Gender.FEMALE,
+      city: "Belo Horizonte",
+      state: "MG",
+    },
+  });
+  await prisma.clinicMembership.create({
+    data: {
+      userId: unifiedUser.id,
+      clinicId: clinic7.id,
+      roles: [UserRole.ADMIN],
+      status: "ACTIVE",
+      termsAcceptedAt: new Date(),
+    },
+  });
+  await prisma.clinicMembership.create({
+    data: {
+      userId: unifiedUser.id,
+      clinicId: clinic2.id,
+      roles: [UserRole.PROFESSIONAL],
+      status: "ACTIVE",
+      termsAcceptedAt: new Date(),
+    },
+  });
+  const unifiedSpecialty = await prisma.specialty.upsert({
+    where: { clinicId_name: { clinicId: clinic2.id, name: "Ortodontia" } },
+    update: {},
+    create: { clinicId: clinic2.id, name: "Ortodontia" },
+  });
+  await prisma.professional.create({
+    data: {
+      userId: unifiedUser.id,
+      clinicId: clinic2.id,
+      professionalCouncil: "CRO",
+      registrationNumber: "99001",
+      registrationState: "RJ",
+      defaultAppointmentDuration: 45,
+      specialties: { create: { specialtyId: unifiedSpecialty.id, isPrimary: true } },
+    },
+  });
+
+  // Convite pendente para uma conta de PACIENTE já existente (Roberto, #1),
+  // com token conhecido para testar o aceite em dev:
+  //   http://localhost:5173/convite?token=convite-demo-roberto
+  await prisma.clinicInvite.create({
+    data: {
+      clinicId: clinic3.id,
+      email: "roberto.ferreira@email.com",
+      name: "Roberto Ferreira",
+      role: UserRole.RECEPTIONIST,
+      tokenHash: hashToken("convite-demo-roberto"),
+      expiresAt: daysFromNow(30),
+    },
+  });
+
+  console.log("  ✅ Conta unificada e convite de demonstração criados\n");
+
+  // ========================================
   // RESUMO FINAL
   // ========================================
   console.log("=".repeat(65));
@@ -4952,6 +5070,14 @@ async function main() {
     "   admin@vitasaude.com.br | igor.pinheiro@vitasaude.com.br | camila.whitfield@vitasaude.com.br",
   );
   console.log("   igorjr.pinheiro@email.com | camila.porto@email.com");
+  console.log("\n   [Conta unificada]");
+  console.log(
+    "   conta.unificada@email.com → paciente + ADMIN da Bem Estar + profissional da OdontoPrime",
+  );
+  console.log(
+    "   Convite pendente (Saúde Total, recepção) para roberto.ferreira@email.com:",
+  );
+  console.log("   /convite?token=convite-demo-roberto");
   console.log("=".repeat(65));
 }
 

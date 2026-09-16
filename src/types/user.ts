@@ -1,7 +1,6 @@
 import type { Gender, UserRole, UserStatus } from "./enums";
 
 export interface CreateUserInput {
-  clinicId?: string | null;
   name: string;
   cpf?: string | null; // Opcional — preenchido na Etapa 3
   email: string;
@@ -94,29 +93,10 @@ export interface InviteStaffInput {
   role: Extract<UserRole, "RECEPTIONIST" | "ADMIN">;
 }
 
-export interface CompleteStaffInput {
-  cpf: string;
-  phone: string;
-  password: string;
-  termsAccepted: boolean;
-}
-
 export interface InviteProfessionalInput {
   name: string;
   email: string;
   specialty: string;
-}
-
-export interface CompleteProfessionalInput {
-  cpf: string;
-  phone: string;
-  password: string;
-  professionalCouncil: string;
-  registrationNumber: string;
-  registrationState: string;
-  defaultAppointmentDuration?: number;
-  formations?: string;
-  termsAccepted: boolean;
 }
 
 export interface UpdateProfessionalInput {

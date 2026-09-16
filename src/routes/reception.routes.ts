@@ -3,13 +3,13 @@ import { ProfileController } from "../controller/profileController";
 import { ReceptionDashboardController } from "../controller/receptionDashboardController";
 import { ReceptionPatientsController } from "../controller/receptionPatientsController";
 import { StaffController } from "../controller/staffController";
-import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
+import { authMiddleware, checkRole } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
 import {
   rescheduleAppointmentSchema,
   updateAppointmentStatusSchema,
 } from "../schemas/appointmentSchema";
-import { completeStaffSchema, updateReceptionSchema } from "../schemas/staffSchema";
+import { updateReceptionSchema } from "../schemas/staffSchema";
 import { UserRole } from "../types/enums";
 
 const router = Router();
@@ -130,15 +130,6 @@ router.get(
  */
 router.get("/", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
   staffController.getAllReceptionists(req, res),
-);
-
-/**
- * PROTEGIDO (tempToken) — Completar cadastro apos verificar email
- * POST /api/reception/complete
- * Requer: Authorization: Bearer <tempToken>
- */
-router.post("/complete", tempRegistrationAuth, validate(completeStaffSchema), (req, res) =>
-  staffController.complete(req, res),
 );
 
 /**

@@ -11,6 +11,7 @@ import {
   updateDocumentSchema,
 } from "../schemas/documentSchema";
 import { UserRole } from "../types/enums";
+import { resolveAppointmentRole } from "../utils/appointmentAccess";
 
 const router = Router({ mergeParams: true });
 const controller = new DocumentController();
@@ -170,7 +171,6 @@ router.get(
       const attachmentId = String(req.params.attachmentId);
       const userId = req.userId as string;
       const clinicId = req.clinicId as string | null;
-      const role = req.userRole as string;
 
       const attachment = await prisma.documentAttachment.findUnique({
         where: { id: attachmentId },
@@ -180,6 +180,7 @@ router.get(
               appointment: {
                 include: {
                   patient: { select: { userId: true } },
+                  professional: { select: { userId: true } },
                 },
               },
             },
@@ -192,10 +193,17 @@ router.get(
       }
 
       const doc = attachment.document;
-      const isStaff = ["ADMIN", "RECEPTIONIST", "PROFESSIONAL"].includes(role);
-      const allowed = isStaff
-        ? doc.clinicId === clinicId
-        : doc.appointment.patient.userId === userId;
+      // Equipe da clínica ativa ou a própria paciente da consulta (em qualquer
+      // clínica) — decidido pela conta toda, não só pelo papel principal.
+      const allowed =
+        resolveAppointmentRole(
+          { userId, clinicId, roles: req.userRoles ?? [] },
+          {
+            clinicId: doc.clinicId,
+            patientUserId: doc.appointment.patient.userId,
+            professionalUserId: doc.appointment.professional.userId,
+          },
+        ) !== null;
 
       if (!allowed) {
         return res.status(403).json({ message: "Acesso negado." });

@@ -2,6 +2,7 @@ import { prisma } from "../../database/prisma";
 import { DocumentRepository } from "../../repository/documentRepository";
 import type { AuditContext } from "../../types/document";
 import { DocumentStatus, UserRole } from "../../types/enums";
+import { resolveAppointmentRole } from "../../utils/appointmentAccess";
 import { AuditService } from "../audit/auditService";
 
 const documentRepository = new DocumentRepository();
@@ -11,7 +12,7 @@ export class ViewDocumentService {
   async execute(
     appointmentId: string,
     docId: string,
-    context: AuditContext & { userRole: string },
+    context: AuditContext & { userRole: string; userRoles?: string[] },
   ) {
     const document = await documentRepository.findById(docId);
 
@@ -21,11 +22,6 @@ export class ViewDocumentService {
 
     if (document.appointmentId !== appointmentId) {
       throw Object.assign(new Error("Documento não pertence a esta consulta"), { statusCode: 404 });
-    }
-
-    // Paciente não possui clinicId no token — acesso validado por ownership abaixo
-    if (context.userRole !== UserRole.PATIENT && document.clinicId !== context.clinicId) {
-      throw Object.assign(new Error("Acesso negado"), { statusCode: 403 });
     }
 
     // Buscar dados da consulta para validar propriedade
@@ -70,10 +66,25 @@ export class ViewDocumentService {
       throw Object.assign(new Error("Consulta não encontrada"), { statusCode: 404 });
     }
 
-    // Enriquecer contexto com clinicId da consulta (necessário para PATIENT sem clinicId no token)
-    const enrichedContext = { ...context, clinicId: context.clinicId ?? appointment.clinicId };
+    const role = resolveAppointmentRole(
+      {
+        userId: context.userId,
+        clinicId: context.clinicId,
+        roles: context.userRoles ?? [context.userRole],
+      },
+      {
+        clinicId: document.clinicId,
+        patientUserId: appointment.patient.userId,
+        professionalUserId: appointment.professional.userId,
+      },
+    );
+    if (!role) {
+      throw Object.assign(new Error("Acesso negado"), { statusCode: 403 });
+    }
 
-    const role = context.userRole;
+    // Auditoria vai para a clínica da consulta (quem acessa como paciente pode
+    // estar sem clínica ativa, ou com outra clínica ativa)
+    const enrichedContext = { ...context, clinicId: appointment.clinicId };
 
     if (role === UserRole.PATIENT) {
       if (appointment.patient.userId !== context.userId) {

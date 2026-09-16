@@ -69,7 +69,7 @@ export class ResetPasswordService {
       select: {
         id: true,
         name: true,
-        clinicId: true,
+        activeClinicId: true,
         passwordResetToken: true,
         passwordResetExpires: true,
       },
@@ -106,11 +106,11 @@ export class ResetPasswordService {
       },
     });
 
-    // clinicId ausente = paciente puro (global) — AuditLog exige clinicId.
-    // userId null: quem "agiu" foi o dono do token, não uma sessão autenticada.
-    if (matchedUser.clinicId) {
+    // Sem clínica preferida = conta só de paciente (global) — AuditLog exige
+    // clinicId. userId null: quem "agiu" foi o dono do token, não uma sessão.
+    if (matchedUser.activeClinicId) {
       await auditLogRepository.create({
-        clinicId: matchedUser.clinicId,
+        clinicId: matchedUser.activeClinicId,
         userId: null,
         userName: matchedUser.name,
         action: "RESET_PASSWORD",

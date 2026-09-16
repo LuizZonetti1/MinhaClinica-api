@@ -1,79 +1,64 @@
 import { prisma } from "../../database/prisma";
-import type { UserRole } from "../../types/enums";
-import { generateAuthToken } from "../../utils/jwtUtils";
+import { UserStatus } from "../../types/enums";
+import {
+  buildSessionContext,
+  generateSessionToken,
+  loadSessionUserById,
+  type SessionUserPayload,
+  toSessionUserPayload,
+} from "./sessionContext";
 
 export interface IssuedSession {
   /** Token de sessão, no mesmo formato emitido pelo login. */
   accessToken: string;
   /** null = sem política de inatividade (paciente/clínica sem settings). */
   sessionTimeoutMinutes: number | null;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    roles: string[];
-    clinicId: string | null;
-    clinicName: string | null;
-    termsAccepted: boolean;
-  };
+  user: SessionUserPayload;
 }
 
 /**
- * Emite a sessão de quem acabou de concluir a Etapa 3 do cadastro.
+ * Emite uma sessão no mesmo formato do login.
  *
- * As quatro telas de conclusão (paciente, clínica, profissional, recepção) já
- * liam `accessToken` da resposta e mandavam o usuário para /dashboard — mas
- * nenhum endpoint do backend devolvia esse campo. Resultado: cadastro concluído
- * com sucesso e, no passo seguinte, PrivateRoutes jogava a pessoa em /login sem
- * explicação, logo depois de ela ter criado a senha.
- *
- * O formato espelha LoginService de propósito: mesmo token (generateAuthToken),
- * mesmo `user` e o mesmo sessionTimeoutMinutes, para o cliente tratar a sessão
- * recém-criada exatamente como trataria um login normal.
+ * Usado ao concluir um cadastro, aceitar convite, confirmar clínica e trocar a
+ * clínica ativa — sempre que a conta muda de contexto sem digitar a senha de
+ * novo. `clinicId` escolhe a clínica que a sessão abre (precisa ser uma clínica
+ * com vínculo ativo; senão cai na preferida da conta).
  */
 export class IssueSessionService {
-  async execute(userId: string): Promise<IssuedSession> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { clinic: { include: { settings: true } } },
-    });
+  async execute(userId: string, options: { clinicId?: string | null } = {}): Promise<IssuedSession> {
+    const user = await loadSessionUserById(userId);
 
     if (!user) {
-      throw new Error("Usuário não encontrado");
+      throw Object.assign(new Error("Usuário não encontrado"), { statusCode: 404 });
     }
 
-    const roles = user.roles.length > 0 ? user.roles : [user.role];
+    if (user.status !== UserStatus.ACTIVE) {
+      throw Object.assign(new Error("Conta inativa. Faça login novamente."), { statusCode: 401 });
+    }
 
-    const accessToken = generateAuthToken(
-      user.id,
-      user.clinicId,
-      user.role as UserRole,
-      user.name,
-      {},
-      roles as UserRole[],
-    );
+    const ctx = buildSessionContext(user, options.clinicId);
+
+    if (ctx.roles.length === 0) {
+      throw Object.assign(new Error("Esta conta não tem nenhum acesso ativo."), {
+        statusCode: 403,
+      });
+    }
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: {
+        lastLoginAt: new Date(),
+        // Guarda a clínica aberta para o próximo login começar nela.
+        ...(ctx.clinicId && ctx.clinicId !== user.activeClinicId
+          ? { activeClinicId: ctx.clinicId }
+          : {}),
+      },
     });
 
     return {
-      accessToken,
-      sessionTimeoutMinutes: user.clinicId
-        ? (user.clinic?.settings?.sessionTimeoutMinutes ?? null)
-        : null,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        roles,
-        clinicId: user.clinicId,
-        clinicName: user.clinic?.tradeName ?? null,
-        termsAccepted: Boolean(user.termsAcceptedAt && user.privacyAcceptedAt),
-      },
+      accessToken: generateSessionToken(user, ctx),
+      sessionTimeoutMinutes: ctx.sessionTimeoutMinutes,
+      user: toSessionUserPayload(user, ctx),
     };
   }
 }

@@ -67,6 +67,23 @@ clinicRoutes.post("/register/complete", authLimiter, tempRegistrationAuth, (req,
 );
 
 /**
+ * PÚBLICO — Resumo da clínica cadastrada com o e-mail de uma conta existente
+ * GET /api/clinics/register/existing/:token
+ */
+clinicRoutes.get("/register/existing/:token", authLimiter, (req, res) =>
+  clinicController.getExistingAccountRegistration(req, res),
+);
+
+/**
+ * PROTEGIDO — Conta existente confirma a clínica cadastrada com o próprio e-mail
+ * POST /api/clinics/register/existing/confirm
+ * Devolve uma sessão nova já na clínica confirmada.
+ */
+clinicRoutes.post("/register/existing/confirm", authLimiter, authMiddleware, (req, res) =>
+  clinicController.confirmExistingAccountRegistration(req, res),
+);
+
+/**
  * PÚBLICO — Link clicado no e-mail pelo responsável da clínica
  * GET /api/clinics/verify-email/:token
  * Verifica o token, gera tempToken JWT e redireciona para o frontend completar cadastro

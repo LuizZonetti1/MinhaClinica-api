@@ -6,18 +6,14 @@ import { ProfessionalController } from "../controller/professionalController";
 import { ProfessionalDashboardController } from "../controller/professionalDashboardController";
 import { ProfileController } from "../controller/profileController";
 import { ScheduleBlockController } from "../controller/scheduleBlockController";
-import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
+import { authMiddleware, checkRole } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
 import {
   createPatientCommentSchema,
   updatePatientCommentSchema,
 } from "../schemas/patientCommentSchema";
 import { setMyProceduresSchema } from "../schemas/procedureSchema";
-import {
-  completeProfessionalSchema,
-  inviteProfessionalSchema,
-  updateProfessionalSchema,
-} from "../schemas/professionalSchema";
+import { inviteProfessionalSchema, updateProfessionalSchema } from "../schemas/professionalSchema";
 import { createScheduleBlockSchema } from "../schemas/scheduleBlockSchema";
 import { UserRole } from "../types/enums";
 
@@ -161,23 +157,6 @@ router.post(
   checkRole(UserRole.ADMIN),
   validate(inviteProfessionalSchema),
   (req, res) => professionalController.invite(req, res),
-);
-
-/**
- * PROTEGIDO (tempToken) — Completar cadastro apos verificar email
- * POST /api/professionals/complete
- * Requer: Authorization: Bearer <tempToken>
- */
-router.post("/complete", tempRegistrationAuth, validate(completeProfessionalSchema), (req, res) =>
-  professionalController.complete(req, res),
-);
-
-/**
- * PROTEGIDO (ADMIN) — Cancelar convite pendente
- * DELETE /api/professionals/invite/:userId
- */
-router.delete("/invite/:userId", authMiddleware, checkRole(UserRole.ADMIN), (req, res) =>
-  professionalController.cancelInvite(req, res),
 );
 
 /**

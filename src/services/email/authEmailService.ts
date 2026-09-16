@@ -143,7 +143,8 @@ export class AuthEmailService {
     }
 
     /**
-     * Envia convite para profissional
+     * Envia convite para profissional. O link abre a página do convite, que
+     * serve tanto a quem já tem conta (entra e aceita) quanto a quem não tem.
      */
     async sendProfessionalInviteEmail(
         email: string,
@@ -151,7 +152,7 @@ export class AuthEmailService {
         clinicName: string,
         verificationToken: string,
     ): Promise<void> {
-        const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=professional`;
+        const verificationUrl = `${process.env.FRONTEND_URL}/convite?token=${verificationToken}`;
         const safeName = escapeHtml(name);
         const safeClinicName = escapeHtml(clinicName);
 
@@ -177,10 +178,14 @@ export class AuthEmailService {
         <div class="content">
             <h2>Olá, ${safeName}!</h2>
             <p>Você foi convidado para trabalhar na clínica <strong>${safeClinicName}</strong>.</p>
-            <p>Para aceitar o convite e completar seu cadastro, clique no botão abaixo:</p>
+            <p>Para aceitar o convite, clique no botão abaixo:</p>
             <center>
                 <a href="${verificationUrl}" class="button">Aceitar Convite</a>
             </center>
+            <p style="font-size: 14px; color: #555;">
+                Já usa o Minha Clínica com este e-mail (por exemplo, como paciente)? Basta entrar com a sua conta e aceitar.
+                Ainda não tem conta? Você cria na mesma página.
+            </p>
             <p>Ou copie e cole este link no seu navegador:</p>
             <p style="word-break: break-all; color: #666;">${verificationUrl}</p>
             <p style="margin-top: 30px; font-size: 14px; color: #666;">
@@ -213,7 +218,7 @@ export class AuthEmailService {
         role: Extract<UserRole, "RECEPTIONIST" | "ADMIN">,
         verificationToken: string,
     ): Promise<void> {
-        const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&type=staff`;
+        const verificationUrl = `${process.env.FRONTEND_URL}/convite?token=${verificationToken}`;
         const roleText = role === UserRole.ADMIN ? "Administrador" : "Recepcionista";
         const safeName = escapeHtml(name);
         const safeClinicName = escapeHtml(clinicName);
@@ -240,10 +245,14 @@ export class AuthEmailService {
         <div class="content">
             <h2>Olá, ${safeName}!</h2>
             <p>Você foi convidado para ser <strong>${roleText}</strong> na <strong>${safeClinicName}</strong>.</p>
-            <p>Para aceitar o convite e completar seu cadastro, clique no botão abaixo:</p>
+            <p>Para aceitar o convite, clique no botão abaixo:</p>
             <center>
                 <a href="${verificationUrl}" class="button">Aceitar Convite</a>
             </center>
+            <p style="font-size: 14px; color: #555;">
+                Já usa o Minha Clínica com este e-mail (por exemplo, como paciente)? Basta entrar com a sua conta e aceitar.
+                Ainda não tem conta? Você cria na mesma página.
+            </p>
             <p>Ou copie e cole este link no seu navegador:</p>
             <p style="word-break: break-all; color: #666;">${verificationUrl}</p>
             <p style="margin-top: 30px; font-size: 14px; color: #666;">
@@ -263,6 +272,131 @@ export class AuthEmailService {
             subject: `Convite para ${roleText} - ${clinicName}`,
             html,
             text: `Olá ${name}, você foi convidado para ser ${roleText} na ${clinicName}. Clique no link: ${verificationUrl}`,
+        });
+    }
+
+    /**
+     * Cadastro de clínica feito com o e-mail de uma conta que JÁ existe (ex.: um
+     * paciente abrindo a própria clínica). Não cria conta nova: o link leva à
+     * página de confirmação, onde a pessoa entra com a senha que já tem e só
+     * aceita os termos da clínica.
+     */
+    async sendClinicExistingAccountEmail(
+        email: string,
+        name: string,
+        clinicTradeName: string,
+        confirmationToken: string,
+        expiresInHours: number,
+    ): Promise<void> {
+        const confirmationUrl = `${process.env.FRONTEND_URL}/clinica/registro/confirmar?token=${confirmationToken}`;
+        const safeName = escapeHtml(name);
+        const safeClinicTradeName = escapeHtml(clinicTradeName);
+
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #6366F1; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+        .button { display: inline-block; padding: 12px 30px; background-color: #6366F1; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+        .clinic-box { background: #EEF2FF; border-left: 4px solid #6366F1; padding: 12px 16px; border-radius: 4px; margin: 16px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Cadastro de Clínica — Minha Clínica</h1>
+        </div>
+        <div class="content">
+            <h2>Olá, ${safeName}!</h2>
+            <p>Recebemos o cadastro da clínica abaixo usando o e-mail da sua conta no Minha Clínica:</p>
+            <div class="clinic-box">
+                <strong>${safeClinicTradeName}</strong>
+            </div>
+            <p>Você não precisa criar outra conta. Clique no botão, entre com a senha que você já usa e confirme o cadastro da clínica:</p>
+            <center>
+                <a href="${confirmationUrl}" class="button">Confirmar cadastro da clínica</a>
+            </center>
+            <p>Ou copie e cole este link no seu navegador:</p>
+            <p style="word-break: break-all; color: #666;">${confirmationUrl}</p>
+            <p style="margin-top: 30px; font-size: 14px; color: #666;">
+                Este link expira em <strong>${expiresInHours} horas</strong>. Sua conta continua funcionando normalmente enquanto isso.
+            </p>
+        </div>
+        <div class="footer">
+            <p>Se você não solicitou este cadastro, ignore este e-mail — nada será criado sem a sua confirmação.</p>
+        </div>
+    </div>
+</body>
+</html>
+    `;
+
+        await this.provider.sendEmail({
+            to: email,
+            subject: `Confirme o cadastro da ${clinicTradeName}`,
+            html,
+            text: `Olá ${name}, recebemos o cadastro da ${clinicTradeName} com o e-mail da sua conta. Entre com a sua senha e confirme em: ${confirmationUrl}`,
+        });
+    }
+
+    /**
+     * Cadastro de clínica com o e-mail de uma conta que não está ativa
+     * (bloqueada, desativada ou com o cadastro inicial pela metade). Nada é
+     * criado; a resposta da API é a mesma de sempre para não revelar o estado
+     * da conta — só o dono do e-mail fica sabendo o que fazer.
+     */
+    async sendClinicRegistrationAccountInactiveEmail(
+        email: string,
+        name: string,
+        clinicTradeName: string,
+    ): Promise<void> {
+        const loginUrl = `${process.env.FRONTEND_URL}/login`;
+        const forgotUrl = `${process.env.FRONTEND_URL}/forgot-password`;
+        const safeName = escapeHtml(name);
+        const safeClinicTradeName = escapeHtml(clinicTradeName);
+
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #6366F1; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Cadastro de Clínica — Minha Clínica</h1>
+        </div>
+        <div class="content">
+            <h2>Olá, ${safeName}!</h2>
+            <p>Recebemos o cadastro da clínica <strong>${safeClinicTradeName}</strong> com o seu e-mail, mas a sua conta no Minha Clínica ainda não está ativa.</p>
+            <p>Conclua a ativação da sua conta (ou <a href="${forgotUrl}">recupere a senha</a>) e depois envie o cadastro da clínica novamente.</p>
+            <p><a href="${loginUrl}">Ir para o login</a></p>
+        </div>
+        <div class="footer">
+            <p>Se você não solicitou este cadastro, por favor ignore este e-mail.</p>
+        </div>
+    </div>
+</body>
+</html>
+    `;
+
+        await this.provider.sendEmail({
+            to: email,
+            subject: `Cadastro da ${clinicTradeName} — ative sua conta primeiro`,
+            html,
+            text: `Olá ${name}, recebemos o cadastro da ${clinicTradeName}, mas sua conta ainda não está ativa. Ative ou recupere o acesso em ${loginUrl} e envie o cadastro novamente.`,
         });
     }
 

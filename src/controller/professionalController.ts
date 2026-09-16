@@ -5,11 +5,7 @@ import {
   GetProfessionalByIdService,
   UpdateProfessionalService,
 } from "../services/professionals/professionalManagementService";
-import {
-  CancelProfessionalInviteService,
-  CompleteProfessionalService,
-  InviteProfessionalService,
-} from "../services/professionals/professionalRegistrationService";
+import { InviteProfessionalService } from "../services/professionals/professionalRegistrationService";
 import { handleControllerError } from "../utils/controllerUtils";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -42,10 +38,15 @@ export class ProfessionalController {
         return;
       }
 
+      if (!req.clinicId) {
+        res.status(403).json({ error: "Acesso negado" });
+        return;
+      }
+
       const { name, email, specialty } = req.body;
 
       const service = new InviteProfessionalService();
-      const result = await service.execute(adminId, { name, email, specialty });
+      const result = await service.execute(adminId, req.clinicId, { name, email, specialty });
 
       res.status(201).json(result);
     } catch (error) {
@@ -61,69 +62,6 @@ export class ProfessionalController {
         return;
       }
       handleControllerError(res, error, "Erro ao enviar convite");
-    }
-  }
-
-  /**
-   * POST /api/professionals/complete
-   * Completar cadastro de profissional (apos verificar email)
-   */
-  async complete(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.userId; // Vem do token de verificacao
-
-      if (!userId) {
-        res.status(401).json({ error: "Nao autenticado" });
-        return;
-      }
-
-      const service = new CompleteProfessionalService();
-      const result = await service.execute(userId, req.body);
-
-      res.status(200).json(result);
-    } catch (error) {
-      // CPF duplicado agora carrega statusCode/code/action explícitos (409).
-      if (error instanceof Error && "statusCode" in error) {
-        handleControllerError(res, error, "Erro ao completar cadastro");
-        return;
-      }
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-        return;
-      }
-      handleControllerError(res, error, "Erro ao completar cadastro");
-    }
-  }
-
-  /**
-   * DELETE /api/professionals/invite/:userId
-   * Cancela um convite pendente (remove o User, libera o e-mail)
-   */
-  async cancelInvite(req: Request, res: Response): Promise<void> {
-    try {
-      const adminId = req.userId;
-      const userId = req.params.userId as string;
-
-      if (!adminId) {
-        res.status(401).json({ error: "Nao autenticado" });
-        return;
-      }
-
-      if (!UUID_REGEX.test(userId)) {
-        res.status(400).json({ error: "ID do convite invalido" });
-        return;
-      }
-
-      const service = new CancelProfessionalInviteService();
-      const result = await service.execute(adminId, userId);
-
-      res.status(200).json(result);
-    } catch (error) {
-      if (error instanceof Error) {
-        res.status(resolveStatusCode(error.message)).json({ error: error.message });
-        return;
-      }
-      handleControllerError(res, error, "Erro ao cancelar convite");
     }
   }
 
@@ -210,8 +148,13 @@ export class ProfessionalController {
         return;
       }
 
+      if (!req.clinicId) {
+        res.status(403).json({ error: "Acesso negado" });
+        return;
+      }
+
       const service = new UpdateProfessionalService();
-      const result = await service.execute(adminId, professionalId, req.body);
+      const result = await service.execute(adminId, req.clinicId, professionalId, req.body);
 
       res.status(200).json(result);
     } catch (error) {
@@ -249,8 +192,13 @@ export class ProfessionalController {
         return;
       }
 
+      if (!req.clinicId) {
+        res.status(403).json({ error: "Acesso negado" });
+        return;
+      }
+
       const service = new DeactivateProfessionalService();
-      const result = await service.execute(adminId, professionalId);
+      const result = await service.execute(adminId, req.clinicId, professionalId);
 
       res.status(200).json(result);
     } catch (error) {

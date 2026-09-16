@@ -5,6 +5,7 @@ import { ConfirmEmailChangeService } from "../services/auth/emailChangeService";
 import { LoginService } from "../services/auth/loginService";
 import { ForgotPasswordService, ResetPasswordService } from "../services/auth/passwordResetService";
 import { ResendVerificationService } from "../services/auth/resendVerificationService";
+import { GetSessionService, SwitchClinicService } from "../services/auth/sessionService";
 import { VerifyEmailService } from "../services/auth/verifyEmailService";
 import {
   CompletePatientService,
@@ -216,6 +217,35 @@ export class AuthController {
       res.status(200).json(result);
     } catch (error) {
       handleControllerError(res, error, "Erro ao registrar aceite");
+    }
+  }
+
+  /**
+   * GET /api/auth/session
+   */
+  async getSession(req: Request, res: Response): Promise<void> {
+    try {
+      const service = new GetSessionService();
+      const result = await service.execute(req.userId as string, req.clinicId ?? null);
+      res.status(200).json(result);
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao carregar a sessão");
+    }
+  }
+
+  /**
+   * POST /api/auth/session/clinic
+   */
+  async switchClinic(req: Request, res: Response): Promise<void> {
+    try {
+      const service = new SwitchClinicService();
+      const result = await service.execute(req.userId as string, req.body.clinicId ?? null, {
+        ipAddress: req.ip ?? req.socket?.remoteAddress ?? null,
+        userAgent: req.headers["user-agent"] ?? null,
+      });
+      res.status(200).json(result);
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao trocar de clínica");
     }
   }
 }

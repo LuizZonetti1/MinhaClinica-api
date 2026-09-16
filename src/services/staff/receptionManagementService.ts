@@ -4,16 +4,12 @@ import utc from "dayjs/plugin/utc";
 import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { AuditLogRepository } from "../../repository/auditLogRepository";
+import { MembershipRepository, memberOf } from "../../repository/membershipRepository";
 import { UserRepository } from "../../repository/userRepository";
-import { AppointmentStatus, UserRole, UserStatus } from "../../types/enums";
+import { AppointmentStatus, MembershipStatus, UserRole, UserStatus } from "../../types/enums";
 import type { ReceptionDetails } from "../../types/receptionist";
 import type { UpdateReceptionInput } from "../../types/user";
-import {
-  createVerificationData,
-  INVITE_EXPIRATION_MINUTES,
-} from "../../utils/verificationTokenUtils";
 import { RequestEmailChangeService } from "../auth/emailChangeService";
-import { createEmailProvider, EmailService } from "../email/emailService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -26,8 +22,6 @@ const ACTIVE_APPOINTMENT_STATUSES = [
 ] as const;
 
 const toRegistrationStatus = (status: string) => {
-  if (status === UserStatus.PENDING_ACTIVATION) return "INVITE_SENT";
-  if (status === UserStatus.EMAIL_VERIFIED) return "EMAIL_VERIFIED";
   if (status === UserStatus.ACTIVE) return "COMPLETED";
   if (status === UserStatus.INACTIVE) return "INACTIVE";
   if (status === UserStatus.BLOCKED) return "BLOCKED";
@@ -37,6 +31,27 @@ const toRegistrationStatus = (status: string) => {
 const hasAnyDefinedField = (data: Record<string, unknown>) =>
   Object.values(data).some((value) => value !== undefined);
 
+/**
+ * Recepcionista desta clínica: conta com vínculo (não encerrado) que inclui
+ * RECEPTIONIST. Traz o status do vínculo, que é o que "ativo/inativo" significa
+ * aqui — a conta pode estar ativa como paciente ou em outra clínica.
+ */
+const findReceptionist = (clinicId: string, receptionistId: string) =>
+  prisma.user.findFirst({
+    where: { id: receptionistId, ...memberOf(clinicId, [UserRole.RECEPTIONIST]) },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      status: true,
+      avatarUrl: true,
+      lastLoginAt: true,
+      createdAt: true,
+      memberships: { where: { clinicId }, select: { id: true, status: true } },
+    },
+  });
+
 export type { ReceptionDetails };
 
 export class GetReceptionByIdService {
@@ -45,28 +60,17 @@ export class GetReceptionByIdService {
     const startOfNextMonth = dayjs().tz(DEFAULT_TIMEZONE).add(1, "month").startOf("month").toDate();
     const startOfToday = dayjs().tz(DEFAULT_TIMEZONE).startOf("day").toDate();
 
-    const receptionist = await prisma.user.findFirst({
-      where: {
-        id: receptionistId,
-        clinicId,
-        role: UserRole.RECEPTIONIST,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        status: true,
-        role: true,
-        avatarUrl: true,
-        lastLoginAt: true,
-        createdAt: true,
-      },
-    });
+    const found = await findReceptionist(clinicId, receptionistId);
 
-    if (!receptionist) {
+    if (!found) {
       throw new Error("Recepcionista nao encontrado");
     }
+
+    const { memberships, ...receptionist } = found;
+    const status =
+      memberships[0]?.status === MembershipStatus.INACTIVE
+        ? UserStatus.INACTIVE
+        : receptionist.status;
 
     const [appointmentsThisMonth, upcomingActiveAppointments] = await Promise.all([
       prisma.appointment.count({
@@ -95,7 +99,9 @@ export class GetReceptionByIdService {
 
     return {
       ...receptionist,
-      registrationStatus: toRegistrationStatus(receptionist.status),
+      status,
+      role: UserRole.RECEPTIONIST,
+      registrationStatus: toRegistrationStatus(status),
       appointmentsThisMonth,
       upcomingActiveAppointments,
       canDeactivate: upcomingActiveAppointments === 0,
@@ -105,39 +111,29 @@ export class GetReceptionByIdService {
 
 export class UpdateReceptionService {
   private userRepository = new UserRepository();
-  private emailService = new EmailService(createEmailProvider());
   private auditLogRepository = new AuditLogRepository();
+  private membershipRepository = new MembershipRepository();
 
-  async execute(adminId: string, receptionistId: string, data: UpdateReceptionInput) {
+  /** `clinicId` = clínica ativa do ADMIN (req.clinicId); a rota já exige ADMIN. */
+  async execute(
+    adminId: string,
+    clinicId: string,
+    receptionistId: string,
+    data: UpdateReceptionInput,
+  ) {
     const admin = await this.userRepository.findById(adminId);
 
-    if (!admin || admin.role !== UserRole.ADMIN) {
+    if (!admin) {
       throw new Error("Apenas administradores podem editar recepcionistas");
     }
 
-    if (!admin.clinicId) {
-      throw new Error("Admin nao esta vinculado a uma clinica");
-    }
-
-    const clinicId = admin.clinicId;
-
-    const receptionist = await prisma.user.findFirst({
-      where: {
-        id: receptionistId,
-        clinicId,
-        role: UserRole.RECEPTIONIST,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        status: true,
-      },
-    });
+    const receptionist = await findReceptionist(clinicId, receptionistId);
 
     if (!receptionist) {
       throw new Error("Recepcionista nao encontrado");
     }
+
+    const membership = receptionist.memberships[0];
 
     const normalizedData = {
       name: data.name?.trim(),
@@ -153,82 +149,72 @@ export class UpdateReceptionService {
       normalizedData.email !== undefined && normalizedData.email !== receptionist.email;
 
     if (emailChanged && normalizedData.email) {
-      const existingUser = await this.userRepository.findByEmail(clinicId, normalizedData.email);
+      const existingUser = await this.userRepository.findByEmail(normalizedData.email);
       if (existingUser && existingUser.id !== receptionist.id) {
-        throw new Error("Email ja cadastrado nesta clinica");
+        throw Object.assign(new Error("Este e-mail já está em uso por outra conta."), {
+          statusCode: 409,
+        });
+      }
+
+      // O e-mail é o login da CONTA inteira: se a pessoa também é paciente ou
+      // trabalha em outra clínica, esta clínica não pode trocar o acesso dela.
+      if (await this.membershipRepository.hasOtherIdentity(receptionist.id, clinicId)) {
+        throw Object.assign(
+          new Error(
+            "O e-mail desta conta é gerenciado pela própria pessoa, pois ela também usa o Minha Clínica fora desta clínica.",
+          ),
+          { statusCode: 403, code: "EMAIL_MANAGED_BY_OWNER" },
+        );
       }
     }
 
-    const userUpdateData: {
-      name?: string;
-      email?: string;
-      status?: (typeof UserStatus)[keyof typeof UserStatus];
-      verificationToken?: string | null;
-      verificationExpires?: Date | null;
-    } = {};
+    const nameChanged =
+      normalizedData.name !== undefined && normalizedData.name !== receptionist.name;
 
-    if (normalizedData.name !== undefined) {
-      userUpdateData.name = normalizedData.name;
-    }
+    // Ativo/inativo é o vínculo com ESTA clínica — nunca User.status, que
+    // trancaria a conta inteira (área de paciente e outras clínicas).
+    const nextMembershipStatus =
+      normalizedData.isActive === undefined
+        ? undefined
+        : normalizedData.isActive
+          ? MembershipStatus.ACTIVE
+          : MembershipStatus.INACTIVE;
+    const statusChanged =
+      nextMembershipStatus !== undefined && nextMembershipStatus !== membership?.status;
 
-    if (emailChanged && normalizedData.email) {
-      userUpdateData.email = normalizedData.email;
-    }
-
-    let shouldResendInvite = false;
-    let verificationTokenToSend: string | null = null;
-
-    // Convite pendente (ainda não ativo): e-mail pode mudar direto, o convite
-    // é reenviado para o endereço novo. Já ATIVO: vai para o fluxo de
-    // confirmação, que mantém o e-mail atual válido até o dono da nova caixa
-    // confirmar — trocar direto seria tomada de conta silenciosa (o e-mail
-    // controla o reset de senha).
-    const isPendingInvite = receptionist.status !== UserStatus.ACTIVE;
-
-    if (emailChanged && isPendingInvite) {
-      const verification = createVerificationData(INVITE_EXPIRATION_MINUTES);
-      userUpdateData.status = UserStatus.PENDING_ACTIVATION;
-      userUpdateData.verificationToken = verification.hashedToken;
-      userUpdateData.verificationExpires = verification.expiresAt;
-      shouldResendInvite = true;
-      verificationTokenToSend = verification.token;
-    } else if (normalizedData.isActive !== undefined) {
-      userUpdateData.status = normalizedData.isActive ? UserStatus.ACTIVE : UserStatus.INACTIVE;
-    }
-
-    // Usuário ativo: o e-mail NÃO entra no update direto — só após confirmação.
-    const requiresEmailConfirmation = emailChanged && !isPendingInvite;
-    if (requiresEmailConfirmation) {
-      userUpdateData.email = undefined;
-    }
-
-    if (!hasAnyDefinedField(userUpdateData) && !requiresEmailConfirmation) {
+    if (!nameChanged && !statusChanged && !emailChanged) {
       throw new Error("Nenhuma alteracao valida foi encontrada para atualizar");
     }
 
-    if (hasAnyDefinedField(userUpdateData)) {
+    if (nameChanged && normalizedData.name) {
       await prisma.user.update({
         where: { id: receptionist.id },
-        data: userUpdateData,
+        data: { name: normalizedData.name },
       });
     }
 
-    // Convite pendente: o e-mail já mudou de fato acima, só registra.
-    if (emailChanged && !requiresEmailConfirmation && normalizedData.email) {
+    if (statusChanged && membership && nextMembershipStatus) {
+      await prisma.clinicMembership.update({
+        where: { id: membership.id },
+        data: { status: nextMembershipStatus },
+      });
+
       await this.auditLogRepository.create({
         clinicId,
         userId: adminId,
         userName: admin.name,
-        action: "CHANGE_EMAIL",
+        action:
+          nextMembershipStatus === MembershipStatus.ACTIVE
+            ? "ACTIVATE_RECEPTIONIST"
+            : "DEACTIVATE_RECEPTIONIST",
         entity: "User",
         entityId: receptionist.id,
-        oldData: { email: receptionist.email },
-        newData: { email: normalizedData.email },
       });
     }
 
-    // Usuário ativo: dispara a confirmação (audita lá dentro).
-    if (requiresEmailConfirmation && normalizedData.email) {
+    // E-mail nunca muda direto: o atual continua válido até o dono da nova
+    // caixa confirmar (audita lá dentro) — o e-mail controla o reset de senha.
+    if (emailChanged && normalizedData.email) {
       await new RequestEmailChangeService().execute({
         targetUserId: receptionist.id,
         newEmail: normalizedData.email,
@@ -243,64 +229,32 @@ export class UpdateReceptionService {
       });
     }
 
-    if (shouldResendInvite && verificationTokenToSend) {
-      const clinic = await prisma.clinic.findUnique({
-        where: { id: clinicId },
-        select: { tradeName: true },
-      });
-
-      if (!clinic) {
-        throw new Error("Clinica nao encontrada");
-      }
-
-      await this.emailService.sendStaffInviteEmail(
-        normalizedData.email ?? receptionist.email,
-        normalizedData.name ?? receptionist.name,
-        clinic.tradeName,
-        UserRole.RECEPTIONIST,
-        verificationTokenToSend,
-      );
-    }
-
     return {
-      message: shouldResendInvite
-        ? "Recepcionista atualizado e convite reenviado"
-        : requiresEmailConfirmation
-          ? "Recepcionista atualizado. A troca de e-mail só vale após a confirmação pelo link enviado ao novo endereço."
-          : "Recepcionista atualizado com sucesso",
-      inviteResent: shouldResendInvite,
-      emailChangePending: requiresEmailConfirmation ? normalizedData.email : undefined,
+      message: emailChanged
+        ? "Recepcionista atualizado. A troca de e-mail só vale após a confirmação pelo link enviado ao novo endereço."
+        : "Recepcionista atualizado com sucesso",
+      inviteResent: false,
+      emailChangePending: emailChanged ? normalizedData.email : undefined,
     };
   }
 }
 
 export class DeactivateReceptionService {
   private userRepository = new UserRepository();
+  private auditLogRepository = new AuditLogRepository();
+  private membershipRepository = new MembershipRepository();
 
-  async execute(adminId: string, receptionistId: string) {
+  /** `clinicId` = clínica ativa do ADMIN (req.clinicId); a rota já exige ADMIN. */
+  async execute(adminId: string, clinicId: string, receptionistId: string) {
     const admin = await this.userRepository.findById(adminId);
 
-    if (!admin || admin.role !== UserRole.ADMIN) {
+    if (!admin) {
       throw new Error("Apenas administradores podem desativar recepcionistas");
     }
 
-    if (!admin.clinicId) {
-      throw new Error("Admin nao esta vinculado a uma clinica");
-    }
-
-    const clinicId = admin.clinicId;
     const startOfToday = dayjs().tz(DEFAULT_TIMEZONE).startOf("day").toDate();
 
-    const receptionist = await prisma.user.findFirst({
-      where: {
-        id: receptionistId,
-        clinicId,
-        role: UserRole.RECEPTIONIST,
-      },
-      select: {
-        id: true,
-      },
-    });
+    const receptionist = await findReceptionist(clinicId, receptionistId);
 
     if (!receptionist) {
       throw new Error("Recepcionista nao encontrado");
@@ -325,18 +279,50 @@ export class DeactivateReceptionService {
       );
     }
 
-    // Soft delete + anonimização: preserva o histórico de agendamentos criados
-    // por este usuário, mas apaga os dados pessoais da recepcionista.
-    await prisma.user.update({
-      where: { id: receptionist.id },
-      data: {
-        status: UserStatus.INACTIVE,
-        name: "Recepcionista removido",
-        email: `deleted-${receptionist.id}@removido.local`,
-        phone: null,
-        avatarUrl: null,
-        deletedAt: new Date(),
-      },
+    // Desligar é encerrar o papel NESTA clínica, preservando o histórico de
+    // agendamentos criados por esta conta. A conta só é anonimizada quando não
+    // sobra mais nada dela (nenhum outro papel aqui, nenhuma outra clínica,
+    // nenhum registro de paciente) — antes, anonimizava sempre e destruía o
+    // login de quem também era paciente.
+    const { accountAnonymized } = await prisma.$transaction(async (tx) => {
+      const membership = await this.membershipRepository.revokeRole(
+        { userId: receptionist.id, clinicId, role: UserRole.RECEPTIONIST },
+        tx,
+      );
+      const stillMemberHere = Boolean(membership && membership.roles.length > 0);
+      const hasOtherIdentity = await this.membershipRepository.hasOtherIdentity(
+        receptionist.id,
+        clinicId,
+        tx,
+      );
+
+      if (stillMemberHere || hasOtherIdentity) {
+        return { accountAnonymized: false };
+      }
+
+      await tx.user.update({
+        where: { id: receptionist.id },
+        data: {
+          status: UserStatus.INACTIVE,
+          name: "Recepcionista removido",
+          email: `deleted-${receptionist.id}@removido.local`,
+          phone: null,
+          avatarUrl: null,
+          deletedAt: new Date(),
+        },
+      });
+      return { accountAnonymized: true };
+    });
+
+    await this.auditLogRepository.create({
+      clinicId,
+      userId: adminId,
+      userName: admin.name,
+      action: "REMOVE_RECEPTIONIST",
+      entity: "User",
+      entityId: receptionist.id,
+      oldData: { name: receptionist.name },
+      newData: { accountAnonymized },
     });
 
     return {

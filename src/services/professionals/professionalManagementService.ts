@@ -4,16 +4,12 @@ import utc from "dayjs/plugin/utc";
 import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
 import { AuditLogRepository } from "../../repository/auditLogRepository";
+import { MembershipRepository } from "../../repository/membershipRepository";
 import { UserRepository } from "../../repository/userRepository";
 import { AppointmentStatus, UserRole, UserStatus } from "../../types/enums";
 import type { ProfessionalDetails } from "../../types/professional";
 import type { UpdateProfessionalInput } from "../../types/user";
-import {
-  createVerificationData,
-  INVITE_EXPIRATION_MINUTES,
-} from "../../utils/verificationTokenUtils";
 import { RequestEmailChangeService } from "../auth/emailChangeService";
-import { createEmailProvider, EmailService } from "../email/emailService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -114,7 +110,8 @@ export class GetProfessionalByIdService {
       name: professional.user.name,
       email: professional.user.email,
       phone: professional.user.phone,
-      status: professional.user.status,
+      // Desativar é por clínica (Professional.isActive), não na conta.
+      status: professional.isActive ? professional.user.status : UserStatus.INACTIVE,
       registrationStatus: toRegistrationStatus(professional.user.status),
       avatarUrl: professional.user.avatarUrl,
       lastLoginAt: professional.user.lastLoginAt,
@@ -138,21 +135,21 @@ export class GetProfessionalByIdService {
 
 export class UpdateProfessionalService {
   private userRepository = new UserRepository();
-  private emailService = new EmailService(createEmailProvider());
   private auditLogRepository = new AuditLogRepository();
+  private membershipRepository = new MembershipRepository();
 
-  async execute(adminId: string, professionalId: string, data: UpdateProfessionalInput) {
+  /** `clinicId` = clínica ativa do ADMIN (req.clinicId); a rota já exige ADMIN. */
+  async execute(
+    adminId: string,
+    clinicId: string,
+    professionalId: string,
+    data: UpdateProfessionalInput,
+  ) {
     const admin = await this.userRepository.findById(adminId);
 
-    if (!admin || admin.role !== UserRole.ADMIN) {
+    if (!admin) {
       throw new Error("Apenas administradores podem editar profissionais");
     }
-
-    if (!admin.clinicId) {
-      throw new Error("Admin nao esta vinculado a uma clinica");
-    }
-
-    const clinicId = admin.clinicId;
 
     const professional = await prisma.professional.findFirst({
       where: {
@@ -195,18 +192,30 @@ export class UpdateProfessionalService {
       normalizedData.email !== undefined && normalizedData.email !== professional.user.email;
 
     if (emailChanged && normalizedData.email) {
-      const existingUser = await this.userRepository.findByEmail(clinicId, normalizedData.email);
+      const existingUser = await this.userRepository.findByEmail(normalizedData.email);
       if (existingUser && existingUser.id !== professional.user.id) {
-        throw new Error("Email ja cadastrado nesta clinica");
+        throw Object.assign(new Error("Este e-mail já está em uso por outra conta."), {
+          statusCode: 409,
+        });
       }
+    }
+
+    // O e-mail é o login da CONTA inteira. Se a pessoa também é paciente ou
+    // trabalha em outra clínica, uma clínica não pode trocar o acesso dela.
+    if (
+      emailChanged &&
+      (await this.membershipRepository.hasOtherIdentity(professional.user.id, clinicId))
+    ) {
+      throw Object.assign(
+        new Error(
+          "O e-mail desta conta é gerenciado pela própria pessoa, pois ela também usa o Minha Clínica fora desta clínica.",
+        ),
+        { statusCode: 403, code: "EMAIL_MANAGED_BY_OWNER" },
+      );
     }
 
     const userUpdateData: {
       name?: string;
-      email?: string;
-      status?: (typeof UserStatus)[keyof typeof UserStatus];
-      verificationToken?: string | null;
-      verificationExpires?: Date | null;
     } = {};
 
     const professionalUpdateData: {
@@ -220,10 +229,6 @@ export class UpdateProfessionalService {
 
     if (normalizedData.name !== undefined) {
       userUpdateData.name = normalizedData.name;
-    }
-
-    if (emailChanged && normalizedData.email) {
-      userUpdateData.email = normalizedData.email;
     }
 
     if (normalizedData.professionalCouncil !== undefined) {
@@ -250,34 +255,14 @@ export class UpdateProfessionalService {
       professionalUpdateData.formations = normalizedData.formations;
     }
 
-    let shouldResendInvite = false;
-    let verificationTokenToSend: string | null = null;
-
-    // Convite pendente (ainda não ativo): o e-mail pode mudar direto, porque
-    // o próprio convite é reenviado para o endereço novo e não há conta em uso.
-    // Já ATIVO: não se troca o e-mail aqui — vai para o fluxo de confirmação
+    // Desativar/reativar vale só nesta clínica (Professional.isActive). A conta
+    // (User.status) não muda — a pessoa pode ser paciente ou trabalhar em
+    // outra clínica.
+    //
+    // E-mail nunca muda direto: vai para o fluxo de confirmação
     // (RequestEmailChangeService), que mantém o e-mail atual válido até o dono
-    // da nova caixa confirmar. Reusar o convite aqui quebrava: leva a
-    // CompleteProfessionalService, que faz professional.create() e viola o
-    // @unique de Professional.userId para quem já é profissional.
-    const isPendingInvite = professional.user.status !== UserStatus.ACTIVE;
-
-    if (emailChanged && isPendingInvite) {
-      const verification = createVerificationData(INVITE_EXPIRATION_MINUTES);
-      userUpdateData.status = UserStatus.PENDING_ACTIVATION;
-      userUpdateData.verificationToken = verification.hashedToken;
-      userUpdateData.verificationExpires = verification.expiresAt;
-      shouldResendInvite = true;
-      verificationTokenToSend = verification.token;
-    } else if (normalizedData.isActive !== undefined) {
-      userUpdateData.status = normalizedData.isActive ? UserStatus.ACTIVE : UserStatus.INACTIVE;
-    }
-
-    // Usuário ativo: o e-mail NÃO entra no update direto.
-    const requiresEmailConfirmation = emailChanged && !isPendingInvite;
-    if (requiresEmailConfirmation) {
-      userUpdateData.email = undefined;
-    }
+    // da nova caixa confirmar.
+    const requiresEmailConfirmation = emailChanged;
 
     const hasValidUpdate =
       hasAnyDefinedField(userUpdateData) ||
@@ -347,17 +332,17 @@ export class UpdateProfessionalService {
       }
     });
 
-    // Convite pendente: o e-mail já mudou de fato acima, só registra.
-    if (emailChanged && !requiresEmailConfirmation && normalizedData.email) {
+    if (
+      normalizedData.isActive !== undefined &&
+      normalizedData.isActive !== professional.isActive
+    ) {
       await this.auditLogRepository.create({
         clinicId,
         userId: adminId,
         userName: admin.name,
-        action: "CHANGE_EMAIL",
-        entity: "User",
-        entityId: professional.user.id,
-        oldData: { email: professional.user.email },
-        newData: { email: normalizedData.email },
+        action: normalizedData.isActive ? "ACTIVATE_PROFESSIONAL" : "DEACTIVATE_PROFESSIONAL",
+        entity: "Professional",
+        entityId: professional.id,
       });
     }
 
@@ -378,31 +363,11 @@ export class UpdateProfessionalService {
       });
     }
 
-    if (shouldResendInvite && verificationTokenToSend) {
-      const clinic = await prisma.clinic.findUnique({
-        where: { id: clinicId },
-        select: { tradeName: true },
-      });
-
-      if (!clinic) {
-        throw new Error("Clinica nao encontrada");
-      }
-
-      await this.emailService.sendProfessionalInviteEmail(
-        normalizedData.email ?? professional.user.email,
-        normalizedData.name ?? professional.user.name,
-        clinic.tradeName,
-        verificationTokenToSend,
-      );
-    }
-
     return {
-      message: shouldResendInvite
-        ? "Profissional atualizado e convite reenviado"
-        : requiresEmailConfirmation
-          ? "Profissional atualizado. A troca de e-mail só vale após o profissional confirmar pelo link enviado ao novo endereço."
-          : "Profissional atualizado com sucesso",
-      inviteResent: shouldResendInvite,
+      message: requiresEmailConfirmation
+        ? "Profissional atualizado. A troca de e-mail só vale após o profissional confirmar pelo link enviado ao novo endereço."
+        : "Profissional atualizado com sucesso",
+      inviteResent: false,
       emailChangePending: requiresEmailConfirmation ? normalizedData.email : undefined,
     };
   }
@@ -410,30 +375,30 @@ export class UpdateProfessionalService {
 
 export class DeactivateProfessionalService {
   private userRepository = new UserRepository();
+  private auditLogRepository = new AuditLogRepository();
+  private membershipRepository = new MembershipRepository();
 
-  async execute(adminId: string, professionalId: string) {
+  /** `clinicId` = clínica ativa do ADMIN (req.clinicId); a rota já exige ADMIN. */
+  async execute(adminId: string, clinicId: string, professionalId: string) {
     const admin = await this.userRepository.findById(adminId);
 
-    if (!admin || admin.role !== UserRole.ADMIN) {
+    if (!admin) {
       throw new Error("Apenas administradores podem desativar profissionais");
     }
 
-    if (!admin.clinicId) {
-      throw new Error("Admin nao esta vinculado a uma clinica");
-    }
-
-    const clinicId = admin.clinicId;
     const startOfToday = dayjs().tz(DEFAULT_TIMEZONE).startOf("day").toDate();
 
     const professional = await prisma.professional.findFirst({
       where: {
         id: professionalId,
         clinicId,
+        deletedAt: null,
       },
       include: {
         user: {
           select: {
             id: true,
+            name: true,
           },
         },
       },
@@ -462,25 +427,59 @@ export class DeactivateProfessionalService {
       );
     }
 
-    // Soft delete + anonimização: mantém o histórico de consultas/prontuários
-    // intacto (Appointment.professional usa onDelete: Restrict de propósito),
-    // mas apaga os dados pessoais do profissional.
-    await prisma.$transaction([
-      prisma.professional.update({
+    const userId = professional.user.id;
+
+    // Desligar é encerrar o papel NESTA clínica. O histórico de consultas e
+    // prontuários fica intacto (Appointment.professional usa onDelete:
+    // Restrict de propósito). A conta só é anonimizada quando não sobra mais
+    // nada dela: nenhum outro papel aqui, nenhuma outra clínica e nenhum
+    // registro de paciente — antes, anonimizava sempre e destruía o login e a
+    // identidade de quem também era paciente.
+    const { accountAnonymized } = await prisma.$transaction(async (tx) => {
+      await tx.professional.update({
         where: { id: professional.id },
         data: { isActive: false, deletedAt: new Date(), bio: null, formations: null },
-      }),
-      prisma.user.update({
-        where: { id: professional.user.id },
+      });
+
+      const membership = await this.membershipRepository.revokeRole(
+        { userId, clinicId, role: UserRole.PROFESSIONAL },
+        tx,
+      );
+      const stillMemberHere = Boolean(membership && membership.roles.length > 0);
+      const hasOtherIdentity = await this.membershipRepository.hasOtherIdentity(
+        userId,
+        clinicId,
+        tx,
+      );
+
+      if (stillMemberHere || hasOtherIdentity) {
+        return { accountAnonymized: false };
+      }
+
+      await tx.user.update({
+        where: { id: userId },
         data: {
           status: UserStatus.INACTIVE,
           name: "Profissional removido",
-          email: `deleted-${professional.user.id}@removido.local`,
+          email: `deleted-${userId}@removido.local`,
           phone: null,
           avatarUrl: null,
+          deletedAt: new Date(),
         },
-      }),
-    ]);
+      });
+      return { accountAnonymized: true };
+    });
+
+    await this.auditLogRepository.create({
+      clinicId,
+      userId: adminId,
+      userName: admin.name,
+      action: "REMOVE_PROFESSIONAL",
+      entity: "Professional",
+      entityId: professional.id,
+      oldData: { name: professional.user.name },
+      newData: { accountAnonymized },
+    });
 
     return {
       message: "Profissional removido com sucesso",

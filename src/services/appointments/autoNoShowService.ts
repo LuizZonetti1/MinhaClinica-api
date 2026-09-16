@@ -78,6 +78,7 @@ export class AutoNoShowService {
           patientId: true,
           patient: {
             select: {
+              blockedAt: true,
               user: { select: { id: true, name: true, email: true, phone: true } },
             },
           },
@@ -105,12 +106,15 @@ export class AutoNoShowService {
           });
           await notifRepo.markAsSent(n.id);
 
-          // Bloquear conta após maxConsecutiveNoShows faltas (configurável por clínica)
+          // Bloquear o PAPEL DE PACIENTE após maxConsecutiveNoShows faltas
+          // (configurável por clínica). Antes gravava User.status=BLOCKED, que
+          // trancava a conta inteira — inclusive o acesso de quem também é
+          // equipe de alguma clínica. Já bloqueado não bloqueia de novo.
           const noShowCount = await notifRepo.countPatientNoShows(appt.patientId);
-          if (noShowCount >= maxConsecutiveNoShows) {
-            await prisma.user.updateMany({
-              where: { id: user.id },
-              data: { status: "BLOCKED" },
+          if (noShowCount >= maxConsecutiveNoShows && !appt.patient?.blockedAt) {
+            await prisma.patient.update({
+              where: { id: appt.patientId },
+              data: { blockedAt: new Date() },
             });
 
             await auditLogRepo.create({
@@ -118,10 +122,10 @@ export class AutoNoShowService {
               userId: null,
               userName: "Sistema (rotina automática de faltas)",
               action: "BLOCK_PATIENT_AUTO_NO_SHOW",
-              entity: "User",
-              entityId: user.id,
-              oldData: { status: "ACTIVE" },
-              newData: { status: "BLOCKED", noShowCount, maxConsecutiveNoShows },
+              entity: "Patient",
+              entityId: appt.patientId,
+              oldData: { blocked: false },
+              newData: { blocked: true, noShowCount, maxConsecutiveNoShows },
             });
 
             const blocked = await notifRepo.create({
@@ -132,9 +136,9 @@ export class AutoNoShowService {
               recipientUserId: user.id,
               type: "ACCOUNT_BLOCKED",
               channel: "IN_APP",
-              subject: "Conta bloqueada",
+              subject: "Agendamentos bloqueados",
               message:
-                "Sua conta foi bloqueada por excesso de faltas nas consultas agendadas. Entre em contato com a clínica.",
+                "Seu acesso como paciente foi bloqueado por excesso de faltas nas consultas agendadas. Entre em contato com a clínica.",
               appointmentId: appt.id,
             });
             await notifRepo.markAsSent(blocked.id);

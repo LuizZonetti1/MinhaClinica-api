@@ -41,7 +41,7 @@ export class RequestEmailChangeService {
 
     const user = await prisma.user.findUnique({
       where: { id: targetUserId },
-      select: { id: true, name: true, email: true, clinicId: true },
+      select: { id: true, name: true, email: true, activeClinicId: true },
     });
 
     if (!user) {
@@ -74,9 +74,13 @@ export class RequestEmailChangeService {
       },
     });
 
-    if (user.clinicId) {
+    // Registrado na clínica em que o pedido foi feito (ADMIN trocando o e-mail
+    // de alguém da equipe) ou, se veio da própria pessoa sem clínica ativa, na
+    // clínica preferida dela. Conta só de paciente não entra em log de clínica.
+    const auditClinicId = context.clinicId ?? user.activeClinicId;
+    if (auditClinicId) {
       await auditLogRepository.create({
-        clinicId: user.clinicId,
+        clinicId: auditClinicId,
         userId: context.userId,
         userName: context.userName,
         action: "REQUEST_EMAIL_CHANGE",
@@ -117,7 +121,7 @@ export class ConfirmEmailChangeService {
         id: true,
         name: true,
         email: true,
-        clinicId: true,
+        activeClinicId: true,
         pendingEmail: true,
         pendingEmailExpires: true,
       },
@@ -156,9 +160,9 @@ export class ConfirmEmailChangeService {
       },
     });
 
-    if (user.clinicId) {
+    if (user.activeClinicId) {
       await auditLogRepository.create({
-        clinicId: user.clinicId,
+        clinicId: user.activeClinicId,
         userId: null, // confirmado pelo dono do token, sem sessão autenticada
         userName: user.name,
         action: "CONFIRM_EMAIL_CHANGE",

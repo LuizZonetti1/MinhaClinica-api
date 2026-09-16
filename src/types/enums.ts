@@ -17,6 +17,23 @@ export const UserStatus = {
 
 export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
 
+export const MembershipStatus = {
+  PENDING: "PENDING",
+  ACTIVE: "ACTIVE",
+  INACTIVE: "INACTIVE",
+} as const;
+
+export type MembershipStatus = (typeof MembershipStatus)[keyof typeof MembershipStatus];
+
+export const InviteStatus = {
+  PENDING: "PENDING",
+  ACCEPTED: "ACCEPTED",
+  DECLINED: "DECLINED",
+  CANCELLED: "CANCELLED",
+} as const;
+
+export type InviteStatus = (typeof InviteStatus)[keyof typeof InviteStatus];
+
 export const Gender = {
   MALE: "MALE",
   FEMALE: "FEMALE",

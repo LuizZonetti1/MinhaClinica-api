@@ -161,6 +161,33 @@ export const clinicRegisterCompleteSchema = yup.object({
 });
 
 /**
+ * Schema para confirmar a clínica cadastrada com o e-mail de uma conta existente
+ * POST /api/clinics/register/existing/confirm (autenticado)
+ * CPF e telefone só são exigidos se a conta ainda não os tiver.
+ */
+export const clinicRegisterConfirmExistingSchema = yup.object({
+  token: yup.string().required("Token é obrigatório"),
+
+  cpf: yup
+    .string()
+    .transform((v) => (typeof v === "string" ? v.replace(/\D/g, "") : v))
+    .matches(/^\d{11}$/, { message: "CPF deve conter exatamente 11 dígitos", excludeEmptyString: true })
+    .test("cpf-valid", "CPF inválido", (v) => (v ? validateCPF(v) : true))
+    .optional(),
+
+  phone: yup
+    .string()
+    .transform((v) => (typeof v === "string" ? v.replace(/\D/g, "") : v))
+    .matches(/^\d{10,11}$/, { message: "Telefone deve ter 10 ou 11 dígitos", excludeEmptyString: true })
+    .optional(),
+
+  termsAccepted: yup
+    .boolean()
+    .oneOf([true], "É necessário aceitar os Termos de Uso e a Política de Privacidade")
+    .required("É necessário aceitar os Termos de Uso e a Política de Privacidade"),
+});
+
+/**
  * Schema para atualização de clínica
  * PUT /api/clinics/:id
  */

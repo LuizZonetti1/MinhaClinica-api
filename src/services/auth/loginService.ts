@@ -1,15 +1,22 @@
-﻿import bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs";
 import { prisma } from "../../database/prisma";
 import { AuditLogRepository } from "../../repository/auditLogRepository";
-import { UserRole, UserStatus } from "../../types/enums";
-import { generateAuthToken, generateTwoFactorPendingToken } from "../../utils/jwtUtils";
-import { isTwoFactorRequired, SendOtpService } from "./twoFactorService";
+import { UserStatus } from "../../types/enums";
+import { generateTwoFactorPendingToken } from "../../utils/jwtUtils";
+import {
+  buildSessionContext,
+  generateSessionToken,
+  loadSessionUserByEmail,
+  toSessionUserPayload,
+} from "./sessionContext";
+import { SendOtpService } from "./twoFactorService";
 
 const auditLogRepository = new AuditLogRepository();
 
 /**
  * LOGIN - Autenticar usuário
- * Apenas email e senha (usuário já está vinculado à clínica)
+ * E-mail e senha. A conta abre na clínica preferida (User.activeClinicId) ou
+ * na primeira em que tem vínculo ativo; quem é só paciente abre sem clínica.
  */
 export class LoginService {
   async execute(data: {
@@ -19,17 +26,7 @@ export class LoginService {
     ipAddress?: string | null;
     userAgent?: string | null;
   }) {
-    // Buscar usuário por email
-    const user = await prisma.user.findFirst({
-      where: {
-        email: data.email,
-      },
-      include: {
-        clinic: { include: { settings: true } },
-        professional: true,
-        patient: true,
-      },
-    });
+    const user = await loadSessionUserByEmail(data.email);
     if (!user) {
       throw new Error("Email ou senha incorretos");
     }
@@ -39,18 +36,11 @@ export class LoginService {
       throw new Error("Email ou senha incorretos");
     }
 
-    // ADMIN/RECEPTIONIST não têm registro próprio de isActive (só User.status
-    // controla o acesso); PROFESSIONAL/PATIENT usam o isActive do registro
-    // vinculado (ver comentário em Professional.isActive/Patient.isActive no
-    // schema). Login só falha aqui se NENHUM papel do usuário estiver usável —
-    // com multi-papel, basta um papel ativo para entrar.
-    const isRoleUsable = (role: UserRole): boolean => {
-      if (role === UserRole.PROFESSIONAL) return user.professional?.isActive === true;
-      if (role === UserRole.PATIENT) return user.patient?.isActive === true;
-      return true;
-    };
-    const rolesToCheck = user.roles.length > 0 ? user.roles : [user.role];
-    if (!rolesToCheck.some(isRoleUsable)) {
+    // Papéis efetivos: vínculo ativo na clínica (PROFESSIONAL exige o registro
+    // Professional ativo lá) + PATIENT se o registro de paciente estiver ativo e
+    // não bloqueado. Login só falha se NENHUM papel estiver usável.
+    const ctx = buildSessionContext(user);
+    if (ctx.roles.length === 0) {
       throw new Error("Email ou senha incorretos");
     }
 
@@ -61,11 +51,12 @@ export class LoginService {
       throw new Error("Email ou senha incorretos");
     }
 
-    // 2FA individual (User.twoFactorEnabled) ou por política da clínica
-    // (ClinicSettings.twoFactorEnabled). Mesmo critério usado por
-    // Send/Resend/ValidateOtp — os dois lados PRECISAM concordar, senão a
-    // clínica que liga a política tranca os próprios usuários para fora.
-    if (isTwoFactorRequired(user)) {
+    // 2FA individual (User.twoFactorEnabled) ou por política de qualquer
+    // clínica em que a conta trabalha. Mesmo critério usado por
+    // Send/Resend/ValidateOtp (isTwoFactorRequired) — os dois lados PRECISAM
+    // concordar, senão a clínica que liga a política tranca os próprios
+    // usuários para fora.
+    if (ctx.twoFactorRequired) {
       let deviceTrusted = false;
 
       if (data.deviceToken) {
@@ -86,10 +77,10 @@ export class LoginService {
 
         const tempToken = generateTwoFactorPendingToken(
           user.id,
-          user.clinicId,
-          user.role,
+          ctx.clinicId,
+          ctx.role,
           user.name,
-          user.roles,
+          ctx.roles,
         );
         return { requires2FA: true, tempToken };
       }
@@ -101,12 +92,10 @@ export class LoginService {
     // usuário no meio do trabalho mesmo digitando, e não existe refresh
     // token no projeto para renovar. O token mantém as 8h de sempre e o
     // valor vai na resposta para o cliente aplicar o timeout de verdade.
-    const sessionTimeoutMinutes = user.clinicId
-      ? (user.clinic?.settings?.sessionTimeoutMinutes ?? null)
-      : null;
+    const sessionTimeoutMinutes = ctx.sessionTimeoutMinutes;
 
-    // Gerar token JWT (inclui todos os roles ativos)
-    const token = generateAuthToken(user.id, user.clinicId, user.role, user.name, {}, user.roles);
+    // Gerar token JWT (clínica ativa + papéis efetivos)
+    const token = generateSessionToken(user, ctx);
 
     // Atualizar último login
     await prisma.user.update({
@@ -116,14 +105,14 @@ export class LoginService {
 
     // ClinicSettings.accessLogEnabled ("Log de acessos — Registrar todos os
     // acessos ao sistema", default true) tinha tela real sem nenhum efeito —
-    // nenhum login era registrado em nenhum lugar. Só se aplica a staff
-    // (clinicId presente); paciente é global.
+    // nenhum login era registrado em nenhum lugar. Só se aplica à clínica
+    // ativa; login de quem é só paciente não entra no log de clínica nenhuma.
     // Falha ao gravar auditoria não pode derrubar o login (o handler do
     // controller transforma qualquer Error em 401) — registra e segue.
-    if (user.clinicId && user.clinic?.settings?.accessLogEnabled !== false) {
+    if (ctx.clinicId && ctx.accessLogEnabled) {
       try {
         await auditLogRepository.create({
-          clinicId: user.clinicId,
+          clinicId: ctx.clinicId,
           userId: user.id,
           userName: user.name,
           action: "LOGIN",
@@ -142,16 +131,7 @@ export class LoginService {
       token,
       /** null = sem política de inatividade (paciente/clínica sem settings). */
       sessionTimeoutMinutes,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        roles: user.roles.length > 0 ? user.roles : [user.role],
-        clinicId: user.clinicId,
-        clinicName: user.clinic?.tradeName ?? null,
-        termsAccepted: Boolean(user.termsAcceptedAt && user.privacyAcceptedAt),
-      },
+      user: toSessionUserPayload(user, ctx),
     };
   }
 }

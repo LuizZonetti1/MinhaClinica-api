@@ -1,12 +1,11 @@
 import { prisma } from "../database/prisma";
 import { UserStatus } from "../types/enums";
-import type { CreateUserInput, UpdateUserInput, UserFiltersInput } from "../types/user";
+import type { CreateUserInput, UpdateUserInput } from "../types/user";
 
 export class UserRepository {
   async createUser(data: CreateUserInput) {
     return prisma.user.create({
       data: {
-        clinicId: data.clinicId ?? null,
         name: data.name,
         cpf: data.cpf ?? null,
         email: data.email,
@@ -26,35 +25,29 @@ export class UserRepository {
     });
   }
 
-  async findWithClinic(userId: string) {
-    return prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        clinic: {
-          include: { settings: true },
-        },
-      },
-    });
+  /** Conta + a clínica ativa da sessão (com settings), quando houver. */
+  async findWithClinic(userId: string, clinicId: string | null) {
+    const [user, clinic] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId } }),
+      clinicId
+        ? prisma.clinic.findUnique({ where: { id: clinicId }, include: { settings: true } })
+        : null,
+    ]);
+    return user ? { ...user, clinic } : null;
   }
 
-  // Busca por email globalmente (pacientes) ou dentro de uma clínica (staff)
-  async findByEmail(emailOrClinicId: string, emailOrUndefined?: string) {
-    const isClinicScoped = emailOrUndefined !== undefined;
+  // E-mail é único na plataforma inteira (uma conta por e-mail). A antiga
+  // versão "escopada por clínica" deixava passar o e-mail de um paciente ou de
+  // alguém de outra clínica e o create estourava na unicidade global.
+  async findByEmail(email: string) {
     return prisma.user.findFirst({
-      where: isClinicScoped
-        ? { clinicId: emailOrClinicId, email: emailOrUndefined }
-        : { email: emailOrClinicId },
+      where: { email: email.toLowerCase().trim() },
     });
   }
 
-  // Busca por CPF globalmente — paciente é identidade única no sistema
+  // Busca por CPF globalmente — uma pessoa, uma conta
   async findByCpfGlobal(cpf: string) {
     return prisma.user.findFirst({ where: { cpf } });
-  }
-
-  // Busca por CPF dentro de uma clínica — staff/profissional, escopados por tenant
-  async findByCpfInClinic(clinicId: string, cpf: string) {
-    return prisma.user.findFirst({ where: { clinicId, cpf } });
   }
 
   async updateUser(userId: string, data: UpdateUserInput) {
@@ -110,47 +103,4 @@ export class UserRepository {
     });
   }
 
-  async findPendingUsers(clinicId: string) {
-    return prisma.user.findMany({
-      where: {
-        clinicId,
-        status: UserStatus.PENDING_ACTIVATION,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-  }
-
-  async findAllByClinic(clinicId: string, filters?: UserFiltersInput) {
-    return prisma.user.findMany({
-      where: {
-        clinicId,
-        role: filters?.role,
-        status: filters?.status,
-        ...(filters?.search && {
-          OR: [
-            { name: { contains: filters.search, mode: "insensitive" } },
-            { email: { contains: filters.search, mode: "insensitive" } },
-            { cpf: { contains: filters.search } },
-          ],
-        }),
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        cpf: true,
-        role: true,
-        status: true,
-        avatarUrl: true,
-        createdAt: true,
-        lastLoginAt: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-  }
 }

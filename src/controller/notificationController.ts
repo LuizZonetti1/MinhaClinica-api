@@ -14,10 +14,9 @@ export class NotificationController {
   async list(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.userId!;
-      const clinicId = req.clinicId ?? null;
 
       const service = new NotificationService();
-      const data = await service.listForUser(userId, clinicId);
+      const data = await service.listForUser(userId);
 
       res.status(200).json({ data });
     } catch (error) {
@@ -50,10 +49,9 @@ export class NotificationController {
   async markAllRead(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.userId!;
-      const clinicId = req.clinicId ?? null;
 
       const service = new NotificationService();
-      await service.markAllRead(userId, clinicId);
+      await service.markAllRead(userId);
 
       res.status(200).json({ message: "Todas as notificações marcadas como lidas" });
     } catch (error) {
@@ -103,7 +101,11 @@ export class NotificationController {
    */
   async searchUsers(req: Request, res: Response): Promise<void> {
     try {
-      const clinicId = req.clinicId!;
+      const clinicId = req.clinicId;
+      if (!clinicId) {
+        res.status(403).json({ error: "Acesso negado" });
+        return;
+      }
       const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
 
       if (!q || q.length < 2) {

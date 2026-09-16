@@ -4,6 +4,7 @@ import {
   clinicNotificationsUpdateSchema,
   clinicPolicyUpdateSchema,
   clinicRegisterCompleteSchema,
+  clinicRegisterConfirmExistingSchema,
   clinicRegisterStartSchema,
   clinicScheduleUpdateSchema,
   clinicSecurityUpdateSchema,
@@ -14,6 +15,8 @@ import {
 import { VerifyEmailService } from "../services/auth/verifyEmailService";
 import {
   CompleteClinicOwnerService,
+  ConfirmExistingAccountClinicService,
+  GetExistingAccountClinicRegistrationService,
   RegisterClinicService,
   ResendClinicVerificationService,
 } from "../services/clinics/clinicRegistrationService";
@@ -275,6 +278,48 @@ export class ClinicController {
         return;
       }
       handleControllerError(res, error, "Erro ao completar cadastro da clínica");
+    }
+  }
+
+  /**
+   * GET /api/clinics/register/existing/:token
+   * Resumo da clínica cadastrada com o e-mail de uma conta existente
+   */
+  async getExistingAccountRegistration(req: Request, res: Response): Promise<void> {
+    try {
+      const service = new GetExistingAccountClinicRegistrationService();
+      const result = await service.execute(req.params.token as string);
+      res.status(200).json(result);
+    } catch (error) {
+      handleControllerError(res, error, "Erro ao carregar cadastro da clínica");
+    }
+  }
+
+  /**
+   * POST /api/clinics/register/existing/confirm
+   * A conta logada confirma a clínica cadastrada com o próprio e-mail
+   */
+  async confirmExistingAccountRegistration(req: Request, res: Response): Promise<void> {
+    try {
+      const validated = await clinicRegisterConfirmExistingSchema.validate(req.body, {
+        abortEarly: false,
+        stripUnknown: true,
+      });
+
+      const service = new ConfirmExistingAccountClinicService();
+      const result = await service.execute(req.userId as string, {
+        token: validated.token,
+        termsAccepted: validated.termsAccepted,
+        cpf: validated.cpf || undefined,
+        phone: validated.phone || undefined,
+      });
+      res.status(200).json(result);
+    } catch (error: any) {
+      if (error.name === "ValidationError") {
+        res.status(400).json({ message: "Erro de validação", errors: error.errors });
+        return;
+      }
+      handleControllerError(res, error, "Erro ao confirmar cadastro da clínica");
     }
   }
 

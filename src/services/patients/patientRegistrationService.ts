@@ -37,9 +37,13 @@ export class RegisterPatientService {
       // O atalho que existia para EMAIL_VERIFIED pulava direto para a Etapa 3 sem
       // enviar e-mail nenhum, o que parecia envio quebrado e tirava a tela de
       // verificação do caminho. Ver o mesmo ajuste em RegisterClinicService.
+      // Só regrava cadastro pendente DE PACIENTE: com o e-mail de um dono de
+      // clínica em cadastro, isto sobrescrevia nome/token dele e o mandava para
+      // o fluxo errado.
       if (
-        existingUser.status === UserStatus.PENDING_ACTIVATION ||
-        existingUser.status === UserStatus.EMAIL_VERIFIED
+        existingUser.role === UserRole.PATIENT &&
+        (existingUser.status === UserStatus.PENDING_ACTIVATION ||
+          existingUser.status === UserStatus.EMAIL_VERIFIED)
       ) {
         const verification = createVerificationData(25);
         await prisma.user.update({

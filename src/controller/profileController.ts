@@ -33,7 +33,7 @@ export class ProfileController {
       const userId = req.userId as string;
 
       const service = new GetProfileService();
-      const data = await service.execute(userId);
+      const data = await service.execute(userId, req.clinicId ?? null, req.userRole);
 
       res.status(200).json({ data });
     } catch (error) {
@@ -56,7 +56,7 @@ export class ProfileController {
       const userId = req.userId as string;
 
       const service = new GetReceptionProfileService();
-      const data = await service.execute(userId);
+      const data = await service.execute(userId, req.clinicId ?? null);
 
       res.status(200).json({ data });
     } catch (error) {
@@ -165,7 +165,7 @@ export class ProfileController {
       // Se veio arquivo, deleta o avatar antigo e salva a nova URL pública
       if (req.file) {
         const profileService = new GetProfileService();
-        const existing = await profileService.execute(userId);
+        const existing = await profileService.execute(userId, req.clinicId ?? null);
         if (existing?.personal?.avatarUrl) {
           const oldPublicId = extractPublicId(existing.personal.avatarUrl);
           if (oldPublicId) await deleteFromCloudinary(oldPublicId);
@@ -307,7 +307,7 @@ export class ProfileController {
       }
 
       const service = new UpdateUserRolesService();
-      const result = await service.execute(userId, roles);
+      const result = await service.execute(userId, req.clinicId ?? null, roles);
 
       res.status(200).json({ message: "Papéis atualizados com sucesso", ...result });
     } catch (error) {

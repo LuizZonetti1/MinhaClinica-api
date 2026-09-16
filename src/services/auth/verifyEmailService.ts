@@ -39,8 +39,9 @@ export class VerifyEmailService {
       },
     });
 
-    // Gerar JWT temporário com scope restrito (válido por 30 min)
-    const tempToken = generateTempRegistrationToken(user.id, user.clinicId, user.role as UserRole);
+    // Gerar JWT temporário com scope restrito (válido por 30 min). A clínica do
+    // dono em cadastro é resolvida pelo vínculo PENDING na Etapa 3, não pelo token.
+    const tempToken = generateTempRegistrationToken(user.id, null, user.role as UserRole);
 
     return {
       tempToken,

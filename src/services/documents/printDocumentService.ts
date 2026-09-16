@@ -2,6 +2,7 @@ import { prisma } from "../../database/prisma";
 import { DocumentRepository } from "../../repository/documentRepository";
 import type { AuditContext } from "../../types/document";
 import { DocumentStatus, UserRole } from "../../types/enums";
+import { resolveAppointmentRole } from "../../utils/appointmentAccess";
 import { AuditService } from "../audit/auditService";
 
 const documentRepository = new DocumentRepository();
@@ -11,7 +12,7 @@ export class PrintDocumentService {
   async execute(
     appointmentId: string,
     docId: string,
-    context: AuditContext & { userRole: string },
+    context: AuditContext & { userRole: string; userRoles?: string[] },
   ) {
     const document = await documentRepository.findById(docId);
 
@@ -34,15 +35,32 @@ export class PrintDocumentService {
       });
     }
 
-    // Validar permissão: PROFESSIONAL (dono), ADMIN, RECEPTIONIST
-    const role = context.userRole;
+    // Validar permissão: PROFESSIONAL (dono), ADMIN, RECEPTIONIST — sempre da
+    // clínica ativa (o documento já foi conferido contra ela acima).
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        professional: { select: { userId: true } },
+        patient: { select: { userId: true } },
+      },
+    });
+    const role = appointment
+      ? resolveAppointmentRole(
+          {
+            userId: context.userId,
+            clinicId: context.clinicId,
+            roles: context.userRoles ?? [context.userRole],
+          },
+          {
+            clinicId: appointment.clinicId,
+            patientUserId: appointment.patient.userId,
+            professionalUserId: appointment.professional.userId,
+          },
+        )
+      : null;
 
     if (role === UserRole.PROFESSIONAL) {
-      const appointment = await prisma.appointment.findUnique({
-        where: { id: appointmentId },
-        include: { professional: { select: { userId: true } } },
-      });
-      if (!appointment || appointment.professional.userId !== context.userId) {
+      if (appointment?.professional.userId !== context.userId) {
         throw Object.assign(new Error("Acesso negado"), { statusCode: 403 });
       }
     } else if (role !== UserRole.ADMIN && role !== UserRole.RECEPTIONIST) {

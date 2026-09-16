@@ -1,4 +1,5 @@
 import { prisma } from "../../database/prisma";
+import { activeMemberOf } from "../../repository/membershipRepository";
 import { NotificationRepository } from "../../repository/notificationRepository";
 import { EmailService, createEmailProvider } from "../email/emailService";
 
@@ -15,8 +16,8 @@ export class SendDirectService {
         const recipient = await prisma.user.findFirst({
             where: {
                 id: input.recipientUserId,
-                clinicId: input.clinicId,
                 status: "ACTIVE",
+                ...activeMemberOf(input.clinicId),
             },
             select: { id: true, name: true, email: true, phone: true },
         });

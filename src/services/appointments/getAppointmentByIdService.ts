@@ -1,10 +1,11 @@
 import { prisma } from "../../database/prisma";
+import { resolveAppointmentRole } from "../../utils/appointmentAccess";
 
 export class GetAppointmentByIdService {
   async execute(
     appointmentId: string,
-    clinicId: string,
-    options?: { userId?: string; userRole?: string },
+    clinicId: string | null,
+    options?: { userId?: string; userRole?: string; userRoles?: string[] },
   ) {
     const appointment = await prisma.appointment.findUnique({
       where: { id: appointmentId },
@@ -48,14 +49,22 @@ export class GetAppointmentByIdService {
       throw Object.assign(new Error("Consulta não encontrada"), { statusCode: 404 });
     }
 
-    if (appointment.clinicId !== clinicId) {
+    // Equipe da clínica ativa ou a própria paciente da consulta (em qualquer
+    // clínica). Profissional e recepção seguem vendo toda consulta da clínica.
+    const role = resolveAppointmentRole(
+      {
+        userId: options?.userId ?? "",
+        clinicId,
+        roles: options?.userRoles ?? (options?.userRole ? [options.userRole] : []),
+      },
+      {
+        clinicId: appointment.clinicId,
+        patientUserId: appointment.patient.userId,
+        professionalUserId: appointment.professional.userId,
+      },
+    );
+    if (!role) {
       throw Object.assign(new Error("Acesso negado a esta consulta"), { statusCode: 403 });
-    }
-
-    if (options?.userRole === "PATIENT" && options.userId) {
-      if (appointment.patient.userId !== options.userId) {
-        throw Object.assign(new Error("Acesso negado"), { statusCode: 403 });
-      }
     }
 
     const { patient, professional, clinic } = appointment;

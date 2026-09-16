@@ -134,7 +134,7 @@ export class DocumentController {
   async listDocuments(req: Request, res: Response): Promise<void> {
     try {
       const context = buildAuditContext(req);
-      if (!context.clinicId && req.userRole !== "PATIENT") {
+      if (!context.clinicId && !req.userRoles?.includes("PATIENT")) {
         res.status(400).json({ error: "Clínica não identificada no token" });
         return;
       }
@@ -144,6 +144,7 @@ export class DocumentController {
       const result = await service.execute(appointmentId, {
         ...context,
         userRole: req.userRole!,
+        userRoles: req.userRoles ?? [],
       });
       res.status(200).json({ documents: result });
     } catch (error) {
@@ -154,7 +155,7 @@ export class DocumentController {
   async viewDocument(req: Request, res: Response): Promise<void> {
     try {
       const context = buildAuditContext(req);
-      if (!context.clinicId && req.userRole !== "PATIENT") {
+      if (!context.clinicId && !req.userRoles?.includes("PATIENT")) {
         res.status(400).json({ error: "Clínica não identificada no token" });
         return;
       }
@@ -165,6 +166,7 @@ export class DocumentController {
       const result = await service.execute(appointmentId, docId, {
         ...context,
         userRole: req.userRole!,
+        userRoles: req.userRoles ?? [],
       });
       res.status(200).json(result);
     } catch (error) {
@@ -186,6 +188,7 @@ export class DocumentController {
       const result = await service.execute(appointmentId, docId, {
         ...context,
         userRole: req.userRole!,
+        userRoles: req.userRoles ?? [],
       });
       res.status(200).json(result);
     } catch (error) {

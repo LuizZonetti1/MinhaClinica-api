@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { UserRole, UserStatus } from "../types/enums";
+import { InviteStatus, MembershipStatus, UserRole } from "../types/enums";
 import { stripCNPJ, validateCNPJ } from "../utils/validateCNPJ";
 import { prisma } from "./prisma";
 
@@ -80,28 +80,31 @@ async function removerBloqueiosDeTeste(): Promise<void> {
   }
 }
 
-/** 2. Pedro Almeida e Luiz Zonetti travados em BLOCKED desde a rodada 5. */
+/**
+ * 2. Pedro Almeida e Luiz Zonetti travados em bloqueio por faltas desde a
+ * rodada 5. O bloqueio agora vive no papel de paciente (Patient.blockedAt).
+ */
 async function reativarUsuariosBloqueados(): Promise<void> {
-  console.log("\n2. Usuários bloqueados a reativar");
+  console.log("\n2. Pacientes bloqueados a reativar");
 
-  const usuarios = await prisma.user.findMany({
-    where: { name: { in: USUARIOS_PARA_REATIVAR }, status: UserStatus.BLOCKED },
-    select: { id: true, name: true, email: true },
+  const pacientes = await prisma.patient.findMany({
+    where: { user: { name: { in: USUARIOS_PARA_REATIVAR } }, blockedAt: { not: null } },
+    select: { id: true, user: { select: { name: true, email: true } } },
   });
 
-  if (usuarios.length === 0) {
-    console.log("  (nenhum dos dois está BLOCKED)");
+  if (pacientes.length === 0) {
+    console.log("  (nenhum dos dois está bloqueado)");
     return;
   }
 
-  for (const usuario of usuarios) {
-    plano(`reativar ${usuario.name} <${usuario.email}> — BLOCKED → ACTIVE`);
+  for (const paciente of pacientes) {
+    plano(`desbloquear ${paciente.user.name} <${paciente.user.email}>`);
   }
 
   if (APPLY) {
-    await prisma.user.updateMany({
-      where: { id: { in: usuarios.map((usuario) => usuario.id) } },
-      data: { status: UserStatus.ACTIVE },
+    await prisma.patient.updateMany({
+      where: { id: { in: pacientes.map((paciente) => paciente.id) } },
+      data: { blockedAt: null },
     });
   }
 }
@@ -109,8 +112,8 @@ async function reativarUsuariosBloqueados(): Promise<void> {
 /**
  * 3. Clínicas criadas só para testar o cadastro.
  * Clinic tem 14 relações onDelete: Cascade — a exclusão só acontece se a clínica
- * estiver de fato vazia (sem consultas, profissionais, documentos ou usuários que
- * concluíram o cadastro). O dono pendente vai junto, pelo cascade.
+ * estiver de fato vazia (sem consultas, profissionais, documentos ou vínculos
+ * ativos). Contas não são apagadas junto: o vínculo sai pelo cascade.
  */
 async function removerClinicasDeTeste(): Promise<void> {
   console.log("\n3. Clínicas de teste órfãs");
@@ -122,12 +125,10 @@ async function removerClinicasDeTeste(): Promise<void> {
     include: {
       _count: { select: { appointments: true, professionals: true, documents: true } },
       // Clinic não tem relação com Patient (paciente é usuário global): o sinal
-      // de "clínica só de teste" é não ter nenhum usuário que passou da etapa de
-      // verificação de e-mail — ou seja, só o dono pendente.
-      users: {
-        where: {
-          status: { notIn: [UserStatus.PENDING_ACTIVATION, UserStatus.EMAIL_VERIFIED] },
-        },
+      // de "clínica só de teste" é não ter nenhum vínculo ativo — ou seja, só o
+      // dono com o cadastro pendente.
+      memberships: {
+        where: { status: MembershipStatus.ACTIVE },
         select: { id: true },
       },
     },
@@ -140,19 +141,19 @@ async function removerClinicasDeTeste(): Promise<void> {
 
   for (const clinica of clinicas) {
     const { appointments, professionals, documents } = clinica._count;
-    const usuariosAtivos = clinica.users.length;
+    const usuariosAtivos = clinica.memberships.length;
 
     if (appointments > 0 || professionals > 0 || documents > 0 || usuariosAtivos > 0) {
       console.log(
         `  ⚠ "${clinica.tradeName}" NÃO será removida: tem ${appointments} consulta(s), ` +
           `${professionals} profissional(is), ${documents} documento(s) e ${usuariosAtivos} ` +
-          "usuário(s) com cadastro concluído. Confira antes de apagar à mão.",
+          "vínculo(s) ativo(s). Confira antes de apagar à mão.",
       );
       continue;
     }
 
     plano(
-      `remover clínica de teste "${clinica.tradeName}" (CNPJ ${clinica.cnpj}) e seu dono pendente`,
+      `remover clínica de teste "${clinica.tradeName}" (CNPJ ${clinica.cnpj})`,
     );
 
     if (APPLY) {
@@ -163,17 +164,13 @@ async function removerClinicasDeTeste(): Promise<void> {
 
 /**
  * 4. Convites de profissional duplicados e os criados pela auditoria.
- * Só toca em convite que ainda não virou Professional.
+ * Só toca em convite ainda pendente (ClinicInvite) — nunca em conta.
  */
 async function limparConvitesPendentes(): Promise<void> {
   console.log("\n4. Convites de profissional pendentes");
 
-  const convites = await prisma.user.findMany({
-    where: {
-      role: UserRole.PROFESSIONAL,
-      status: { in: [UserStatus.PENDING_ACTIVATION, UserStatus.EMAIL_VERIFIED] },
-      professional: { is: null },
-    },
+  const convites = await prisma.clinicInvite.findMany({
+    where: { role: UserRole.PROFESSIONAL, status: InviteStatus.PENDING },
     select: { id: true, name: true, email: true, clinicId: true, createdAt: true },
     orderBy: { createdAt: "desc" },
   });
@@ -214,7 +211,10 @@ async function limparConvitesPendentes(): Promise<void> {
   }
 
   if (APPLY) {
-    await prisma.user.deleteMany({ where: { id: { in: [...paraRemover.keys()] } } });
+    await prisma.clinicInvite.updateMany({
+      where: { id: { in: [...paraRemover.keys()] } },
+      data: { status: InviteStatus.CANCELLED },
+    });
   }
 }
 

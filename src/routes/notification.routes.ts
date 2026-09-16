@@ -24,9 +24,10 @@ router.get("/", ...authenticated, (req, res) => controller.list(req, res));
 
 /**
  * GET /api/notifications/search-users?q=...
- * Busca usuários ativos da clínica por nome (para envio de mensagem direta)
+ * Busca a equipe ativa da clínica por nome (para envio de mensagem direta)
+ * Roles: ADMIN, RECEPTIONIST, PROFESSIONAL — paciente não lista usuários.
  */
-router.get("/search-users", ...authenticated, (req, res) => controller.searchUsers(req, res));
+router.get("/search-users", ...canSendDirect, (req, res) => controller.searchUsers(req, res));
 
 /**
  * PATCH /api/notifications/read-all

@@ -5,10 +5,7 @@ import {
   GetReceptionByIdService,
   UpdateReceptionService,
 } from "../services/staff/receptionManagementService";
-import {
-  CompleteStaffService,
-  InviteStaffService,
-} from "../services/staff/staffRegistrationService";
+import { InviteStaffService } from "../services/staff/staffRegistrationService";
 import { handleControllerError } from "../utils/controllerUtils";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,10 +38,15 @@ export class StaffController {
         return;
       }
 
+      if (!req.clinicId) {
+        res.status(403).json({ error: "Acesso negado" });
+        return;
+      }
+
       const { name, email, role } = req.body;
 
       const service = new InviteStaffService();
-      const result = await service.execute(adminId, { name, email, role });
+      const result = await service.execute(adminId, req.clinicId, { name, email, role });
 
       res.status(201).json(result);
     } catch (error) {
@@ -60,37 +62,6 @@ export class StaffController {
         return;
       }
       handleControllerError(res, error, "Erro ao enviar convite");
-    }
-  }
-
-  /**
-   * POST /api/staff/complete
-   * Completar cadastro de staff (apos verificar email)
-   */
-  async complete(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.userId; // Vem do token de verificacao
-
-      if (!userId) {
-        res.status(401).json({ error: "Nao autenticado" });
-        return;
-      }
-
-      const service = new CompleteStaffService();
-      const result = await service.execute(userId, req.body);
-
-      res.status(200).json(result);
-    } catch (error) {
-      // CPF duplicado agora carrega statusCode/code/action explícitos (409).
-      if (error instanceof Error && "statusCode" in error) {
-        handleControllerError(res, error, "Erro ao completar cadastro");
-        return;
-      }
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-        return;
-      }
-      handleControllerError(res, error, "Erro ao completar cadastro");
     }
   }
 
@@ -177,8 +148,13 @@ export class StaffController {
         return;
       }
 
+      if (!req.clinicId) {
+        res.status(403).json({ error: "Acesso negado" });
+        return;
+      }
+
       const service = new UpdateReceptionService();
-      const result = await service.execute(adminId, receptionistId, req.body);
+      const result = await service.execute(adminId, req.clinicId, receptionistId, req.body);
 
       res.status(200).json(result);
     } catch (error) {
@@ -216,8 +192,13 @@ export class StaffController {
         return;
       }
 
+      if (!req.clinicId) {
+        res.status(403).json({ error: "Acesso negado" });
+        return;
+      }
+
       const service = new DeactivateReceptionService();
-      const result = await service.execute(adminId, receptionistId);
+      const result = await service.execute(adminId, req.clinicId, receptionistId);
 
       res.status(200).json(result);
     } catch (error) {

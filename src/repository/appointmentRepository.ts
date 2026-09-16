@@ -16,6 +16,8 @@ export class AppointmentRepository {
         user: {
           status: { in: ["ACTIVE", "PENDING_ACTIVATION"] },
         },
+        // Bloqueado por faltas fica fora, como quando o bloqueio era na conta.
+        blockedAt: null,
         OR: [{ user: { name: { contains: q, mode: "insensitive" } } }, { cpf: { contains: q } }],
       },
       select: {

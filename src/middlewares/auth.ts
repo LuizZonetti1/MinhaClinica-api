@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { prisma } from "../database/prisma";
-import type { UserRole } from "../types/enums";
+import { loadRequestAuth } from "../services/auth/sessionContext";
+import { UserStatus, type UserRole } from "../types/enums";
 import { type JwtPayload, verifyTempRegistrationToken } from "../utils/jwtUtils";
 
 // Estende a interface Request do Express para incluir dados do usuário
@@ -68,23 +68,45 @@ export const authMiddleware = async (
       return;
     }
 
-    // Verifica se a senha foi alterada após a emissão do token (revogação implícita)
-    if (decoded.iat) {
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        select: { passwordChangedAt: true },
+    // Estado atual da conta, lido do banco a cada requisição. O token só diz
+    // QUEM é e em QUAL clínica a sessão está; os papéis vêm daqui, para que
+    // desligar alguém de uma clínica, bloquear a conta ou remover um papel
+    // valha na hora — antes, o token de 8h continuava com os papéis antigos.
+    const auth = await loadRequestAuth(decoded.userId, decoded.clinicId ?? null);
+
+    if (!auth || auth.status !== UserStatus.ACTIVE) {
+      res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+      return;
+    }
+
+    // Revogação implícita: senha alterada após a emissão do token
+    if (
+      decoded.iat &&
+      auth.passwordChangedAt &&
+      decoded.iat < auth.passwordChangedAt.getTime() / 1000
+    ) {
+      res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+      return;
+    }
+
+    if (auth.clinicAccessRevoked) {
+      res.status(401).json({
+        error: "Seu acesso a esta clínica foi encerrado. Faça login novamente.",
+        code: "CLINIC_ACCESS_REVOKED",
       });
-      if (user?.passwordChangedAt && decoded.iat < user.passwordChangedAt.getTime() / 1000) {
-        res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
-        return;
-      }
+      return;
+    }
+
+    if (auth.roles.length === 0) {
+      res.status(401).json({ error: "Sessão expirada. Faça login novamente." });
+      return;
     }
 
     // Adiciona as informações do usuário ao request
     req.userId = decoded.userId;
-    req.clinicId = decoded.clinicId;
-    req.userRole = decoded.role;
-    req.userRoles = decoded.roles ?? [decoded.role];
+    req.clinicId = decoded.clinicId ?? null;
+    req.userRole = auth.roles[0];
+    req.userRoles = auth.roles;
     req.userName = decoded.name;
 
     next();
@@ -131,9 +153,9 @@ export const checkRole = (...allowedRoles: UserRole[]) => {
  * checagem, qualquer usuário autenticado alcança a clínica de outro tenant só
  * trocando o UUID da URL.
  *
- * Usar sempre DEPOIS de `authMiddleware`. PATIENT é usuário global e não tem
- * `clinicId` no token, portanto nunca passa por aqui; o acesso do paciente a
- * dados de clínica é o `/api/clinic-directory`.
+ * Usar sempre DEPOIS de `authMiddleware`. `clinicId` do token é a clínica
+ * ATIVA da sessão; quem é só paciente não tem clínica ativa e nunca passa por
+ * aqui — o acesso do paciente a dados de clínica é o `/api/clinic-directory`.
  */
 export const checkSameClinic = (paramName = "id") => {
   return (req: Request, res: Response, next: NextFunction): void => {

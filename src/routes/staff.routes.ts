@@ -1,13 +1,9 @@
 import { Router } from "express";
 import { ProfileController } from "../controller/profileController";
 import { StaffController } from "../controller/staffController";
-import { authMiddleware, checkRole, tempRegistrationAuth } from "../middlewares/auth";
+import { authMiddleware, checkRole } from "../middlewares/auth";
 import { validate } from "../middlewares/validation";
-import {
-  completeStaffSchema,
-  inviteStaffSchema,
-  updateReceptionSchema,
-} from "../schemas/staffSchema";
+import { inviteStaffSchema, updateReceptionSchema } from "../schemas/staffSchema";
 import { UserRole } from "../types/enums";
 
 const router = Router();
@@ -56,15 +52,6 @@ router.post(
   checkRole(UserRole.ADMIN),
   validate(inviteStaffSchema),
   (req, res) => staffController.invite(req, res),
-);
-
-/**
- * PROTEGIDO (tempToken) — Completar cadastro apos verificar email
- * POST /api/staff/complete
- * Requer: Authorization: Bearer <tempToken>
- */
-router.post("/complete", tempRegistrationAuth, validate(completeStaffSchema), (req, res) =>
-  staffController.complete(req, res),
 );
 
 /**

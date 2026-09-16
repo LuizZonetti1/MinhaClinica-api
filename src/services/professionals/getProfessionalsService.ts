@@ -3,7 +3,7 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { DEFAULT_TIMEZONE } from "../../config/timezone";
 import { prisma } from "../../database/prisma";
-import { UserRole, UserStatus } from "../../types/enums";
+import { InviteStatus, UserRole, UserStatus } from "../../types/enums";
 import type { ProfessionalListItem } from "../../types/professional";
 import { toRegistrationStatus } from "./professionalManagementService";
 
@@ -53,21 +53,9 @@ export class GetProfessionalsService {
           },
         },
       }),
-      // Convites enviados (Etapa 1) que ainda não viraram Professional (Etapa 3).
-      // O registro de Professional só nasce em CompleteProfessionalService — até
-      // lá, o convidado existe apenas como User e não aparecia em lugar nenhum.
-      //
-      // Os DOIS status intermediários entram: clicar no link do convite move o
-      // usuário de PENDING_ACTIVATION para EMAIL_VERIFIED, e filtrar só o
-      // primeiro fazia o convidado sumir da lista no exato momento em que ele
-      // aceitava o convite — sem ter virado Professional ainda.
-      prisma.user.findMany({
-        where: {
-          clinicId,
-          role: UserRole.PROFESSIONAL,
-          status: { in: [UserStatus.PENDING_ACTIVATION, UserStatus.EMAIL_VERIFIED] },
-          professional: { is: null },
-        },
+      // Convites ainda não aceitos — o Professional só nasce no aceite.
+      prisma.clinicInvite.findMany({
+        where: { clinicId, role: UserRole.PROFESSIONAL, status: InviteStatus.PENDING },
       }),
     ]);
 
@@ -77,7 +65,8 @@ export class GetProfessionalsService {
       name: professional.user.name,
       email: professional.user.email,
       phone: professional.user.phone,
-      status: professional.user.status,
+      // Desativar é por clínica (Professional.isActive), não na conta.
+      status: professional.isActive ? professional.user.status : UserStatus.INACTIVE,
       registrationStatus: toRegistrationStatus(professional.user.status),
       avatarUrl: professional.user.avatarUrl,
       lastLoginAt: professional.user.lastLoginAt,
@@ -90,21 +79,20 @@ export class GetProfessionalsService {
       appointmentsThisMonth: professional._count.appointments,
     }));
 
-    // cpf/phone/password do convite são placeholders ("00000000000"/"temp") até a
-    // Etapa 3 — nunca expor. id reaproveita o userId (não há Professional ainda);
-    // registrationStatus "INVITE_SENT" é o sinal para o front tratar a linha como
-    // não navegável para a página de detalhes.
-    const inviteItems: ProfessionalListItem[] = pendingInvites.map((user) => ({
-      id: user.id,
-      userId: user.id,
-      name: user.name,
-      email: user.email,
+    // id = id do convite (não há Professional nem, talvez, conta ainda);
+    // registrationStatus "INVITE_SENT"/"INVITE_EXPIRED" é o sinal para o front
+    // tratar a linha como não navegável e oferecer reenviar/cancelar.
+    const inviteItems: ProfessionalListItem[] = pendingInvites.map((invite) => ({
+      id: invite.id,
+      userId: "",
+      name: invite.name,
+      email: invite.email,
       phone: null,
-      status: user.status,
-      registrationStatus: toRegistrationStatus(user.status),
+      status: UserStatus.PENDING_ACTIVATION,
+      registrationStatus: invite.expiresAt < new Date() ? "INVITE_EXPIRED" : "INVITE_SENT",
       avatarUrl: null,
       lastLoginAt: null,
-      createdAt: user.createdAt,
+      createdAt: invite.createdAt,
       isActive: false,
       professionalCouncil: "",
       registrationNumber: "",

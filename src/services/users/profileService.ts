@@ -76,8 +76,12 @@ export class GetProfileService {
     this.dashboardRepository = new DashboardRepository();
   }
 
-  async execute(userId: string): Promise<UserProfileResponse> {
-    const user = await this.userRepository.findWithClinic(userId);
+  async execute(
+    userId: string,
+    clinicId: string | null,
+    activeRole?: UserRole,
+  ): Promise<UserProfileResponse> {
+    const user = await this.userRepository.findWithClinic(userId, clinicId);
 
     if (!user) {
       throw new Error("Usuário não encontrado");
@@ -129,12 +133,12 @@ export class GetProfileService {
       },
       clinic: {
         tradeName: clinic?.tradeName ?? "",
-        role: ROLE_LABELS[user.role as UserRole] ?? user.role,
+        role: ROLE_LABELS[activeRole ?? (user.role as UserRole)] ?? user.role,
         foundedAt: clinic ? dayjs(clinic.createdAt).tz(DEFAULT_TIMEZONE).toISOString() : "",
         professionalsCount: activeProfessionals,
       },
       access: {
-        role: user.role as UserRole,
+        role: activeRole ?? (user.role as UserRole),
         lastLoginAt: user.lastLoginAt
           ? dayjs(user.lastLoginAt).tz(DEFAULT_TIMEZONE).toISOString()
           : null,
@@ -160,8 +164,8 @@ export class GetReceptionProfileService {
     this.userRepository = new UserRepository();
   }
 
-  async execute(userId: string): Promise<ReceptionProfileResponse> {
-    const user = await this.userRepository.findWithClinic(userId);
+  async execute(userId: string, clinicId: string | null): Promise<ReceptionProfileResponse> {
+    const user = await this.userRepository.findWithClinic(userId, clinicId);
 
     if (!user) {
       throw new Error("Usuário não encontrado");
@@ -188,7 +192,7 @@ export class GetReceptionProfileService {
         shift: null,
       },
       access: {
-        role: user.role as UserRole,
+        role: UserRole.RECEPTIONIST,
         lastLoginAt: user.lastLoginAt
           ? dayjs(user.lastLoginAt).tz(DEFAULT_TIMEZONE).toISOString()
           : null,
@@ -433,11 +437,11 @@ export class ChangePasswordService {
     const hashed = await bcrypt.hash(data.newPassword, 10);
     await this.userRepository.updatePassword(userId, hashed);
 
-    // clinicId ausente = paciente puro (global) — AuditLog exige clinicId.
-    // oldData/newData nunca guardam hash de senha.
-    if (user.clinicId) {
+    // Sem clínica preferida = conta só de paciente (global) — AuditLog exige
+    // clinicId. oldData/newData nunca guardam hash de senha.
+    if (user.activeClinicId) {
       await this.auditLogRepository.create({
-        clinicId: user.clinicId,
+        clinicId: user.activeClinicId,
         userId: user.id,
         userName: user.name,
         action: "CHANGE_PASSWORD",

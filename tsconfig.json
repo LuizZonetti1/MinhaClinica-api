@@ -16,6 +16,7 @@
     "node_modules",
     "dist",
     "prisma.config.ts",
-    ".env"
+    ".env",
+    "src/**/*.test.ts"
   ]
 }

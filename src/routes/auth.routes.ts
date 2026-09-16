@@ -18,6 +18,7 @@ import {
   registerStartSchema,
   resendVerificationSchema,
   resetPasswordSchema,
+  switchClinicSchema,
   verifyEmailSchema,
 } from "../schemas/authSchema";
 import { completePatientSchema } from "../schemas/patientSchema";
@@ -178,6 +179,21 @@ router.post("/reset-password", passwordResetLimiter, validate(resetPasswordSchem
  */
 router.post("/confirm-email-change", tokenLimiter, (req, res) =>
   authController.confirmEmailChange(req, res),
+);
+
+/**
+ * PROTEGIDO — Dados atuais da sessão (papéis, clínica ativa e clínicas da conta)
+ * GET /api/auth/session
+ */
+router.get("/session", authMiddleware, (req, res) => authController.getSession(req, res));
+
+/**
+ * PROTEGIDO — Trocar a clínica ativa da sessão (null = área de paciente)
+ * POST /api/auth/session/clinic
+ * Devolve um token novo no mesmo formato do login.
+ */
+router.post("/session/clinic", authMiddleware, validate(switchClinicSchema), (req, res) =>
+  authController.switchClinic(req, res),
 );
 
 /**

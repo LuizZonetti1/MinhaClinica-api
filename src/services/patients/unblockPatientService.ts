@@ -29,13 +29,14 @@ export class UnblockPatientService {
       throw new Error("Paciente nao encontrado");
     }
 
-    if (patient.user.status !== UserStatus.BLOCKED) {
+    // O bloqueio por faltas vale só para o papel de paciente (Patient.blockedAt).
+    if (!patient.blockedAt) {
       throw Object.assign(new Error("Paciente nao esta bloqueado"), { statusCode: 400 });
     }
 
-    await prisma.user.update({
-      where: { id: patient.user.id },
-      data: { status: UserStatus.ACTIVE },
+    await prisma.patient.update({
+      where: { id: patient.id },
+      data: { blockedAt: null },
     });
 
     await auditLogRepository.create({
@@ -43,10 +44,10 @@ export class UnblockPatientService {
       userId: context.userId,
       userName: context.userName,
       action: "UNBLOCK_PATIENT",
-      entity: "User",
-      entityId: patient.user.id,
-      oldData: { status: UserStatus.BLOCKED },
-      newData: { status: UserStatus.ACTIVE },
+      entity: "Patient",
+      entityId: patient.id,
+      oldData: { blocked: true },
+      newData: { blocked: false },
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     });
